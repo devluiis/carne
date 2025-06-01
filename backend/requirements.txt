@@ -1,0 +1,7 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+psycopg2-binary # Driver para PostgreSQL
+python-dotenv
+passlib[bcrypt] # Para hash de senhas
+python-jose[cryptography] # Para JWT
