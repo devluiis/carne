@@ -1,45 +1,44 @@
 import React, { useState, useEffect } from 'react';
-import { reports } from '../api'; // Importar reports
+import { reports } from '../api';
 import { useAuth } from '../components/AuthProvider.jsx';
+import { useGlobalAlert } from '../App.jsx';
 
 function DashboardPage() {
     const [summaryData, setSummaryData] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
     const { user } = useAuth();
+    const { setGlobalAlert } = useGlobalAlert();
 
     useEffect(() => {
         if (user) {
             fetchDashboardSummary();
         } else {
             setLoading(false);
-            setError('Faça login para ver o dashboard.');
+            setGlobalAlert({ message: 'Faça login para ver o dashboard.', type: 'error' });
         }
     }, [user]);
 
     const fetchDashboardSummary = async () => {
         try {
             setLoading(true);
-            const response = await reports.getDashboardSummary(); // Chama o novo endpoint de dashboard
+            const response = await reports.getDashboardSummary();
             setSummaryData(response.data);
-            setError('');
         } catch (err) {
             console.error('Erro ao carregar dados do dashboard:', err);
-            setError(`Falha ao carregar dashboard: ${err.response?.data?.detail || err.message}`);
+            const errorMessage = `Falha ao carregar dashboard: ${err.response?.data?.detail || err.message}`;
+            setGlobalAlert({ message: errorMessage, type: 'error' });
         } finally {
             setLoading(false);
         }
     };
 
     if (loading) return <p style={loadingStyle}>Carregando Dashboard...</p>;
-    if (error) return <p style={{ ...errorStyle, color: 'red' }}>{error}</p>;
     if (!summaryData) return <p style={noDataStyle}>Nenhum dado de dashboard disponível.</p>;
 
     return (
         <div style={containerStyle}>
-            <h2 style={headerStyle}>Dashboard Resumido</h2>
-            <div style={gridContainerStyle}>
-                
+            <h2 style={headerStyle}>Detalhes do Dashboard</h2> {/* Alterado de "Dashboard Resumido" para "Detalhes do Dashboard" para ser mais descritivo */}
+            <div style={gridContainerStyle}> {/* Este é o contêiner que precisa do estilo grid */}
                 <div style={cardStyle}>
                     <h3>Total de Clientes</h3>
                     <p style={cardValueStyle}>{summaryData.total_clientes}</p>
@@ -89,7 +88,6 @@ function DashboardPage() {
                     <h3>Parcelas Atrasadas</h3>
                     <p style={cardValueStyleRed}>{summaryData.parcelas_atrasadas}</p>
                 </div>
-                
             </div>
         </div>
     );
@@ -99,10 +97,10 @@ function DashboardPage() {
 const containerStyle = { maxWidth: '1200px', margin: '20px auto', padding: '20px', border: '1px solid #eee', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', backgroundColor: 'white' };
 const headerStyle = { textAlign: 'center', marginBottom: '30px', color: '#333' };
 const gridContainerStyle = {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-    gap: '20px',
-    justifyContent: 'center',
+    display: 'grid', // A chave para o layout de grade
+    gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', // Colunas auto-ajustáveis, mínimo de 250px, distribuindo o espaço
+    gap: '20px', // Espaçamento entre os itens da grade
+    justifyContent: 'center', // Centraliza os itens na grade, se houver espaço extra
 };
 const cardStyle = {
     backgroundColor: '#f9f9f9',
@@ -113,9 +111,9 @@ const cardStyle = {
     boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
 };
 const cardValueStyle = { fontSize: '2em', fontWeight: 'bold', margin: '10px 0' };
-const cardValueStyleGreen = { ...cardValueStyle, color: '#28a745' }; // Verde para positivo/recebido
-const cardValueStyleRed = { ...cardValueStyle, color: '#dc3545' };   // Vermelho para negativo/atrasado
-const cardValueStyleBlue = { ...cardValueStyle, color: '#007bff' };  // Azul para neutro/informativo
+const cardValueStyleGreen = { ...cardValueStyle, color: '#28a745' };
+const cardValueStyleRed = { ...cardValueStyle, color: '#dc3545' };
+const cardValueStyleBlue = { ...cardValueStyle, color: '#007bff' };
 
 const loadingStyle = { textAlign: 'center', fontSize: '1.2em', color: '#555' };
 const errorStyle = { textAlign: 'center', fontSize: '1.2em', color: 'red' };

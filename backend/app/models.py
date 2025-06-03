@@ -45,6 +45,8 @@ class Carne(Base):
     frequencia_pagamento = Column(String(50), nullable=False) # Ex: 'mensal', 'quinzenal'
     status_carne = Column(String(50), default='Ativo', nullable=False) # Ex: 'Ativo', 'Quitado', 'Cancelado', 'Em Atraso'
     observacoes = Column(String)
+    valor_entrada = Column(DECIMAL(10, 2), default=0.00, nullable=False) # NOVO: Valor da entrada
+    forma_pagamento_entrada = Column(String(50), nullable=True) # NOVO: Forma de pagamento da entrada
 
     # Relacionamentos
     # MODIFICADO: Adicione lazy='joined' para carregar o cliente junto com o carnê
@@ -64,7 +66,7 @@ class Parcela(Base):
     data_pagamento_completo = Column(Date)
     status_parcela = Column(String(50), default='Pendente', nullable=False) # Ex: 'Pendente', 'Paga', 'Paga com Atraso', 'Atrasada', 'Parcialmente Paga'
     juros_multa = Column(DECIMAL(10, 2), default=0.00, nullable=False)
-    juros_multa_anterior_aplicada = Column(DECIMAL(10, 2), default=0.00, nullable=False) # NOVO: Armazena o valor de juros/multa aplicado no último cálculo.
+    juros_multa_anterior_aplicada = Column(DECIMAL(10, 2), default=0.00, nullable=False) # Armazena o valor de juros/multa aplicado no último cálculo.
 
     # Relacionamentos
     carne = relationship("Carne", back_populates="parcelas")

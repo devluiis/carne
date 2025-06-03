@@ -2,17 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { clients } from '../api';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../components/AuthProvider.jsx';
-import { useGlobalAlert } from '../App.jsx'; // Importar useGlobalAlert
+import { useGlobalAlert } from '../App.jsx';
+import LoadingSpinner from '../components/LoadingSpinner.jsx';
 
-function ClientList() {
+function ClientsPage() {
     const [clientList, setClientList] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(''); // Manter erro local para carregamento
+    const [error, setError] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
     const navigate = useNavigate();
     const { user } = useAuth();
-    const { setGlobalAlert } = useGlobalAlert(); // Usar o contexto do alerta global
-
+    const { setGlobalAlert } = useGlobalAlert();
 
     useEffect(() => {
         fetchClients();
@@ -41,19 +41,24 @@ function ClientList() {
         if (window.confirm('Tem certeza que deseja excluir este cliente? Isso removerá todos os carnês e pagamentos associados.')) {
             try {
                 await clients.delete(id);
-                setGlobalAlert({ message: 'Cliente excluído com sucesso!', type: 'success' }); // Feedback de sucesso
+                setGlobalAlert({ message: 'Cliente excluído com sucesso!', type: 'success' });
                 fetchClients(searchQuery);
             } catch (err) {
                 console.error('Erro ao excluir cliente:', err);
                 const errorMessage = `Falha ao excluir cliente: ${err.response?.data?.detail || err.message || 'Erro desconhecido.'}`;
-                setError(errorMessage); // Manter erro local para exibição imediata
-                setGlobalAlert({ message: errorMessage, type: 'error' }); // Feedback de erro global
+                setError(errorMessage);
+                setGlobalAlert({ message: errorMessage, type: 'error' });
             }
         }
     };
 
-    if (loading) return <p>Carregando clientes...</p>;
-    if (error && clientList.length === 0) return <p style={{ color: 'red' }}>{error}</p>; // Exibir erro local se a lista estiver vazia
+    if (loading) {
+        return <LoadingSpinner message="Carregando clientes..." />;
+    }
+
+    if (error && clientList.length === 0) {
+        return <p style={{ color: 'red', textAlign: 'center' }}>{error}</p>;
+    }
 
     return (
         <div style={{ maxWidth: '800px', margin: '20px auto', padding: '20px', border: '1px solid #eee', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
@@ -128,7 +133,6 @@ function ClientList() {
                                     >
                                         Ver Carnês
                                     </button>
-                                    {/* NOVO: Botão para ver o resumo detalhado do cliente (RF008) */}
                                     <button
                                         onClick={() => navigate(`/clients/details/${client.id_cliente}`)}
                                         style={{ ...actionButtonStyle, backgroundColor: '#17a2b8', marginLeft: '5px' }}
@@ -151,12 +155,11 @@ const tableHeaderStyle = {
     textAlign: 'left',
     backgroundColor: '#f2f2f2'
 };
-
 const tableCellStyle = {
     borderBottom: '1px solid #eee',
     padding: '10px'
 };
-const actionButtonStyle = { // Reutilizado de outros componentes para consistência
+const actionButtonStyle = {
     padding: '5px 10px',
     backgroundColor: '#6c757d',
     color: 'white',
@@ -166,4 +169,4 @@ const actionButtonStyle = { // Reutilizado de outros componentes para consistên
     marginRight: '5px'
 };
 
-export default ClientList;
+export default ClientsPage;

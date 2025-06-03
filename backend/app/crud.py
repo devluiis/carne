@@ -33,11 +33,6 @@ def _apply_interest_and_fine_if_due(db: Session, parcela: models.Parcela):
         total_novos_juros_multa = multa + juros_mora
 
         # Atualiza juros_multa e saldo_devedor
-        # O saldo devedor já inclui os juros anteriores. Para atualizar:
-        # 1. Subtrai os juros/multas que já estavam aplicados
-        # 2. Adiciona os novos juros/multas
-        # 3. O saldo devedor é sempre o valor devido original + juros/multa acumulados - valor pago
-        
         # O saldo devedor atual, desconsiderando os juros que serão recalculados
         current_saldo_excluding_old_juros = parcela.valor_devido - parcela.valor_pago
 
@@ -348,22 +343,31 @@ def get_carnes(
 
 
 def create_carne(db: Session, carne: schemas.CarneCreate):
-    valor_total_original = Decimal(str(carne.valor_total_original))
-    valor_parcela_original = Decimal(str(carne.valor_parcela_original))
+    valor_total_original_decimal = Decimal(str(carne.valor_total_original))
+    valor_entrada_decimal = Decimal(str(carne.valor_entrada))
+    valor_parcela_original_decimal = Decimal(str(carne.valor_parcela_original))
 
-    if abs(valor_total_original - (valor_parcela_original * carne.numero_parcelas)) > Decimal('0.01'):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Valor total original não corresponde ao número de parcelas x valor da parcela.")
+    if valor_entrada_decimal > valor_total_original_decimal: # Validação RF009
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="O valor de entrada não pode ser maior que o valor total original da dívida.")
+
+    # Valor remanescente a ser parcelado após a entrada
+    valor_a_parcelar = valor_total_original_decimal - valor_entrada_decimal
+
+    if abs(valor_a_parcelar - (valor_parcela_original_decimal * carne.numero_parcelas)) > Decimal('0.01'):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="O valor a parcelar não corresponde ao número de parcelas x valor da parcela. Ajuste o valor da parcela ou número de parcelas.")
 
     db_carne = models.Carne(
         id_cliente=carne.id_cliente,
         descricao=carne.descricao,
-        valor_total_original=valor_total_original,
+        valor_total_original=valor_total_original_decimal,
         numero_parcelas=carne.numero_parcelas,
-        valor_parcela_original=valor_parcela_original,
+        valor_parcela_original=valor_parcela_original_decimal,
         data_primeiro_vencimento=carne.data_primeiro_vencimento,
         frequencia_pagamento=carne.frequencia_pagamento,
         status_carne=carne.status_carne,
-        observacoes=carne.observacoes
+        observacoes=carne.observacoes,
+        valor_entrada=valor_entrada_decimal, # RF009
+        forma_pagamento_entrada=carne.forma_pagamento_entrada # RF009
     )
     db.add(db_carne)
     db.commit()
@@ -371,11 +375,11 @@ def create_carne(db: Session, carne: schemas.CarneCreate):
 
     current_due_date = carne.data_primeiro_vencimento
     for i in range(carne.numero_parcelas):
-        parcela_valor_devido = valor_parcela_original
-        # Ajusta a última parcela para que a soma seja exatamente o valor total original
+        parcela_valor_devido = valor_parcela_original_decimal
+        # Ajusta a última parcela para que a soma seja exatamente o valor a parcelar
         if i == carne.numero_parcelas - 1:
-            soma_parcelas_anteriores = valor_parcela_original * i
-            parcela_valor_devido = valor_total_original - soma_parcelas_anteriores
+            soma_parcelas_anteriores = valor_parcela_original_decimal * i
+            parcela_valor_devido = valor_a_parcelar - soma_parcelas_anteriores
             # Garante que não haja pequenos erros de arredondamento
             parcela_valor_devido = parcela_valor_devido.quantize(Decimal('0.01'))
 
@@ -405,7 +409,7 @@ def update_carne(db: Session, carne_id: int, carne_update: schemas.CarneCreate):
         return None
     
     # Validação: Não permite alterar campos que afetam parcelas se houver pagamentos (RF011)
-    # Apenas permite alterar descrição, status e observações
+    # Adicionado valor_entrada e forma_pagamento_entrada nas restrições
     has_payments = db.query(models.Pagamento).join(models.Parcela).filter(models.Parcela.id_carne == carne_id).first()
     
     if has_payments:
@@ -417,28 +421,47 @@ def update_carne(db: Session, carne_id: int, carne_update: schemas.CarneCreate):
                                     detail=f"Não é possível alterar '{key}' de um carnê que já possui pagamentos registrados. Você pode alterar apenas descrição, status e observações.")
     
     update_data = carne_update.model_dump(exclude_unset=True)
+    
+    # Validação adicional para valor_entrada se estiver sendo atualizado
+    if 'valor_entrada' in update_data and update_data['valor_entrada'] is not None:
+        valor_entrada_decimal = Decimal(str(update_data['valor_entrada']))
+        valor_total_original_decimal = Decimal(str(db_carne.valor_total_original)) # Use o valor_total_original atual do DB ou do update_data se estiver no update
+        if 'valor_total_original' in update_data:
+            valor_total_original_decimal = Decimal(str(update_data['valor_total_original']))
+
+        if valor_entrada_decimal > valor_total_original_decimal:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="O valor de entrada não pode ser maior que o valor total original da dívida.")
+
+
     for key, value in update_data.items():
         setattr(db_carne, key, value)
     
     db.add(db_carne)
     
-    # Se o número de parcelas, valor total ou frequência mudarem, as parcelas precisam ser regeneradas
-    # Isso só acontece se o `has_payments` for False (validado acima)
-    if not has_payments and any(k in update_data for k in ['numero_parcelas', 'valor_total_original', 'valor_parcela_original', 'data_primeiro_vencimento', 'frequencia_pagamento']):
+    # Se o número de parcelas, valor total, valor da parcela, data do 1º vencimento,
+    # frequência ou VALOR DE ENTRADA mudarem, as parcelas precisam ser regeneradas
+    # Isso só acontece se o `has_payments` for False (validado acima).
+    # Adicionado 'valor_entrada' na condição de regeneração.
+    if not has_payments and any(k in update_data for k in ['numero_parcelas', 'valor_total_original', 'valor_parcela_original', 'data_primeiro_vencimento', 'frequencia_pagamento', 'valor_entrada']):
         # Exclui parcelas existentes
         db.query(models.Parcela).filter(models.Parcela.id_carne == carne_id).delete(synchronize_session=False)
         db.flush() # Persiste a exclusão antes de adicionar novas
 
         # Regenera as parcelas (lógica similar à de create_carne)
-        valor_total_original = Decimal(str(db_carne.valor_total_original))
-        valor_parcela_original = Decimal(str(db_carne.valor_parcela_original))
+        valor_total_original_decimal = Decimal(str(db_carne.valor_total_original))
+        valor_entrada_decimal = Decimal(str(db_carne.valor_entrada))
+        valor_parcela_original_decimal = Decimal(str(db_carne.valor_parcela_original))
+        
+        valor_a_parcelar = valor_total_original_decimal - valor_entrada_decimal # RF009
+        if valor_a_parcelar < Decimal('0.00'): valor_a_parcelar = Decimal('0.00') # Garante que não seja negativo
+
         current_due_date = db_carne.data_primeiro_vencimento
 
         for i in range(db_carne.numero_parcelas):
-            parcela_valor_devido = valor_parcela_original
+            parcela_valor_devido = valor_parcela_original_decimal
             if i == db_carne.numero_parcelas - 1:
-                soma_parcelas_anteriores = valor_parcela_original * i
-                parcela_valor_devido = valor_total_original - soma_parcelas_anteriores
+                soma_parcelas_anteriores = valor_parcela_original_decimal * i
+                parcela_valor_devido = valor_a_parcelar - soma_parcelas_anteriores
                 parcela_valor_devido = parcela_valor_devido.quantize(Decimal('0.01'))
 
             db_parcela = models.Parcela(
@@ -610,19 +633,19 @@ def create_pagamento(db: Session, pagamento: schemas.PagamentoCreate, usuario_id
                 has_overdue_carne = True
             if p.status_parcela == 'Parcialmente Paga':
                 is_partially_paid_carne = True
-        
-        if all_paid_carne:
-            db_carne.status_carne = 'Quitado'
-        elif has_overdue_carne:
-            db_carne.status_carne = 'Em Atraso'
-        elif is_partially_paid_carne:
-            db_carne.status_carne = 'Ativo'
-        else:
-            db_carne.status_carne = 'Ativo' # Se não está quitado, nem em atraso (todas Pendentes)
-        
-        db.add(db_carne)
-        db.commit()
-        db.refresh(db_carne)
+            
+            if all_paid_carne:
+                db_carne.status_carne = 'Quitado'
+            elif has_overdue_carne:
+                db_carne.status_carne = 'Em Atraso'
+            elif is_partially_paid_carne:
+                db_carne.status_carne = 'Ativo'
+            else:
+                db_carne.status_carne = 'Ativo'
+            
+            db.add(db_carne)
+            db.commit()
+            db.refresh(db_carne)
     
     return db_pagamento
 

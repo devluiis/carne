@@ -1,5 +1,5 @@
-import React, { useState, createContext, useContext } from 'react'; // Importar createContext e useContext
-import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
+import React, { useState, createContext, useContext } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './components/AuthProvider.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import ClientsPage from './pages/ClientsPage.jsx';
@@ -14,14 +14,13 @@ import ClientDetailsPage from './pages/ClientDetailsPage.jsx';
 import DashboardPage from './pages/DashboardPage.jsx';
 import ReceiptsReportPage from './pages/ReceiptsReportPage.jsx';
 import PendingDebtsReportPage from './pages/PendingDebtsReportPage.jsx';
-import GlobalAlert from './components/GlobalAlert.jsx'; // NOVO: Importar GlobalAlert
+import GlobalAlert from './components/GlobalAlert.jsx';
+import RegisterUserByAdminPage from './pages/RegisterUserByAdminPage.jsx'; // NOVO: Importar a nova página
 
-// NOVO: Contexto para o alerta global
 const GlobalAlertContext = createContext(null);
 export const useGlobalAlert = () => useContext(GlobalAlertContext);
 
 
-// Componente para rotas privadas
 const PrivateRoute = ({ children }) => {
     const { user, loading } = useAuth();
 
@@ -32,7 +31,6 @@ const PrivateRoute = ({ children }) => {
     return user ? children : <Navigate to="/" />;
 };
 
-// Componente para rotas restritas a administradores
 const AdminRoute = ({ children }) => {
     const { user, loading } = useAuth();
 
@@ -44,7 +42,6 @@ const AdminRoute = ({ children }) => {
         return <Navigate to="/" />;
     }
     if (user.perfil !== 'admin') {
-        // Usa o alerta global para feedback ao usuário
         const { setGlobalAlert } = useContext(GlobalAlertContext);
         setGlobalAlert({ message: 'Acesso negado. Você não tem permissão de administrador para esta funcionalidade.', type: 'error' });
         return <Navigate to="/clients" />;
@@ -54,7 +51,7 @@ const AdminRoute = ({ children }) => {
 
 
 function App() {
-    const [globalAlert, setGlobalAlert] = useState(null); // Estado para o alerta global
+    const [globalAlert, setGlobalAlert] = useState(null);
 
     const clearGlobalAlert = () => {
         setGlobalAlert(null);
@@ -63,7 +60,7 @@ function App() {
     return (
         <Router>
             <AuthProvider>
-                <GlobalAlertContext.Provider value={{ setGlobalAlert, clearGlobalAlert }}> {/* Provedor do contexto */}
+                <GlobalAlertContext.Provider value={{ setGlobalAlert, clearGlobalAlert }}>
                     <Header />
                     {globalAlert && (
                         <GlobalAlert 
@@ -75,7 +72,6 @@ function App() {
                     <Routes>
                         <Route path="/" element={<LoginPage />} />
                         
-                        {/* Rota de Registro de Usuário COMUM (Atendente) - RF001 */}
                         <Route path="/register-user" element={<RegisterUserPage />} />
 
                         {/* Rota de Registro de Admin - Protegida por AdminRoute */}
@@ -88,7 +84,16 @@ function App() {
                             }
                         />
 
-                        {/* Rota para o perfil do usuário */}
+                        {/* NOVO: Rota para Registro de Atendente por Admin - Protegida por AdminRoute */}
+                        <Route
+                            path="/register-atendente"
+                            element={
+                                <AdminRoute>
+                                    <RegisterUserByAdminPage />
+                                </AdminRoute>
+                            }
+                        />
+
                         <Route
                             path="/profile"
                             element={
@@ -98,7 +103,6 @@ function App() {
                             }
                         />
 
-                        {/* Rota para o Dashboard (RF021) */}
                         <Route
                             path="/dashboard"
                             element={
@@ -108,26 +112,23 @@ function App() {
                             }
                         />
                         
-                        {/* Rota para o Relatório de Recebimentos por Período (RF022) */}
                         <Route
                             path="/reports/receipts"
                             element={
-                                <PrivateRoute> {/* Acessível por qualquer usuário logado */}
+                                <PrivateRoute>
                                     <ReceiptsReportPage />
                                 </PrivateRoute>
                             }
                         />
-                        {/* NOVO: Rota para o Relatório de Dívidas por Cliente (RF023) */}
                         <Route
                             path="/reports/pending-debts-by-client/:client_id"
                             element={
-                                <PrivateRoute> {/* Acessível por qualquer usuário logado */}
+                                <PrivateRoute>
                                     <PendingDebtsReportPage />
                                 </PrivateRoute>
                             }
                         />
 
-                        {/* Rotas de Clientes */}
                         <Route
                             path="/clients"
                             element={
@@ -152,7 +153,6 @@ function App() {
                                 </PrivateRoute>
                             }
                         />
-                        {/* Rota para a página de detalhes/resumo do cliente (RF008) */}
                         <Route
                             path="/clients/details/:id"
                             element={
@@ -162,7 +162,6 @@ function App() {
                             }
                         />
 
-                        {/* Rotas de Carnês */}
                         <Route
                             path="/carnes"
                             element={
@@ -212,36 +211,75 @@ function App() {
 
 function Header() {
     const { user, logout } = useAuth();
+    const location = useLocation();
+
+    const isLinkActive = (path) => {
+        if (path === '/dashboard' && location.pathname === '/dashboard') return true;
+        if (path === '/clients' && location.pathname.startsWith('/clients')) return true;
+        if (path === '/carnes' && location.pathname.startsWith('/carnes')) return true;
+        if (path === '/reports/receipts' && location.pathname === '/reports/receipts') return true;
+        if (path === '/reports/pending-debts-by-client/0' && location.pathname.startsWith('/reports/pending-debts-by-client')) return true;
+        if (path === '/profile' && location.pathname === '/profile') return true;
+        if (path === '/register-admin' && location.pathname === '/register-admin') return true;
+        if (path === '/register-atendente' && location.pathname === '/register-atendente') return true; // NOVO: Para ativar o link do novo formulário
+
+        return false; // Default para não ativo
+    };
+
+
+    const activeLinkStyle = {
+        backgroundColor: '#555',
+        padding: '10px 15px',
+        borderRadius: '5px',
+        color: 'white',
+        textDecoration: 'none',
+        transition: 'background-color 0.3s ease',
+    };
+
+    const inactiveLinkStyle = {
+        padding: '10px 15px',
+        color: 'white',
+        textDecoration: 'none',
+        transition: 'background-color 0.3s ease',
+    };
+
+    const listItemStyle = {
+        marginRight: '10px',
+    };
+
     return (
         <header style={{ background: '#333', color: 'white', padding: '10px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h1 style={{ margin: 0, fontSize: '24px' }}>Carnê de Pagamentos</h1>
             <nav>
                 {user && (
                     <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex' }}>
-                        <li style={{ marginRight: '20px' }}>
-                            <Link to="/dashboard" style={{ color: 'white', textDecoration: 'none' }}>Dashboard</Link>
+                        <li style={listItemStyle}>
+                            <Link to="/dashboard" style={isLinkActive('/dashboard') ? activeLinkStyle : inactiveLinkStyle}>Dashboard</Link>
                         </li>
-                        <li style={{ marginRight: '20px' }}>
-                            <Link to="/clients" style={{ color: 'white', textDecoration: 'none' }}>Clientes</Link>
+                        <li style={listItemStyle}>
+                            <Link to="/clients" style={isLinkActive('/clients') ? activeLinkStyle : inactiveLinkStyle}>Clientes</Link>
                         </li>
-                        <li style={{ marginRight: '20px' }}>
-                            <Link to="/carnes" style={{ color: 'white', textDecoration: 'none' }}>Carnês</Link>
+                        <li style={listItemStyle}>
+                            <Link to="/carnes" style={isLinkActive('/carnes') ? activeLinkStyle : inactiveLinkStyle}>Carnês</Link>
                         </li>
-                        <li style={{ marginRight: '20px' }}>
-                            {/* NOVO: Link para o Relatório de Recebimentos (RF022) */}
-                            <Link to="/reports/receipts" style={{ color: 'white', textDecoration: 'none' }}>Rel. Recebimentos</Link>
+                        <li style={listItemStyle}>
+                            <Link to="/reports/receipts" style={isLinkActive('/reports/receipts') ? activeLinkStyle : inactiveLinkStyle}>Rel. Recebimentos</Link>
                         </li>
-                        <li style={{ marginRight: '20px' }}>
-                            {/* NOVO: Link para o Relatório de Dívidas por Cliente (RF023) */}
-                            <Link to="/reports/pending-debts-by-client/0" style={{ color: 'white', textDecoration: 'none' }}>Rel. Dívidas Cli.</Link>
+                        <li style={listItemStyle}>
+                            <Link to="/reports/pending-debts-by-client/0" style={isLinkActive('/reports/pending-debts-by-client/0') ? activeLinkStyle : inactiveLinkStyle}>Rel. Dívidas Cli.</Link>
                         </li>
-                        <li style={{ marginRight: '20px' }}>
-                            <Link to="/profile" style={{ color: 'white', textDecoration: 'none' }}>Meu Perfil</Link>
+                        <li style={listItemStyle}>
+                            <Link to="/profile" style={isLinkActive('/profile') ? activeLinkStyle : inactiveLinkStyle}>Meu Perfil</Link>
                         </li>
                         {user.perfil === 'admin' && ( 
-                            <li style={{ marginRight: '20px' }}>
-                                <Link to="/register-admin" style={{ color: 'white', textDecoration: 'none' }}>Registrar Admin</Link>
-                            </li>
+                            <>
+                                <li style={listItemStyle}>
+                                    <Link to="/register-admin" style={isLinkActive('/register-admin') ? activeLinkStyle : inactiveLinkStyle}>Registrar Admin</Link>
+                                </li>
+                                <li style={listItemStyle}> {/* NOVO: Link para registrar atendente */}
+                                    <Link to="/register-atendente" style={isLinkActive('/register-atendente') ? activeLinkStyle : inactiveLinkStyle}>Registrar Atendente</Link>
+                                </li>
+                            </>
                         )}
                     </ul>
                 )}

@@ -3,7 +3,8 @@ import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
-const api = axios.create({
+// MODIFICAÇÃO AQUI: Adicionado "export" para que a instância seja exportável
+export const api = axios.create({
     baseURL: API_BASE_URL,
 });
 
@@ -27,7 +28,7 @@ export const auth = {
         formData.append('username', email);
         formData.append('password', senha);
 
-        return api.post('/token', formData, {
+        return api.post('/token', formData, { // Usa a 'api' local que agora é exportada
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded'
             }
@@ -35,10 +36,10 @@ export const auth = {
     },
     register: (userData) => api.post('/register', userData),
     registerAdmin: (userData) => api.post('/register-admin', userData),
+    registerAtendenteByAdmin: (userData) => api.post('/register-atendente', userData),
     getMe: () => api.get('/me'),
     updateProfile: (userData) => api.put('/me', userData),
 };
-
 
 export const clients = {
     getAll: (searchQuery = null) => {
@@ -83,10 +84,8 @@ export const pagamentos = {
     delete: (id) => api.delete(`/carnes/pagamentos/${id}`),
 };
 
-// Objeto para rotas de relatórios/dashboard
 export const reports = {
     getDashboardSummary: () => api.get(`/reports/dashboard/summary`),
-    // NOVO: Função para obter o relatório de recebimentos (RF022)
     getReceiptsReport: (startDate, endDate) => {
         return api.get(`/reports/receipts`, {
             params: {
@@ -95,6 +94,5 @@ export const reports = {
             }
         });
     },
-    // NOVO: Função para obter o relatório de dívidas pendentes por cliente (RF023)
     getPendingDebtsReportByClient: (clientId) => api.get(`/reports/pending-debts-by-client/${clientId}`),
 };

@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from datetime import timedelta
 from app import schemas, crud, models
 from app.database import get_db
-from app.auth import verify_password, create_access_token, get_current_active_user, get_current_admin_user # Importar get_current_admin_user
+from app.auth import verify_password, create_access_token, get_current_active_user, get_current_admin_user
 from app.config import ACCESS_TOKEN_EXPIRE_MINUTES
 
 router = APIRouter()
@@ -19,44 +19,47 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
             headers={"WWW-Authenticate": "Bearer"},
         )
     
-    # ATENÇÃO: É importante que o perfil do usuário seja incluído no token
-    # ou que seja acessível após a autenticação para que o frontend
-    # possa tomar decisões sobre a interface (Ex: exibir botão de admin)
-    # Por simplicidade, assumimos que 'get_current_active_user' ou uma rota '/me'
-    # retornará o perfil completo do usuário.
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"sub": user.email}, expires_delta=access_token_expires
     )
     
-    # Retorna o token e os dados básicos do usuário para o frontend
     return {"access_token": access_token, "token_type": "bearer", "user_data": schemas.UserResponse.model_validate(user).model_dump()}
 
 
 @router.post("/register", response_model=schemas.UserResponse)
-# Permite que qualquer usuário logado (atendente ou admin) registre novos atendentes
-# Se a intenção é que APENAS ADMINS possam registrar, adicione Depends(get_current_admin_user)
-# Ex: def register_user(user: schemas.UserCreate, db: Session = Depends(get_db), current_user: models.Usuario = Depends(get_current_admin_user)):
+# Rota pública para qualquer um se registrar como atendente (se essa for a regra de negócio)
 def register_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     db_user = crud.get_user_by_email(db, email=user.email)
     if db_user:
         raise HTTPException(status_code=400, detail="Email já registrado")
-    # Garante que este endpoint só crie usuários com perfil "atendente"
-    if user.perfil and user.perfil != "atendente":
-        raise HTTPException(status_code=400, detail="Este endpoint é apenas para registro de atendentes.")
     
-    # Se o perfil não for especificado, ele será "atendente" por padrão no schema
+    # Garante que este endpoint só crie usuários com perfil "atendente"
+    user.perfil = "atendente" # Força o perfil para "atendente" para esta rota
     return crud.create_user(db=db, user=user)
+
+# NOVO ENDPOINT: Registrar Atendente por Admin (RF Acréscimo)
+@router.post("/register-atendente", response_model=schemas.UserResponse)
+def register_atendente_by_admin(
+    user_data: schemas.UserCreate, # Usar o mesmo schema de UserCreate
+    db: Session = Depends(get_db),
+    current_admin_user: models.Usuario = Depends(get_current_admin_user) # Protegido por Admin
+):
+    db_user = crud.get_user_by_email(db, email=user_data.email)
+    if db_user:
+        raise HTTPException(status_code=400, detail="Email já registrado")
+    
+    user_data.perfil = "atendente" # Garante que o perfil seja 'atendente' para este endpoint
+    return crud.create_user(db=db, user=user_data)
 
 
 @router.post("/register-admin", response_model=schemas.UserResponse)
-# Rota agora protegida: Apenas administradores logados podem criar novos administradores.
+# Rota protegida: Apenas administradores logados podem criar novos administradores.
 def register_admin_user(user_data: schemas.UserRegisterAdmin, db: Session = Depends(get_db), current_admin_user: models.Usuario = Depends(get_current_admin_user)):
     db_user = crud.get_user_by_email(db, email=user_data.email)
     if db_user:
         raise HTTPException(status_code=400, detail="Email já registrado")
     
-    # Garante que o perfil seja 'admin' para este endpoint
     user_data.perfil = "admin" 
     return crud.create_user(db=db, user=user_data)
 

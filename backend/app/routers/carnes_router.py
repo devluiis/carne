@@ -7,6 +7,8 @@ from datetime import date
 from app import schemas, crud, models
 from app.database import get_db
 from app.auth import get_current_active_user, get_current_admin_user # Importar get_current_admin_user
+from fastapi.responses import Response # Alterado de FileResponse para Response
+from app.pdf_utils import generate_carne_pdf_bytes # Nova importação
 
 router = APIRouter(prefix="/carnes", tags=["Carnês"])
 
@@ -145,3 +147,30 @@ def delete_pagamento(pagamento_id: int, db: Session = Depends(get_db), current_u
     if db_pagamento is None:
         raise HTTPException(status_code=404, detail="Pagamento não encontrado")
     return {}
+
+@router.get("/{carne_id}/pdf", tags=["Carnês PDF"])
+async def get_carne_pdf_route(
+    carne_id: int, 
+    db: Session = Depends(get_db), 
+    current_user: models.Usuario = Depends(get_current_active_user)
+):
+    db_carne = crud.get_carne(db, carne_id=carne_id)
+    if db_carne is None:
+        raise HTTPException(status_code=404, detail="Carnê não encontrado")
+
+    try:
+        pdf_bytes = generate_carne_pdf_bytes(db_carne)
+        
+        filename = f"carne_{db_carne.id_cliente}_{carne_id}.pdf"
+        
+        return Response(
+            content=pdf_bytes,
+            media_type='application/pdf',
+            headers={'Content-Disposition': f'inline; filename="{filename}"'}
+            # Use 'attachment; filename="{filename}"' para forçar o download
+        )
+    except FileNotFoundError: # Exceção específica se o logo não for encontrado
+         raise HTTPException(status_code=500, detail=f"Erro ao gerar PDF: Arquivo de logo não encontrado em {LOGO_PATH}. Verifique o caminho.")
+    except Exception as e:
+        print(f"Erro detalhado ao gerar PDF: {e}") # Log do erro no servidor
+        raise HTTPException(status_code=500, detail=f"Ocorreu um erro interno ao gerar o PDF: {e}")

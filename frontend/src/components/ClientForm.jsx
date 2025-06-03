@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { clients } from '../api';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useGlobalAlert } from '../App.jsx';
+import LoadingSpinner from './LoadingSpinner.jsx'; // Assumindo que este componente já foi criado
 
 function ClientForm() {
     const [nome, setNome] = useState('');
@@ -8,14 +10,16 @@ function ClientForm() {
     const [endereco, setEndereco] = useState('');
     const [telefone, setTelefone] = useState('');
     const [email, setEmail] = useState('');
-    const [error, setError] = useState('');
-    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(''); // Para erros de validação ou de API no formulário
+    const [loadingInitial, setLoadingInitial] = useState(false); // Para carregamento inicial de dados na edição
+    const [submitLoading, setSubmitLoading] = useState(false); // Para o estado de envio do formulário
     const navigate = useNavigate();
-    const { id } = useParams(); // Para edição
+    const { id } = useParams();
+    const { setGlobalAlert } = useGlobalAlert();
 
     useEffect(() => {
         if (id) {
-            setLoading(true);
+            setLoadingInitial(true);
             clients.getById(id)
                 .then(response => {
                     const client = response.data;
@@ -27,97 +31,100 @@ function ClientForm() {
                 })
                 .catch(err => {
                     console.error('Erro ao carregar cliente para edição:', err);
-                    setError('Erro ao carregar dados do cliente.');
+                    setGlobalAlert({ message: 'Erro ao carregar dados do cliente.', type: 'error' });
+                    navigate('/clients');
                 })
-                .finally(() => setLoading(false));
+                .finally(() => setLoadingInitial(false));
         }
-    }, [id]);
+    }, [id, navigate, setGlobalAlert]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setError('');
-        setLoading(true);
-
+        setError(''); // Limpa erros locais antes de submeter
+        setSubmitLoading(true);
         const clientData = { nome, cpf_cnpj: cpfCnpj, endereco, telefone, email };
 
         try {
             if (id) {
                 await clients.update(id, clientData);
-                alert('Cliente atualizado com sucesso!');
+                setGlobalAlert({ message: 'Cliente atualizado com sucesso!', type: 'success' });
             } else {
                 await clients.create(clientData);
-                alert('Cliente cadastrado com sucesso!');
+                setGlobalAlert({ message: 'Cliente cadastrado com sucesso!', type: 'success' });
             }
             navigate('/clients');
         } catch (err) {
-            console.error('Erro ao salvar cliente:', err);
-            setError(`Erro ao salvar cliente: ${err.response?.data?.detail || err.message}`);
+            const errorMessage = `Erro ao salvar cliente: ${err.response?.data?.detail || err.message}`;
+            setError(errorMessage); // Mostra erro localmente no formulário
+            setGlobalAlert({ message: errorMessage, type: 'error' });
         } finally {
-            setLoading(false);
+            setSubmitLoading(false);
         }
     };
 
-    if (loading && id) return <p>Carregando dados do cliente...</p>;
+    if (loadingInitial) {
+        return <LoadingSpinner message="Carregando dados do cliente..." />;
+    }
 
     return (
-        <div style={{ maxWidth: '600px', margin: '20px auto', padding: '20px', border: '1px solid #ccc', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+        <div className="form-container">
             <h2>{id ? 'Editar Cliente' : 'Cadastrar Novo Cliente'}</h2>
-            {error && <p style={{ color: 'red' }}>{error}</p>}
+            {error && <p style={{ color: 'red', textAlign: 'center', marginBottom: '15px' }}>{error}</p>}
             <form onSubmit={handleSubmit}>
-                <div style={{ marginBottom: '15px' }}>
-                    <label style={{ display: 'block', marginBottom: '5px' }}>Nome:</label>
+                <div className="form-group">
+                    <label>Nome Completo / Razão Social:</label>
                     <input
                         type="text"
                         value={nome}
                         onChange={(e) => setNome(e.target.value)}
                         required
-                        style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}
+                        className="form-input"
                     />
                 </div>
-                <div style={{ marginBottom: '15px' }}>
-                    <label style={{ display: 'block', marginBottom: '5px' }}>CPF/CNPJ:</label>
+                <div className="form-group">
+                    <label>CPF / CNPJ:</label>
                     <input
                         type="text"
                         value={cpfCnpj}
                         onChange={(e) => setCpfCnpj(e.target.value)}
                         required
-                        style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}
+                        className="form-input"
                     />
                 </div>
-                <div style={{ marginBottom: '15px' }}>
-                    <label style={{ display: 'block', marginBottom: '5px' }}>Endereço:</label>
+                <div className="form-group">
+                    <label>Endereço:</label>
                     <input
                         type="text"
                         value={endereco}
                         onChange={(e) => setEndereco(e.target.value)}
-                        style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}
+                        className="form-input"
                     />
                 </div>
-                <div style={{ marginBottom: '15px' }}>
-                    <label style={{ display: 'block', marginBottom: '5px' }}>Telefone:</label>
+                <div className="form-group">
+                    <label>Telefone:</label>
                     <input
                         type="text"
                         value={telefone}
                         onChange={(e) => setTelefone(e.target.value)}
-                        style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}
+                        className="form-input"
                     />
                 </div>
-                <div style={{ marginBottom: '15px' }}>
-                    <label style={{ display: 'block', marginBottom: '5px' }}>Email:</label>
+                <div className="form-group">
+                    <label>Email:</label>
                     <input
                         type="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}
+                        className="form-input"
                     />
                 </div>
-                <button type="submit" disabled={loading} style={{ width: '100%', padding: '10px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
-                    {loading ? 'Salvando...' : (id ? 'Atualizar Cliente' : 'Cadastrar Cliente')}
+                <button type="submit" className="btn btn-primary" disabled={submitLoading}>
+                    {submitLoading ? 'Salvando...' : (id ? 'Atualizar Cliente' : 'Cadastrar Cliente')}
                 </button>
                 <button
                     type="button"
                     onClick={() => navigate('/clients')}
-                    style={{ width: '100%', padding: '10px', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', marginTop: '10px' }}
+                    className="btn btn-secondary mt-2" // Adicionada classe mt-2 para margem
                 >
                     Cancelar
                 </button>

@@ -113,7 +113,6 @@ class ParcelaResponse(ParcelaBase):
     saldo_devedor: float
     data_pagamento_completo: Optional[date] = None
     juros_multa: float
-    # Adicionar a nova coluna aqui no schema de resposta da parcela
     juros_multa_anterior_aplicada: float = Field(0.00, description="Valor de juros/multa aplicado anteriormente, para cálculo preciso.")
     pagamentos: List[PagamentoResponseMin] = []
 
@@ -135,9 +134,8 @@ class PagamentoResponse(PagamentoCreate):
     class Config:
         from_attributes = True
 
-# NOVO: PagamentoResponse com detalhes da parcela e do carnê/cliente para relatórios (RF022)
+# PagamentoResponse com detalhes da parcela e do carnê/cliente para relatórios (RF022)
 class PagamentoReportItem(PagamentoResponse):
-    # Removido o 'parcela: ParcelaBase' direto, pois os campos necessários estão sendo mapeados individualmente
     cliente_nome: str
     carnes_descricao: Optional[str] = None
     parcela_numero: int
@@ -147,7 +145,7 @@ class PagamentoReportItem(PagamentoResponse):
         from_attributes = True
 
 
-# NOVO: Schema para o Relatório de Recebimentos (RF022)
+# Schema para o Relatório de Recebimentos (RF022)
 class ReceiptsReportResponse(BaseModel):
     start_date: date
     end_date: date
@@ -157,7 +155,7 @@ class ReceiptsReportResponse(BaseModel):
     class Config:
         from_attributes = True
 
-# NOVO: Schema para um item de dívida pendente para o relatório (RF023)
+# Schema para um item de dívida pendente para o relatório (RF023)
 class PendingDebtItem(BaseModel):
     id_parcela: int
     numero_parcela: int
@@ -174,7 +172,7 @@ class PendingDebtItem(BaseModel):
     class Config:
         from_attributes = True
 
-# NOVO: Schema para o Relatório de Dívidas por Cliente (RF023)
+# Schema para o Relatório de Dívidas por Cliente (RF023)
 class PendingDebtsReportResponse(BaseModel):
     cliente_id: int
     cliente_nome: str
@@ -197,6 +195,10 @@ class CarneBase(BaseModel):
     frequencia_pagamento: str # Ex: 'mensal', 'quinzenal', 'bimestral'
     status_carne: Optional[str] = "Ativo" # Padrão ao criar
     observacoes: Optional[str] = None
+    # NOVO: Valor de entrada e forma de pagamento da entrada
+    valor_entrada: float = Field(0.00, ge=0, description="Valor pago como entrada no carnê.")
+    forma_pagamento_entrada: Optional[str] = Field(None, description="Forma de pagamento do valor de entrada.")
+
 
 class CarneCreate(CarneBase):
     pass
