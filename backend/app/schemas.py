@@ -187,25 +187,27 @@ class PendingDebtsReportResponse(BaseModel):
 # --- Carne (Schemas) ---
 class CarneBase(BaseModel):
     id_cliente: int
+    data_venda: Optional[date] = None  # <<<< ALTERADO PARA OPCIONAL
     descricao: Optional[str] = None
-    valor_total_original: float = Field(..., gt=0, description="Valor total da dívida, deve ser maior que zero")
-    numero_parcelas: int = Field(..., gt=0, description="Número de parcelas, deve ser maior que zero")
-    valor_parcela_original: float = Field(..., gt=0, description="Valor de cada parcela, deve ser maior que zero")
+    valor_total_original: float = Field(..., gt=0)
+    numero_parcelas: int = Field(..., gt=0)
+    valor_parcela_original: float 
     data_primeiro_vencimento: date
-    frequencia_pagamento: str # Ex: 'mensal', 'quinzenal', 'bimestral'
-    status_carne: Optional[str] = "Ativo" # Padrão ao criar
+    frequencia_pagamento: str 
+    status_carne: Optional[str] = "Ativo" 
     observacoes: Optional[str] = None
-    # NOVO: Valor de entrada e forma de pagamento da entrada
-    valor_entrada: float = Field(0.00, ge=0, description="Valor pago como entrada no carnê.")
-    forma_pagamento_entrada: Optional[str] = Field(None, description="Forma de pagamento do valor de entrada.")
+    valor_entrada: float = Field(0.00, ge=0)
+    forma_pagamento_entrada: Optional[str] = None
 
 
 class CarneCreate(CarneBase):
+    # data_venda já é herdada de CarneBase e definida como obrigatória lá
     pass
 
 class CarneResponse(CarneBase):
     id_carne: int
-    data_criacao: datetime
+    data_criacao: datetime # Data de inserção no sistema
+    # data_venda é herdada de CarneBase
     cliente: ClientResponseMin
     parcelas: List[ParcelaResponse] = []
 
@@ -229,8 +231,12 @@ class DashboardSummaryResponse(BaseModel):
         from_attributes = True
 
 # --- Schemas Aninhados para Respostas Completas ---
-class ClientResponseFull(ClientResponse):
+class ClientResponseFull(ClientResponse): # Supondo que você tenha esta definição
+    data_cadastro: datetime # Adicionando de volta se estava no seu original
     carnes: List[CarneResponse] = []
+    class Config: from_attributes = True
 
-class UserResponseFull(UserResponse):
+
+class UserResponseFull(UserResponse): # Supondo que você tenha esta definição
     pagamentos: List[PagamentoResponseMin] = []
+    class Config: from_attributes = True

@@ -13,10 +13,7 @@ class Usuario(Base):
     ultimo_login = Column(DateTime)
     ativo = Column(Boolean, default=True)
     perfil = Column(String(50), default='admin', nullable=False)
-
-    # Adicione este relacionamento se ainda não estiver (para Pagamento)
     pagamentos = relationship("Pagamento", back_populates="usuario_registro")
-
 
 class Cliente(Base):
     __tablename__ = "cliente"
@@ -27,32 +24,29 @@ class Cliente(Base):
     telefone = Column(String(20))
     email = Column(String(255))
     data_cadastro = Column(DateTime, default=func.now())
-
-    # Adicione este relacionamento se ainda não estiver (para Carne)
     carnes = relationship("Carne", back_populates="cliente", cascade="all, delete-orphan")
-
 
 class Carne(Base):
     __tablename__ = "carne"
     id_carne = Column(Integer, primary_key=True, index=True)
     id_cliente = Column(Integer, ForeignKey("cliente.id_cliente"), nullable=False)
+    
+    data_venda = Column(Date, nullable=True) # <<<< CAMPO ADICIONADO
+
     descricao = Column(String(500))
     valor_total_original = Column(DECIMAL(10, 2), nullable=False)
     numero_parcelas = Column(Integer, nullable=False)
     valor_parcela_original = Column(DECIMAL(10, 2), nullable=False)
-    data_criacao = Column(DateTime, default=func.now())
+    data_criacao = Column(DateTime, default=func.now()) # Data de inserção no sistema
     data_primeiro_vencimento = Column(Date, nullable=False)
-    frequencia_pagamento = Column(String(50), nullable=False) # Ex: 'mensal', 'quinzenal'
-    status_carne = Column(String(50), default='Ativo', nullable=False) # Ex: 'Ativo', 'Quitado', 'Cancelado', 'Em Atraso'
+    frequencia_pagamento = Column(String(50), nullable=False)
+    status_carne = Column(String(50), default='Ativo', nullable=False)
     observacoes = Column(String)
-    valor_entrada = Column(DECIMAL(10, 2), default=0.00, nullable=False) # NOVO: Valor da entrada
-    forma_pagamento_entrada = Column(String(50), nullable=True) # NOVO: Forma de pagamento da entrada
+    valor_entrada = Column(DECIMAL(10, 2), default=0.00, nullable=False)
+    forma_pagamento_entrada = Column(String(50), nullable=True)
 
-    # Relacionamentos
-    # MODIFICADO: Adicione lazy='joined' para carregar o cliente junto com o carnê
-    cliente = relationship("Cliente", back_populates="carnes", lazy="joined") # <-- MODIFICADO
+    cliente = relationship("Cliente", back_populates="carnes", lazy="joined")
     parcelas = relationship("Parcela", back_populates="carne", cascade="all, delete-orphan")
-
 
 class Parcela(Base):
     __tablename__ = "parcela"
@@ -62,16 +56,13 @@ class Parcela(Base):
     valor_devido = Column(DECIMAL(10, 2), nullable=False)
     data_vencimento = Column(Date, nullable=False)
     valor_pago = Column(DECIMAL(10, 2), default=0.00, nullable=False)
-    saldo_devedor = Column(DECIMAL(10, 2), nullable=False) # Será calculado: valor_devido - valor_pago
+    saldo_devedor = Column(DECIMAL(10, 2), nullable=False)
     data_pagamento_completo = Column(Date)
-    status_parcela = Column(String(50), default='Pendente', nullable=False) # Ex: 'Pendente', 'Paga', 'Paga com Atraso', 'Atrasada', 'Parcialmente Paga'
+    status_parcela = Column(String(50), default='Pendente', nullable=False)
     juros_multa = Column(DECIMAL(10, 2), default=0.00, nullable=False)
-    juros_multa_anterior_aplicada = Column(DECIMAL(10, 2), default=0.00, nullable=False) # Armazena o valor de juros/multa aplicado no último cálculo.
-
-    # Relacionamentos
+    juros_multa_anterior_aplicada = Column(DECIMAL(10, 2), default=0.00, nullable=False)
     carne = relationship("Carne", back_populates="parcelas")
     pagamentos = relationship("Pagamento", back_populates="parcela", cascade="all, delete-orphan")
-
 
 class Pagamento(Base):
     __tablename__ = "pagamento"
@@ -79,10 +70,8 @@ class Pagamento(Base):
     id_parcela = Column(Integer, ForeignKey("parcela.id_parcela"), nullable=False)
     data_pagamento = Column(DateTime, default=func.now())
     valor_pago = Column(DECIMAL(10, 2), nullable=False)
-    forma_pagamento = Column(String(50), nullable=False) # Ex: 'Dinheiro', 'PIX', 'Cartão'
+    forma_pagamento = Column(String(50), nullable=False)
     observacoes = Column(String)
     id_usuario_registro = Column(Integer, ForeignKey("usuario.id_usuario"), nullable=False)
-
-    # Relacionamentos
     parcela = relationship("Parcela", back_populates="pagamentos")
     usuario_registro = relationship("Usuario", back_populates="pagamentos")

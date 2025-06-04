@@ -121,7 +121,7 @@ function App() {
                             }
                         />
                         <Route
-                            path="/reports/pending-debts-by-client/:client_id"
+                            path="/reports/pending-debts-by-client/:client_id?"
                             element={
                                 <PrivateRoute>
                                     <PendingDebtsReportPage />

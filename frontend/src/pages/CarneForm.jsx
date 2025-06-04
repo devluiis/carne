@@ -6,10 +6,10 @@ import LoadingSpinner from '../components/LoadingSpinner.jsx';
 
 function CarneForm() {
     const [idCliente, setIdCliente] = useState('');
+    const [dataVenda, setDataVenda] = useState(''); // <<<< NOVO ESTADO
     const [descricao, setDescricao] = useState('');
     const [valorTotalOriginal, setValorTotalOriginal] = useState('');
     const [numeroParcelas, setNumeroParcelas] = useState('');
-    // O estado valorParcelaOriginal foi removido, pois será calculado
     const [dataPrimeiroVencimento, setDataPrimeiroVencimento] = useState('');
     const [frequenciaPagamento, setFrequenciaPagamento] = useState('mensal');
     const [statusCarne, setStatusCarne] = useState('Ativo');
@@ -32,6 +32,7 @@ function CarneForm() {
             const response = await carnes.getById(carneId);
             const carne = response.data;
             setIdCliente(carne.id_cliente);
+            setDataVenda(carne.data_venda ? new Date(carne.data_venda + 'T00:00:00').toISOString().split('T')[0] : ''); // <<<< CARREGAR DATA DA VENDA
             setDescricao(carne.descricao || '');
             setValorTotalOriginal(String(carne.valor_total_original));
             setNumeroParcelas(String(carne.numero_parcelas));
@@ -45,7 +46,7 @@ function CarneForm() {
             const anyPayments = carne.parcelas?.some(p => p.pagamentos?.length > 0 || parseFloat(p.valor_pago) > 0);
             setHasPayments(anyPayments);
             if (anyPayments) {
-                setEditWarningMessage('Este carnê possui pagamentos. Apenas Descrição, Status e Observações podem ser alterados.');
+                setEditWarningMessage('Este carnê possui pagamentos. Apenas Descrição, Data da Venda, Status e Observações podem ser alterados.');
             }
         } catch (err) {
             console.error('Erro ao carregar carnê para edição:', err);
@@ -70,6 +71,8 @@ function CarneForm() {
                 if (id) {
                     fetchCarneParaEdicao(id).finally(() => setLoadingInitial(false));
                 } else {
+                    // Definir data da venda como hoje por padrão ao criar um novo carnê
+                    setDataVenda(new Date().toISOString().split('T')[0]);
                     setLoadingInitial(false);
                 }
             });
@@ -85,6 +88,10 @@ function CarneForm() {
 
         if (!idCliente) {
             setGlobalAlert({ message: 'Selecione um cliente.', type: 'warning' });
+            setSubmitLoading(false); return;
+        }
+        if (!dataVenda) { // <<<< VALIDAÇÃO PARA DATA DA VENDA
+            setGlobalAlert({ message: 'Data da venda é obrigatória.', type: 'warning' });
             setSubmitLoading(false); return;
         }
         if (isNaN(vTotal) || vTotal <= 0) {
@@ -107,6 +114,10 @@ function CarneForm() {
             setGlobalAlert({ message: 'Data do primeiro vencimento é obrigatória.', type: 'warning' });
             setSubmitLoading(false); return;
         }
+        if (new Date(dataPrimeiroVencimento) < new Date(dataVenda) && !id) { // Apenas na criação, na edição pode ser mais complexo
+             setGlobalAlert({ message: 'A data do primeiro vencimento não pode ser anterior à data da venda.', type: 'warning' });
+             setSubmitLoading(false); return;
+        }
         if (vEntrada > 0 && !formaPagamentoEntrada) {
             setGlobalAlert({ message: 'Forma de pagamento da entrada é obrigatória se houver valor de entrada.', type: 'warning' });
             setSubmitLoading(false); return;
@@ -123,6 +134,7 @@ function CarneForm() {
 
         const carneData = {
             id_cliente: parseInt(idCliente),
+            data_venda: dataVenda, // <<<< ENVIAR DATA DA VENDA
             descricao,
             valor_total_original: vTotal,
             numero_parcelas: nParcelas,
@@ -136,19 +148,17 @@ function CarneForm() {
         };
 
         try {
-            if (id) { // Editando um carnê existente
+            if (id) {
                 await carnes.update(id, carneData);
                 setGlobalAlert({ message: 'Carnê atualizado com sucesso!', type: 'success' });
-                navigate(`/carnes/details/${id}`); // Navega para os detalhes do carnê editado
-            } else { // Criando um novo carnê
+                navigate(`/carnes/details/${id}`);
+            } else {
                 const response = await carnes.create(carneData);
                 setGlobalAlert({ message: 'Carnê cadastrado com sucesso!', type: 'success' });
                 const newCarneId = response.data.id_carne;
                 if (newCarneId) {
-                    navigate(`/carnes/details/${newCarneId}`); // Navega para os detalhes do novo carnê
+                    navigate(`/carnes/details/${newCarneId}`);
                 } else {
-                    console.error("ID do novo carnê não encontrado na resposta da API.");
-                    setGlobalAlert({ message: 'ID do novo carnê não encontrado. Redirecionando para a lista.', type: 'warning' });
                     navigate('/carnes'); 
                 }
             }
@@ -172,20 +182,16 @@ function CarneForm() {
             <form onSubmit={handleSubmit}>
                 <div className="form-group">
                     <label>Cliente:</label>
-                    <select
-                        value={idCliente}
-                        onChange={(e) => setIdCliente(e.target.value)}
-                        required
-                        className="form-select"
-                        disabled={!!id || !!clientIdFromUrl || hasPayments}
-                    >
+                    <select value={idCliente} onChange={(e) => setIdCliente(e.target.value)} required className="form-select" disabled={!!id || !!clientIdFromUrl || (id && hasPayments) }>
                         <option value="">Selecione um Cliente</option>
-                        {clientOptions.map(client => (
-                            <option key={client.id_cliente} value={client.id_cliente}>
-                                {client.nome} ({client.cpf_cnpj})
-                            </option>
-                        ))}
+                        {clientOptions.map(client => (<option key={client.id_cliente} value={client.id_cliente}>{client.nome} ({client.cpf_cnpj})</option>))}
                     </select>
+                </div>
+
+                {/* NOVO CAMPO "DATA DA VENDA" */}
+                <div className="form-group">
+                    <label>Data da Venda/Emissão do Carnê:</label>
+                    <input type="date" value={dataVenda} onChange={(e) => setDataVenda(e.target.value)} required className="form-input" disabled={id && hasPayments}/>
                 </div>
 
                 <div className="form-group">
@@ -195,18 +201,18 @@ function CarneForm() {
 
                 <div className="form-group">
                     <label>Valor Total Original da Dívida:</label>
-                    <input type="number" step="0.01" value={valorTotalOriginal} onChange={(e) => setValorTotalOriginal(e.target.value)} required className="form-input" disabled={hasPayments} />
+                    <input type="number" step="0.01" value={valorTotalOriginal} onChange={(e) => setValorTotalOriginal(e.target.value)} required className="form-input" disabled={id && hasPayments} />
                 </div>
 
                 <div className="form-group">
                     <label>Valor de Entrada (Opcional):</label>
-                    <input type="number" step="0.01" value={valorEntrada} onChange={(e) => setValorEntrada(e.target.value)} className="form-input" min="0" disabled={hasPayments} />
+                    <input type="number" step="0.01" value={valorEntrada} onChange={(e) => setValorEntrada(e.target.value)} className="form-input" min="0" disabled={id && hasPayments} />
                 </div>
 
                 {parseFloat(valorEntrada) > 0 && (
                     <div className="form-group">
                         <label>Forma de Pagamento da Entrada:</label>
-                        <select value={formaPagamentoEntrada} onChange={(e) => setFormaPagamentoEntrada(e.target.value)} required className="form-select" disabled={hasPayments}>
+                        <select value={formaPagamentoEntrada} onChange={(e) => setFormaPagamentoEntrada(e.target.value)} required={parseFloat(valorEntrada) > 0} className="form-select" disabled={id && hasPayments}>
                             <option value="">Selecione...</option>
                             <option value="Dinheiro">Dinheiro</option>
                             <option value="PIX">PIX</option>
@@ -218,19 +224,17 @@ function CarneForm() {
 
                 <div className="form-group">
                     <label>Número de Parcelas:</label>
-                    <input type="number" value={numeroParcelas} onChange={(e) => setNumeroParcelas(e.target.value)} required className="form-input" disabled={hasPayments} min="1"/>
+                    <input type="number" value={numeroParcelas} onChange={(e) => setNumeroParcelas(e.target.value)} required className="form-input" disabled={id && hasPayments} min="1"/>
                 </div>
-
-                {/* O CAMPO "VALOR DA PARCELA ORIGINAL" FOI REMOVIDO DAQUI */}
 
                 <div className="form-group">
                     <label>Data do Primeiro Vencimento:</label>
-                    <input type="date" value={dataPrimeiroVencimento} onChange={(e) => setDataPrimeiroVencimento(e.target.value)} required className="form-input" disabled={hasPayments} />
+                    <input type="date" value={dataPrimeiroVencimento} onChange={(e) => setDataPrimeiroVencimento(e.target.value)} required className="form-input" disabled={id && hasPayments} />
                 </div>
 
                 <div className="form-group">
                     <label>Frequência de Pagamento:</label>
-                    <select value={frequenciaPagamento} onChange={(e) => setFrequenciaPagamento(e.target.value)} required className="form-select" disabled={hasPayments}>
+                    <select value={frequenciaPagamento} onChange={(e) => setFrequenciaPagamento(e.target.value)} required className="form-select" disabled={id && hasPayments}>
                         <option value="mensal">Mensal</option>
                         <option value="quinzenal">Quinzenal</option>
                         <option value="trimestral">Trimestral</option>
@@ -242,7 +246,6 @@ function CarneForm() {
                     <select value={statusCarne} onChange={(e) => setStatusCarne(e.target.value)} required className="form-select">
                         <option value="Ativo">Ativo</option>
                         <option value="Cancelado">Cancelado</option>
-                        {/* Status como Quitado ou Em Atraso devem ser automáticos */}
                     </select>
                 </div>
 
