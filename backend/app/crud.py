@@ -2,11 +2,11 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import IntegrityError
 from app import models, schemas # Garanta que models.py e schemas.py já foram atualizados com data_venda
 from fastapi import HTTPException, status
-from datetime import date, timedelta, datetime
+from datetime import date, timedelta, datetime # <<< GARANTA QUE datetime ESTÁ IMPORTADO
 from decimal import Decimal
 from typing import Optional
 from app.config import MULTA_ATRASO_PERCENTUAL, JUROS_MORA_PERCENTUAL_AO_MES
-from sqlalchemy import func 
+from sqlalchemy import func
 
 
 # --- Funções Auxiliares (RF017/RF018) ---
@@ -620,13 +620,18 @@ def create_pagamento(db: Session, pagamento: schemas.PagamentoCreate, usuario_id
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, 
                             detail=f"Valor pago (R${valor_pago_decimal:.2f}) excede saldo devedor (R${db_parcela.saldo_devedor:.2f}).")
 
-    db_pagamento_obj = models.Pagamento( # Renomeado para evitar conflito
+    # >>>>> INÍCIO DA MODIFICAÇÃO <<<<<
+    data_atual_pagamento = datetime.utcnow() # Usar UTC para consistência ou datetime.now() para fuso local do servidor
+
+    db_pagamento_obj = models.Pagamento(
         id_parcela=pagamento.id_parcela,
+        data_pagamento=data_atual_pagamento,  # Definindo explicitamente a data do pagamento
         valor_pago=valor_pago_decimal,
         forma_pagamento=pagamento.forma_pagamento,
         observacoes=pagamento.observacoes,
         id_usuario_registro=usuario_id
     )
+    # >>>>> FIM DA MODIFICAÇÃO <<<<<
     db.add(db_pagamento_obj)
     
     db_parcela.valor_pago += valor_pago_decimal
@@ -637,8 +642,10 @@ def create_pagamento(db: Session, pagamento: schemas.PagamentoCreate, usuario_id
 
     if db_parcela.saldo_devedor <= Decimal('0.00'):
         db_parcela.status_parcela = 'Paga'
-        db_parcela.data_pagamento_completo = datetime.now().date() # Usa a data atual do pagamento
-        if db_pagamento_obj.data_pagamento.date() > db_parcela.data_vencimento:
+        # db_pagamento_obj.data_pagamento já foi definida acima.
+        # Se você quiser que a data_pagamento_completo da parcela seja a data do último pagamento:
+        db_parcela.data_pagamento_completo = db_pagamento_obj.data_pagamento.date() 
+        if db_pagamento_obj.data_pagamento.date() > db_parcela.data_vencimento: # Comparação corrigida
             db_parcela.status_parcela = 'Paga com Atraso'
         # Se quitado, zera juros pendentes, mas mantém o que foi aplicado para o cálculo do saldo
         # db_parcela.juros_multa = Decimal('0.00') # Juros pagos são parte do valor_pago

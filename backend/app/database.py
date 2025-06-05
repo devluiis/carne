@@ -3,6 +3,8 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from app.config import DATABASE_URL
 
+print(f"DEBUG CRÍTICO [app.database.py]: DATABASE_URL para create_engine: '{DATABASE_URL}'")
+
 # Crie o engine do SQLAlchemy para o PostgreSQL
 engine = create_engine(DATABASE_URL)
 
