@@ -1,0 +1,9 @@
+# Python
+__pycache__/
+*.pyc
+*.pyd
+*.pyo
+*.ipynb_checkpoints
+.pytest_cache/
+venv/
+.env
