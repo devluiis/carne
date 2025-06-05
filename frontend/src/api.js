@@ -3,12 +3,11 @@ import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
-// MODIFICAÇÃO AQUI: Adicionado "export" para que a instância seja exportável
+// Instância do Axios exportada para uso direto se necessário
 export const api = axios.create({
     baseURL: API_BASE_URL,
 });
 
-// Interceptor para adicionar o token JWT em cada requisição
 api.interceptors.request.use(
     (config) => {
         const token = localStorage.getItem('token');
@@ -22,16 +21,14 @@ api.interceptors.request.use(
     }
 );
 
+// Rotas de autenticação (geralmente na raiz, sem /api global no main.py)
 export const auth = {
     login: (email, senha) => {
         const formData = new URLSearchParams();
         formData.append('username', email);
         formData.append('password', senha);
-
-        return api.post('/token', formData, { // Usa a 'api' local que agora é exportada
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
-            }
+        return api.post('/token', formData, { 
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
         });
     },
     register: (userData) => api.post('/register', userData),
@@ -41,10 +38,9 @@ export const auth = {
     updateProfile: (userData) => api.put('/me', userData),
 };
 
+// Outras rotas que NÃO usam /api globalmente no seu main.py
 export const clients = {
-    getAll: (searchQuery = null) => {
-        return api.get('/clients/', { params: searchQuery ? { search_query: searchQuery } : {} });
-    },
+    getAll: (searchQuery = null) => api.get('/clients/', { params: searchQuery ? { search_query: searchQuery } : {} }),
     getById: (id) => api.get(`/clients/${id}`),
     getSummary: (id) => api.get(`/clients/${id}/summary`),
     create: (clientData) => api.post('/clients/', clientData),
@@ -60,8 +56,7 @@ export const carnes = {
         if (dataVencimentoInicio) params.data_vencimento_inicio = dataVencimentoInicio;
         if (dataVencimentoFim) params.data_vencimento_fim = dataVencimentoFim;
         if (searchQuery) params.search_query = searchQuery;
-
-        return api.get(`/carnes/`, { params: params });
+        return api.get(`/carnes/`, { params });
     },
     getById: (id) => api.get(`/carnes/${id}`),
     create: (carneData) => api.post(`/carnes/`, carneData),
@@ -86,13 +81,25 @@ export const pagamentos = {
 
 export const reports = {
     getDashboardSummary: () => api.get(`/reports/dashboard/summary`),
-    getReceiptsReport: (startDate, endDate) => {
-        return api.get(`/reports/receipts`, {
-            params: {
-                start_date: startDate,
-                end_date: endDate
-            }
-        });
-    },
+    getReceiptsReport: (startDate, endDate) => api.get(`/reports/receipts`, { params: { start_date: startDate, end_date: endDate } }),
     getPendingDebtsReportByClient: (clientId) => api.get(`/reports/pending-debts-by-client/${clientId}`),
+};
+
+// Para Produtos, o seu main.py inclui produtos_router com prefix="/api"
+// e o produtos_router.py tem prefix="/produtos"
+// então o caminho completo é /api/produtos/
+const PRODUTOS_API_PREFIX = "/api"; 
+
+export const produtos = { // <<<< ESTA É A EXPORTAÇÃO QUE ESTAVA FALTANDO OU INCORRETA
+    getAll: (skip = 0, limit = 100, searchQuery = null, categoria = null, marca = null) => {
+        const params = { skip, limit };
+        if (searchQuery) params.search_query = searchQuery;
+        if (categoria) params.categoria = categoria;
+        if (marca) params.marca = marca;
+        return api.get(`${PRODUTOS_API_PREFIX}/produtos/`, { params });
+    },
+    getById: (id) => api.get(`${PRODUTOS_API_PREFIX}/produtos/${id}`),
+    create: (produtoData) => api.post(`${PRODUTOS_API_PREFIX}/produtos/`, produtoData),
+    update: (id, produtoData) => api.put(`${PRODUTOS_API_PREFIX}/produtos/${id}`, produtoData),
+    delete: (id) => api.delete(`${PRODUTOS_API_PREFIX}/produtos/${id}`),
 };

@@ -4,7 +4,7 @@ from app import models, schemas # Garanta que models.py e schemas.py já foram a
 from fastapi import HTTPException, status
 from datetime import date, timedelta, datetime
 from decimal import Decimal
-from typing import Optional
+from typing import Optional, List
 from app.config import MULTA_ATRASO_PERCENTUAL, JUROS_MORA_PERCENTUAL_AO_MES
 from sqlalchemy import func 
 
@@ -59,6 +59,99 @@ def calculate_next_due_date(current_date: date, frequency: str) -> date:
 def calculate_parcela_saldo_devedor(parcela_valor_devido: Decimal, pagos: Decimal, juros: Decimal) -> Decimal:
     return (parcela_valor_devido + juros) - pagos
 
+# --- Operações de Produto ---
+
+def create_produto(db: Session, produto: schemas.ProdutoCreate) -> models.Produto:
+    db_produto = models.Produto(
+        nome=produto.nome,
+        descricao=produto.descricao,
+        categoria=produto.categoria,
+        marca=produto.marca,
+        imei=produto.imei,
+        codigo_sku=produto.codigo_sku,
+        preco_venda=produto.preco_venda,
+        preco_custo=produto.preco_custo,
+        estoque_atual=produto.estoque_atual if produto.estoque_atual is not None else 0,
+        unidade_medida=produto.unidade_medida if produto.unidade_medida else "unidade"
+    )
+    try:
+        db.add(db_produto)
+        db.commit()
+        db.refresh(db_produto)
+        return db_produto
+    except IntegrityError as e:
+        db.rollback()
+        # Verifica se o erro é devido a uma violação de unicidade (IMEI ou SKU)
+        # A mensagem de erro exata pode variar dependendo do driver do banco de dados (psycopg2, etc.)
+        error_info = str(e.orig).lower()
+        if "duplicate key value violates unique constraint" in error_info:
+            if "produto_imei_key" in error_info or (db_produto.imei and f"({db_produto.imei})" in error_info):
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"IMEI '{db_produto.imei}' já cadastrado.")
+            if "produto_codigo_sku_key" in error_info or (db_produto.codigo_sku and f"({db_produto.codigo_sku})" in error_info):
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Código SKU '{db_produto.codigo_sku}' já cadastrado.")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Erro ao criar produto. Verifique os dados.")
+
+
+def get_produto(db: Session, produto_id: int) -> Optional[models.Produto]:
+    return db.query(models.Produto).filter(models.Produto.id_produto == produto_id).first()
+
+def get_produtos(
+    db: Session, 
+    skip: int = 0, 
+    limit: int = 100, 
+    search_query: Optional[str] = None,
+    categoria: Optional[str] = None,
+    marca: Optional[str] = None
+) -> List[models.Produto]:
+    query = db.query(models.Produto)
+    if search_query:
+        query = query.filter(models.Produto.nome.ilike(f"%{search_query}%"))
+    if categoria:
+        query = query.filter(models.Produto.categoria.ilike(f"%{categoria}%"))
+    if marca:
+        query = query.filter(models.Produto.marca.ilike(f"%{marca}%"))
+    return query.order_by(models.Produto.nome).offset(skip).limit(limit).all()
+
+def update_produto(db: Session, produto_id: int, produto_update: schemas.ProdutoUpdate) -> Optional[models.Produto]:
+    db_produto = get_produto(db, produto_id)
+    if not db_produto:
+        return None
+    
+    update_data = produto_update.model_dump(exclude_unset=True)
+    
+    for key, value in update_data.items():
+        # Converte para Decimal se for preco_venda ou preco_custo e não for None
+        if key in ['preco_venda', 'preco_custo'] and value is not None:
+            setattr(db_produto, key, Decimal(str(value)))
+        else:
+            setattr(db_produto, key, value)
+            
+    try:
+        db.add(db_produto)
+        db.commit()
+        db.refresh(db_produto)
+        return db_produto
+    except IntegrityError as e:
+        db.rollback()
+        error_info = str(e.orig).lower()
+        if "duplicate key value violates unique constraint" in error_info:
+            if "produto_imei_key" in error_info or (db_produto.imei and f"({db_produto.imei})" in error_info):
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"IMEI '{db_produto.imei}' já cadastrado para outro produto.")
+            if "produto_codigo_sku_key" in error_info or (db_produto.codigo_sku and f"({db_produto.codigo_sku})" in error_info):
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Código SKU '{db_produto.codigo_sku}' já cadastrado para outro produto.")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Erro ao atualizar produto. Verifique os dados.")
+
+
+def delete_produto(db: Session, produto_id: int) -> Optional[models.Produto]:
+    db_produto = get_produto(db, produto_id)
+    if not db_produto:
+        return None
+    # Adicionar aqui lógica de verificação se o produto está associado a algum carnê/venda antes de excluir, se necessário.
+    # Ex: if db.query(models.ItemVenda).filter(models.ItemVenda.id_produto == produto_id).first():
+    #         raise HTTPException(status_code=400, detail="Produto não pode ser excluído pois está associado a vendas.")
+    db.delete(db_produto)
+    db.commit()
+    return db_produto
 
 # --- Operações de Usuário ---
 def get_user_by_email(db: Session, email: str):

@@ -7,86 +7,89 @@ export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
-    const [loading, setLoading] = useState(true);
-    // O token é pego do localStorage no início e atualizado no login/logout
-    // A principal fonte de verdade para as chamadas API é o interceptor em api.js
+    const [loading, setLoading] = useState(true); // Inicia como true para o fetchUser inicial
+    const [token, setToken] = useState(localStorage.getItem('token')); // Inicializa token do localStorage
 
-    // Função para buscar dados do usuário se um token existir
     const fetchUser = useCallback(async () => {
-        const tokenFromStorage = localStorage.getItem('token');
-        if (!tokenFromStorage) {
+        const currentToken = localStorage.getItem('token'); // Lê o token mais recente
+        if (!currentToken) {
             setUser(null);
+            setToken(null); // Garante que o estado do token seja limpo
             setLoading(false);
             return;
         }
         
-        setLoading(true); // Garante que o loading seja true ao iniciar a busca
+        // Não precisa de setLoading(true) aqui se o loading inicial já é true
+        // e se o login já lida com seu próprio loading.
         try {
-            // Assume que api.js tem o interceptor que usa o token do localStorage
-            const response = await auth.getMe();
+            const response = await auth.getMe(); // auth.getMe() usará o token via interceptor
             setUser(response.data);
-            // Atualiza o usuário no localStorage também para consistência
-            localStorage.setItem('user', JSON.stringify(response.data));
+            localStorage.setItem('user', JSON.stringify(response.data)); // Mantém user no localStorage
         } catch (error) {
-            console.error('Erro ao buscar usuário (sessão pode ter expirado):', error);
-            // Limpa tudo se o token for inválido ou houver erro
+            console.error('Erro ao buscar usuário (sessão pode ter expirado ou token inválido):', error);
             localStorage.removeItem('token');
             localStorage.removeItem('user');
+            setToken(null);
             setUser(null);
         } finally {
-            setLoading(false);
+            setLoading(false); // Importante para liberar o PrivateRoute
         }
-    }, []); // useCallback sem dependências, pois tokenFromStorage é lido dentro
+    }, []); // Removida a dependência 'token' daqui para evitar loops se setToken for chamado dentro
 
     useEffect(() => {
-        // Tenta carregar o usuário do localStorage para uma UI mais rápida,
-        // mas fetchUser validará e buscará o mais recente.
+        // Ao montar, tenta carregar usuário do localStorage para UI rápida,
+        // mas fetchUser validará com o backend.
         const storedUser = localStorage.getItem('user');
         if (storedUser) {
             try {
                 setUser(JSON.parse(storedUser));
             } catch (e) {
-                console.error("Erro ao parsear usuário do localStorage:", e);
-                localStorage.removeItem('user'); // Remove dado inválido
+                localStorage.removeItem('user');
             }
         }
-        fetchUser(); // Sempre busca para validar/atualizar
+        fetchUser(); // Valida a sessão e busca dados do usuário atual
     }, [fetchUser]);
 
+
     const login = async (email, password) => {
-        setLoading(true);
+        setLoading(true); // Inicia o processo de login
         try {
             const response = await auth.login(email, password);
-            const { access_token, user_data } = response.data;
-            localStorage.setItem('token', access_token);
-            localStorage.setItem('user', JSON.stringify(user_data));
-            setUser(user_data);
-            setLoading(false); // Define loading como false após sucesso
-            return user_data; // Retorna user_data para uso opcional na página de login
+            const newToken = response.data.access_token;
+            const userData = response.data.user_data;
+
+            localStorage.setItem('token', newToken);
+            localStorage.setItem('user', JSON.stringify(userData));
+            
+            setToken(newToken); // Atualiza o estado do token
+            setUser(userData);  // Atualiza o estado do usuário
+            setLoading(false);  // <<<< ADICIONADO: Finaliza o loading após sucesso
+            return true;        // Indica sucesso
         } catch (error) {
-            // Limpa em caso de falha no login
+            console.error('Erro no login:', error);
+            // Limpa tudo em caso de falha
             localStorage.removeItem('token');
             localStorage.removeItem('user');
+            setToken(null);
             setUser(null);
-            setLoading(false);
-            throw error; // Propaga o erro para ser tratado na página de login
+            setLoading(false); // Finaliza o loading em caso de erro
+            throw error; 
         }
     };
 
     const logout = () => {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
+        setToken(null);
         setUser(null);
-        // Redirecionamento pode ser feito no componente que chama o logout, se necessário
+        // O redirecionamento para '/' geralmente é feito no componente que chama logout
+        // ou por um useEffect que monitora 'user' no App.jsx ou PrivateRoute
     };
 
-    // Função para registrar usuário comum (atendente)
     const register = async (userData) => {
-        // setLoading(true); // Opcional: setLoading aqui também
+        // setLoading(true); // Opcional, depende se você quer um loading global para registro
         try {
-            // A API /register deve criar o usuário
-            await auth.register(userData); 
-            // Não faz login automático após registro aqui, usuário precisará logar
+            await auth.register(userData);
             // setLoading(false);
             return true;
         } catch (error) {
@@ -96,65 +99,57 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
-    // Função para admin registrar outro admin
     const registerAdmin = async (userData) => {
         // setLoading(true);
         try {
-            // Assume que auth.registerAdmin existe em api.js e está configurado no backend
-            const response = await auth.registerAdmin(userData); 
+            const response = await auth.registerAdmin(userData);
             // setLoading(false);
-            return response; // Pode retornar dados do usuário criado, se a API fizer isso
+            return response;
         } catch (error) {
-            console.error('Erro no registro de admin:', error);
-            // setLoading(false);
+            // ... (tratamento de erro)
             throw error;
         }
     };
 
-    // Função para admin registrar atendente
     const registerAtendenteByAdmin = async (userData) => {
         // setLoading(true);
         try {
-            // Assume que auth.registerAtendenteByAdmin existe em api.js
-            // ou que você tem uma rota específica no backend para isso.
-            // Se a rota de registro é a mesma, mas protegida,
-            // a chamada API pode ser a mesma `auth.register`,
-            // mas o token do admin no header permitirá a criação.
-            // Baseado no seu código anterior, você tinha `auth.registerAtendenteByAdmin`
-            // O ideal é que a API chamada seja a mesma de register, e o backend valide o perfil do chamador
-            // Por ora, mantenho a chamada como você tinha, assumindo que exista no api.js
-            const response = await auth.register({ ...userData, perfil: 'atendente' }); // Ou uma chamada API específica
+            const response = await auth.registerAtendenteByAdmin(userData); // Usa a função correta do api.js
             // setLoading(false);
             return response;
         } catch (error) {
-            console.error('Erro no registro de atendente por admin:', error);
-            // setLoading(false);
+            // ... (tratamento de erro)
             throw error;
         }
     };
     
-    // Função para atualizar dados do usuário no contexto (usado pelo ProfilePage)
-    const updateUser = (newUserData) => {
-        setUser(currentUser => ({ ...currentUser, ...newUserData }));
-        // Atualiza também no localStorage para persistência entre reloads da UI
-        localStorage.setItem('user', JSON.stringify({ ...user, ...newUserData }));
+    // A função updateUser que discutimos para o ProfilePage
+     const updateUser = (newUserData) => {
+        const updatedUser = { ...user, ...newUserData };
+        setUser(updatedUser);
+        localStorage.setItem('user', JSON.stringify(updatedUser));
     };
 
     const value = {
         user,
+        token, // Exportando o token se algum componente precisar dele diretamente
         loading,
         login,
         logout,
         register,
         registerAdmin,
         registerAtendenteByAdmin,
-        updateUser // Exportando a nova função
+        updateUser 
     };
 
     return (
         <AuthContext.Provider value={value}>
-            {!loading && children} {/* Opcional: Renderiza children apenas quando o loading inicial terminar */}
-            {/* Se preferir mostrar o app com um spinner de tela cheia, mantenha apenas {children} e trate o loading nas páginas */}
+            {/* Removido !loading && children para deixar o PrivateRoute/AdminRoute gerenciar o spinner
+                se o loading inicial ainda não terminou. Se children for null/undefined,
+                o React não renderiza nada, o que pode ser uma tela em branco.
+                Garantir que o <App /> tenha algo para renderizar é importante.
+                No entanto, o <PrivateRoute> já tem um spinner. */}
+            {children}
         </AuthContext.Provider>
     );
 };

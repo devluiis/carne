@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.database import Base, engine
 from app.routers import auth_router, clients_router, carnes_router, reports_router # <<< ADICIONE reports_router AQUI
 from app.models import Usuario
+from app.routers import auth_router, clients_router, carnes_router, reports_router, produtos_router # <<<< ADICIONE produtos_router
 
 # Cria as tabelas no banco de dados
 def create_db_tables():
@@ -33,6 +34,7 @@ app.include_router(auth_router.router, tags=["Autenticação"])
 app.include_router(clients_router.router, tags=["Clientes"])
 app.include_router(carnes_router.router, tags=["Carnês"])
 app.include_router(reports_router.router, tags=["Relatórios e Dashboard"]) # <<< ADICIONE ESTA LINHA
+app.include_router(produtos_router.router, prefix="/api", tags=["Produtos"]) # <<<< ADICIONE ESTA LINHA
 
 
 @app.on_event("startup")

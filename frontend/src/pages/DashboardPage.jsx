@@ -1,24 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react'; // Adicionado useCallback
 import { reports } from '../api';
 import { useAuth } from '../components/AuthProvider.jsx';
 import { useGlobalAlert } from '../App.jsx';
+import LoadingSpinner from '../components/LoadingSpinner.jsx'; // Importar o spinner
 
 function DashboardPage() {
     const [summaryData, setSummaryData] = useState(null);
     const [loading, setLoading] = useState(true);
-    const { user } = useAuth();
+    const { user } = useAuth(); // user é usado para disparar o useEffect
     const { setGlobalAlert } = useGlobalAlert();
 
-    useEffect(() => {
-        if (user) {
-            fetchDashboardSummary();
-        } else {
-            setLoading(false);
-            setGlobalAlert({ message: 'Faça login para ver o dashboard.', type: 'error' });
-        }
-    }, [user]);
-
-    const fetchDashboardSummary = async () => {
+    const fetchDashboardSummary = useCallback(async () => {
         try {
             setLoading(true);
             const response = await reports.getDashboardSummary();
@@ -27,96 +19,108 @@ function DashboardPage() {
             console.error('Erro ao carregar dados do dashboard:', err);
             const errorMessage = `Falha ao carregar dashboard: ${err.response?.data?.detail || err.message}`;
             setGlobalAlert({ message: errorMessage, type: 'error' });
+            setSummaryData(null); // Garante que não tentará renderizar dados antigos/inválidos
         } finally {
             setLoading(false);
         }
-    };
+    }, [setGlobalAlert]); // Dependência do useCallback
 
-    if (loading) return <p style={loadingStyle}>Carregando Dashboard...</p>;
-    if (!summaryData) return <p style={noDataStyle}>Nenhum dado de dashboard disponível.</p>;
+    useEffect(() => {
+        if (user) { // Apenas busca se o usuário estiver logado/carregado
+            fetchDashboardSummary();
+        } else if (!user && !useAuth().loading) { // Se não há usuário e AuthProvider não está carregando
+            setLoading(false); // Para o loading do dashboard
+            // O PrivateRoute já deve ter redirecionado, mas por segurança:
+            // setGlobalAlert({ message: 'Sessão encerrada. Faça login para ver o dashboard.', type: 'info' });
+        }
+    }, [user, fetchDashboardSummary, useAuth().loading]); // Adicionada dependência loading do AuthProvider
 
+    if (loading) { // Loading do DashboardPage
+        return <LoadingSpinner message="Carregando Dashboard..." />;
+    }
+
+    if (!summaryData) { // Se summaryData for null (após erro no fetch ou antes do primeiro fetch bem-sucedido)
+        return (
+            <div className="form-container text-center">
+                <h2>Dashboard</h2>
+                <p>Não foi possível carregar os dados do dashboard ou não há dados disponíveis.</p>
+                <button onClick={fetchDashboardSummary} className="btn btn-primary" style={{width: 'auto'}}>
+                    Tentar Novamente
+                </button>
+            </div>
+        );
+    }
+
+    // Se summaryData existir, renderiza o dashboard
     return (
-        <div style={containerStyle}>
-            <h2 style={headerStyle}>Detalhes do Dashboard</h2> {/* Alterado de "Dashboard Resumido" para "Detalhes do Dashboard" para ser mais descritivo */}
-            <div style={gridContainerStyle}> {/* Este é o contêiner que precisa do estilo grid */}
-                <div style={cardStyle}>
+        <div className="form-container" style={{maxWidth: '1200px'}}> {/* Usando classe do index.css */}
+            <h2 className="text-center" style={{marginBottom: '30px'}}>Painel de Controle</h2>
+            <div style={{ 
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+                gap: '20px'
+            }}>
+                {/* Card Total de Clientes */}
+                <div className="card-dashboard">
                     <h3>Total de Clientes</h3>
-                    <p style={cardValueStyle}>{summaryData.total_clientes}</p>
+                    <p className="card-value">{summaryData.total_clientes}</p>
                 </div>
-
-                <div style={cardStyle}>
+                {/* Card Total de Carnês */}
+                <div className="card-dashboard">
                     <h3>Total de Carnês</h3>
-                    <p style={cardValueStyle}>{summaryData.total_carnes}</p>
+                    <p className="card-value">{summaryData.total_carnes}</p>
                 </div>
-
-                <div style={cardStyle}>
+                {/* Card Carnês Ativos */}
+                <div className="card-dashboard">
                     <h3>Carnês Ativos</h3>
-                    <p style={cardValueStyleGreen}>{summaryData.total_carnes_ativos}</p>
+                    <p className="card-value card-value-green">{summaryData.total_carnes_ativos}</p>
                 </div>
-
-                <div style={cardStyle}>
+                {/* Card Carnês Quitados */}
+                <div className="card-dashboard">
                     <h3>Carnês Quitados</h3>
-                    <p style={cardValueStyleBlue}>{summaryData.total_carnes_quitados}</p>
+                    <p className="card-value card-value-blue">{summaryData.total_carnes_quitados}</p>
                 </div>
-
-                <div style={cardStyle}>
+                {/* Card Carnês em Atraso */}
+                <div className="card-dashboard">
                     <h3>Carnês em Atraso</h3>
-                    <p style={cardValueStyleRed}>{summaryData.total_carnes_atrasados}</p>
+                    <p className="card-value card-value-red">{summaryData.total_carnes_atrasados}</p>
                 </div>
-                
-                <div style={cardStyle}>
-                    <h3>Dívida Geral em Aberto</h3>
-                    <p style={cardValueStyleRed}>R$ {summaryData.total_divida_geral_aberta.toFixed(2)}</p>
+                {/* Card Dívida Geral em Aberto */}
+                <div className="card-dashboard">
+                    <h3>Dívida Aberta (Total)</h3>
+                    <p className="card-value card-value-red">R$ {Number(summaryData.total_divida_geral_aberta).toFixed(2)}</p>
                 </div>
-
-                <div style={cardStyle}>
+                {/* Card Recebido Hoje */}
+                <div className="card-dashboard">
                     <h3>Recebido Hoje</h3>
-                    <p style={cardValueStyleGreen}>R$ {summaryData.total_recebido_hoje.toFixed(2)}</p>
+                    <p className="card-value card-value-green">R$ {Number(summaryData.total_recebido_hoje).toFixed(2)}</p>
                 </div>
-
-                <div style={cardStyle}>
+                {/* Card Recebido no Mês */}
+                <div className="card-dashboard">
                     <h3>Recebido no Mês</h3>
-                    <p style={cardValueStyleGreen}>R$ {summaryData.total_recebido_mes.toFixed(2)}</p>
+                    <p className="card-value card-value-green">R$ {Number(summaryData.total_recebido_mes).toFixed(2)}</p>
                 </div>
-
-                <div style={cardStyle}>
-                    <h3>Parcelas a Vencer (7 dias)</h3>
-                    <p style={cardValueStyleBlue}>{summaryData.parcelas_a_vencer_7dias}</p>
+                {/* Card Parcelas a Vencer (7 dias) */}
+                <div className="card-dashboard">
+                    <h3>Parcelas a Vencer (7d)</h3>
+                    <p className="card-value card-value-blue">{summaryData.parcelas_a_vencer_7dias}</p>
                 </div>
-
-                <div style={cardStyle}>
+                {/* Card Parcelas Atrasadas */}
+                <div className="card-dashboard">
                     <h3>Parcelas Atrasadas</h3>
-                    <p style={cardValueStyleRed}>{summaryData.parcelas_atrasadas}</p>
+                    <p className="card-value card-value-red">{summaryData.parcelas_atrasadas}</p>
                 </div>
             </div>
         </div>
     );
 }
 
-// Estilos
-const containerStyle = { maxWidth: '1200px', margin: '20px auto', padding: '20px', border: '1px solid #eee', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', backgroundColor: 'white' };
-const headerStyle = { textAlign: 'center', marginBottom: '30px', color: '#333' };
-const gridContainerStyle = {
-    display: 'grid', // A chave para o layout de grade
-    gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', // Colunas auto-ajustáveis, mínimo de 250px, distribuindo o espaço
-    gap: '20px', // Espaçamento entre os itens da grade
-    justifyContent: 'center', // Centraliza os itens na grade, se houver espaço extra
-};
-const cardStyle = {
-    backgroundColor: '#f9f9f9',
-    border: '1px solid #ddd',
-    borderRadius: '8px',
-    padding: '20px',
-    textAlign: 'center',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-};
-const cardValueStyle = { fontSize: '2em', fontWeight: 'bold', margin: '10px 0' };
-const cardValueStyleGreen = { ...cardValueStyle, color: '#28a745' };
-const cardValueStyleRed = { ...cardValueStyle, color: '#dc3545' };
-const cardValueStyleBlue = { ...cardValueStyle, color: '#007bff' };
-
-const loadingStyle = { textAlign: 'center', fontSize: '1.2em', color: '#555' };
-const errorStyle = { textAlign: 'center', fontSize: '1.2em', color: 'red' };
-const noDataStyle = { textAlign: 'center', fontSize: '1.1em', color: '#777' };
+// Sugestão: Mova estes estilos para o seu index.css para manter os componentes limpos
+// Exemplo de classes CSS que podem ser criadas:
+// .card-dashboard { background-color: #f9f9f9; border: 1px solid #ddd; ... }
+// .card-value { font-size: 2em; font-weight: bold; ... }
+// .card-value-green { color: #28a745; }
+// .card-value-red { color: #dc3545; }
+// .card-value-blue { color: #007bff; }
 
 export default DashboardPage;

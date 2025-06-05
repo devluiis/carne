@@ -1,7 +1,7 @@
 from pydantic import BaseModel, EmailStr, Field
 from datetime import datetime, date
 from typing import Optional, List
-from decimal import Decimal
+from decimal import Decimal # Importado Decimal
 
 # --- Usuário ---
 class UserBase(BaseModel):
@@ -54,9 +54,10 @@ class ClientBase(BaseModel):
 class ClientCreate(ClientBase):
     pass
 
-class ClientUpdate(ClientBase):
-    nome: Optional[str] = None
-    cpf_cnpj: Optional[str] = None
+class ClientUpdate(ClientBase): # Baseado no seu upload, ClientUpdate herda de ClientBase
+    nome: Optional[str] = None # Tornando explícito que podem ser opcionais aqui
+    cpf_cnpj: Optional[str] = Field(None, max_length=20)
+    # endereco, telefone, email já são Optional em ClientBase
 
 class ClientResponse(ClientBase):
     id_cliente: int
@@ -73,12 +74,12 @@ class ClientResponseMin(BaseModel):
     class Config:
         from_attributes = True
 
-class ClientSummaryResponse(ClientResponse):
-    total_divida_aberta: float = Field(0.0, description="Soma dos saldos devedores de todas as parcelas pendentes e parcialmente pagas do cliente.")
-    total_pago_historico: float = Field(0.0, description="Soma de todos os valores pagos em carnês do cliente.")
-    numero_carnes_ativos: int = Field(0, description="Número de carnês com status 'Ativo' ou 'Em Atraso'.")
-    numero_carnes_quitados: int = Field(0, description="Número de carnês com status 'Quitado'.")
-    numero_carnes_cancelados: int = Field(0, description="Número de carnês com status 'Cancelado'.")
+class ClientSummaryResponse(ClientResponse): # ClientResponse já tem os campos base
+    total_divida_aberta: float = Field(0.0)
+    total_pago_historico: float = Field(0.0)
+    numero_carnes_ativos: int = Field(0)
+    numero_carnes_quitados: int = Field(0)
+    numero_carnes_cancelados: int = Field(0)
 
     class Config:
         from_attributes = True
@@ -88,7 +89,7 @@ class ClientSummaryResponse(ClientResponse):
 class PagamentoResponseMin(BaseModel):
     id_pagamento: int
     data_pagamento: datetime
-    valor_pago: float
+    valor_pago: float # Pydantic converterá Decimal para float na serialização
     forma_pagamento: str
     observacoes: Optional[str] = None
     id_usuario_registro: int
@@ -113,7 +114,7 @@ class ParcelaResponse(ParcelaBase):
     saldo_devedor: float
     data_pagamento_completo: Optional[date] = None
     juros_multa: float
-    juros_multa_anterior_aplicada: float = Field(0.00, description="Valor de juros/multa aplicado anteriormente, para cálculo preciso.")
+    juros_multa_anterior_aplicada: float = Field(0.00)
     pagamentos: List[PagamentoResponseMin] = []
 
     class Config:
@@ -134,7 +135,6 @@ class PagamentoResponse(PagamentoCreate):
     class Config:
         from_attributes = True
 
-# PagamentoResponse com detalhes da parcela e do carnê/cliente para relatórios (RF022)
 class PagamentoReportItem(PagamentoResponse):
     cliente_nome: str
     carnes_descricao: Optional[str] = None
@@ -144,18 +144,15 @@ class PagamentoReportItem(PagamentoResponse):
     class Config:
         from_attributes = True
 
-
-# Schema para o Relatório de Recebimentos (RF022)
 class ReceiptsReportResponse(BaseModel):
     start_date: date
     end_date: date
     total_recebido_periodo: float
-    pagamentos: List[PagamentoReportItem] # Lista dos pagamentos detalhados
+    pagamentos: List[PagamentoReportItem]
 
     class Config:
         from_attributes = True
 
-# Schema para um item de dívida pendente para o relatório (RF023)
 class PendingDebtItem(BaseModel):
     id_parcela: int
     numero_parcela: int
@@ -172,7 +169,6 @@ class PendingDebtItem(BaseModel):
     class Config:
         from_attributes = True
 
-# Schema para o Relatório de Dívidas por Cliente (RF023)
 class PendingDebtsReportResponse(BaseModel):
     cliente_id: int
     cliente_nome: str
@@ -183,38 +179,33 @@ class PendingDebtsReportResponse(BaseModel):
     class Config:
         from_attributes = True
 
-
 # --- Carne (Schemas) ---
 class CarneBase(BaseModel):
     id_cliente: int
-    data_venda: Optional[date] = None  # <<<< ALTERADO PARA OPCIONAL
+    data_venda: date 
     descricao: Optional[str] = None
     valor_total_original: float = Field(..., gt=0)
     numero_parcelas: int = Field(..., gt=0)
-    valor_parcela_original: float 
+    valor_parcela_original: float # Frontend calcula e envia. Backend valida.
     data_primeiro_vencimento: date
-    frequencia_pagamento: str 
-    status_carne: Optional[str] = "Ativo" 
+    frequencia_pagamento: str
+    status_carne: Optional[str] = "Ativo"
     observacoes: Optional[str] = None
     valor_entrada: float = Field(0.00, ge=0)
     forma_pagamento_entrada: Optional[str] = None
 
-
 class CarneCreate(CarneBase):
-    # data_venda já é herdada de CarneBase e definida como obrigatória lá
     pass
 
 class CarneResponse(CarneBase):
     id_carne: int
-    data_criacao: datetime # Data de inserção no sistema
-    # data_venda é herdada de CarneBase
+    data_criacao: datetime
     cliente: ClientResponseMin
     parcelas: List[ParcelaResponse] = []
 
     class Config:
         from_attributes = True
 
-# Schema para o Dashboard Resumido (RF021)
 class DashboardSummaryResponse(BaseModel):
     total_clientes: int
     total_carnes: int
@@ -230,13 +221,50 @@ class DashboardSummaryResponse(BaseModel):
     class Config:
         from_attributes = True
 
-# --- Schemas Aninhados para Respostas Completas ---
-class ClientResponseFull(ClientResponse): # Supondo que você tenha esta definição
-    data_cadastro: datetime # Adicionando de volta se estava no seu original
+# --- Schemas Aninhados para Respostas Completas (conforme seu último upload) ---
+class ClientResponseFull(ClientResponse): # ClientResponse já herda de ClientBase
+    # data_cadastro já está em ClientResponse via ClientBase
     carnes: List[CarneResponse] = []
     class Config: from_attributes = True
 
-
-class UserResponseFull(UserResponse): # Supondo que você tenha esta definição
+class UserResponseFull(UserResponse): # UserResponse já herda de UserBase
     pagamentos: List[PagamentoResponseMin] = []
     class Config: from_attributes = True
+
+
+# <<<< NOVOS SCHEMAS PARA PRODUTO >>>>
+class ProdutoBase(BaseModel):
+    nome: str = Field(..., min_length=1, max_length=255)
+    descricao: Optional[str] = None
+    categoria: Optional[str] = Field(None, max_length=100)
+    marca: Optional[str] = Field(None, max_length=100)
+    imei: Optional[str] = Field(None, max_length=50) # Não é unique no schema, o DB garante
+    codigo_sku: Optional[str] = Field(None, max_length=50) # Não é unique no schema, o DB garante
+    preco_venda: Optional[Decimal] = Field(None, ge=0, description="Preço de venda ao cliente")
+    preco_custo: Optional[Decimal] = Field(None, ge=0, description="Preço de custo para a loja")
+    estoque_atual: Optional[int] = Field(0, ge=0, description="Quantidade em estoque")
+    unidade_medida: Optional[str] = Field("unidade", max_length=20, description="Unidade de medida (un, pç, kg, etc.)")
+
+class ProdutoCreate(ProdutoBase):
+    # Pode adicionar campos específicos para criação se necessário,
+    # ou validações mais estritas do que em ProdutoBase.
+    # Por exemplo, tornar nome obrigatório já está em ProdutoBase.
+    # Se preco_venda for obrigatório na criação:
+    # preco_venda: Decimal = Field(..., ge=0)
+    pass
+
+class ProdutoUpdate(ProdutoBase):
+    # Na atualização, todos os campos são opcionais.
+    # Pydantic já trata isso se usarmos .model_dump(exclude_unset=True) no CRUD.
+    # Se quisermos ser explícitos:
+    nome: Optional[str] = Field(None, min_length=1, max_length=255)
+    # preco_venda, preco_custo, etc., já são Optional em ProdutoBase,
+    # então não precisam ser redefinidos aqui a menos que queiramos mudar validações.
+    
+
+class ProdutoResponse(ProdutoBase):
+    id_produto: int
+    data_cadastro: datetime
+
+    class Config:
+        from_attributes = True

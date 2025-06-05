@@ -1,113 +1,90 @@
-import React, { useState, useEffect, useCallback } from 'react'; // Adicionado useCallback
-import { carnes, clients } from '../api';
+import React, { useState, useEffect, useCallback } from 'react';
+import { carnes /* Removido 'clients' daqui, pois a busca de todos os clientes agora é em NovaVendaPage */ } from '../api';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../components/AuthProvider.jsx';
 import { useGlobalAlert } from '../App.jsx';
 import LoadingSpinner from '../components/LoadingSpinner.jsx';
-import ConfirmationModal from '../components/ConfirmationModal.jsx'; // <<<< IMPORTAR O MODAL
+import ConfirmationModal from '../components/ConfirmationModal.jsx';
+
+// Função getStatusStyle (mantenha ou importe de um utils)
+const getStatusStyle = (status) => {
+    switch (status) {
+        case 'Quitado': return { color: '#28a745', fontWeight: 'bold' };
+        case 'Em Atraso': return { color: '#dc3545', fontWeight: 'bold' };
+        case 'Cancelado': return { color: '#6c757d', fontWeight: 'bold' };
+        case 'Ativo': default: return { color: '#007bff', fontWeight: 'bold' };
+    }
+};
 
 function CarnesPage() {
     const [carnesList, setCarnesList] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(''); // Mantido para erros de carregamento da página, se necessário
     const navigate = useNavigate();
-    const { id_cliente } = useParams();
+    const { id_cliente } = useParams(); // id_cliente da URL (para carnês de um cliente específico)
     const { user } = useAuth();
     const { setGlobalAlert } = useGlobalAlert();
 
-    const [clientOptions, setClientOptions] = useState([]);
-    const [clienteSelecionadoParaNovoCarne, setClienteSelecionadoParaNovoCarne] = useState(id_cliente || '');
+    // Removidos: clientOptions, clienteSelecionadoParaNovoCarne
+    // A função fetchClientOptions também foi removida daqui
+
     const [filterStatus, setFilterStatus] = useState('');
     const [filterDateStart, setFilterDateStart] = useState('');
     const [filterDateEnd, setFilterDateEnd] = useState('');
     const [filterSearchQuery, setFilterSearchQuery] = useState('');
 
-    // Estados para o modal de confirmação de exclusão
     const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
     const [carneToDeleteId, setCarneToDeleteId] = useState(null);
 
-    // Envolver fetchCarnes e fetchClientOptions com useCallback
     const fetchCarnes = useCallback(async () => {
         try {
             setLoading(true);
-            setError(''); // Limpa erro anterior
-            const response = await carnes.getAll(id_cliente, filterStatus, filterDateStart, filterDateEnd, filterSearchQuery);
-            setCarnesList(response.data || []); // Garante que seja um array
+            // Se id_cliente vier da URL, ele será usado. Caso contrário, será null.
+            const currentClientId = id_cliente || null; 
+            const response = await carnes.getAll(currentClientId, filterStatus, filterDateStart, filterDateEnd, filterSearchQuery);
+            setCarnesList(response.data || []);
         } catch (err) {
             console.error('Erro ao buscar carnês:', err);
-            setError('Falha ao carregar carnês.'); // Pode ser usado para exibir uma mensagem na página se preferir
-            setGlobalAlert({ message: 'Falha ao carregar carnês. Faça login novamente ou verifique as permissões.', type: 'error' });
+            setGlobalAlert({ message: 'Falha ao carregar carnês.', type: 'error' });
             if (err.response && err.response.status === 401) {
                 navigate('/');
             }
         } finally {
             setLoading(false);
         }
-    }, [id_cliente, filterStatus, filterDateStart, filterDateEnd, filterSearchQuery, setGlobalAlert, navigate]); // Adicionar dependências
-
-    const fetchClientOptions = useCallback(async () => {
-        if (id_cliente) return; // Não busca se já está filtrando por um cliente específico na URL
-        try {
-            const response = await clients.getAll();
-            setClientOptions(response.data || []); // Garante que seja um array
-        } catch (err) {
-            console.error('Erro ao carregar opções de clientes:', err);
-            // Opcional: setGlobalAlert({ message: 'Falha ao carregar lista de clientes.', type: 'warning' });
-        }
-    }, [id_cliente]); // Adicionar dependências
+    }, [id_cliente, filterStatus, filterDateStart, filterDateEnd, filterSearchQuery, setGlobalAlert, navigate]);
 
     useEffect(() => {
         if (user) {
             fetchCarnes();
-            fetchClientOptions();
         } else {
             setLoading(false);
-            // setError('Faça login para ver os carnês.'); // GlobalAlert já está tratando
             setGlobalAlert({ message: 'Faça login para ver os carnês.', type: 'error' });
         }
-    // Removido filterStatus, etc., da dependência do useEffect principal
-    // para evitar re-fetching excessivo. fetchCarnes agora é chamado pelo botão "Aplicar Filtros"
-    // ou quando o componente monta/usuário muda. Ou pode adicionar as dependências de filtro
-    // de volta se quiser re-fetch automático ao mudar filtros.
-    // Por ora, vamos manter o botão "Aplicar Filtros" como o gatilho.
-    }, [user, id_cliente, fetchCarnes, fetchClientOptions, setGlobalAlert]); // fetchCarnes e fetchClientOptions como dependências
+    }, [user, fetchCarnes]); // fetchCarnes agora é a única dependência de fetch aqui
 
-
-    const handleOpenDeleteModal = (id) => { // <<<< NOVA FUNÇÃO PARA ABRIR O MODAL
+    const handleOpenDeleteModal = (id) => {
         setCarneToDeleteId(id);
         setShowDeleteConfirmModal(true);
     };
 
-    const handleCancelDelete = () => { // <<<< NOVA FUNÇÃO PARA CANCELAR EXCLUSÃO
+    const handleCancelDelete = () => {
         setShowDeleteConfirmModal(false);
         setCarneToDeleteId(null);
     };
 
-    const performDeleteCarne = async () => { // <<<< NOVA FUNÇÃO PARA EXECUTAR A EXCLUSÃO
+    const performDeleteCarne = async () => {
         if (!carneToDeleteId) return;
         try {
             await carnes.delete(carneToDeleteId);
             setGlobalAlert({ message: 'Carnê excluído com sucesso!', type: 'success' });
-            fetchCarnes(); // Atualiza a lista
+            fetchCarnes(); 
         } catch (err) {
-            console.error('Erro ao excluir carnê:', err);
             const errorMessage = `Falha ao excluir carnê: ${err.response?.data?.detail || err.message || 'Erro desconhecido.'}`;
-            // setError(errorMessage); // GlobalAlert já está tratando
             setGlobalAlert({ message: errorMessage, type: 'error' });
         } finally {
             setShowDeleteConfirmModal(false);
             setCarneToDeleteId(null);
         }
-    };
-
-
-    const handleAdicionarNovoCarne = () => {
-        const targetClientId = id_cliente || clienteSelecionadoParaNovoCarne;
-        if (!targetClientId) {
-            setGlobalAlert({ message: 'Por favor, selecione um cliente antes de adicionar um novo carnê.', type: 'warning' });
-            return;
-        }
-        navigate(`/carnes/new/${targetClientId}`);
     };
     
     const handleClearFilters = () => {
@@ -115,55 +92,31 @@ function CarnesPage() {
         setFilterDateStart('');
         setFilterDateEnd('');
         setFilterSearchQuery('');
-        // Chama fetchCarnes sem filtros para resetar a lista, ou
-        // o useEffect com dependências de filtro faria isso se configurado
-        // Para ser explícito, chamaremos fetchCarnes aqui também, mas com id_cliente original
-        // A função fetchCarnes dentro do useCallback já pega os estados de filtro atuais
-        // Se eles foram limpos, a próxima chamada a fetchCarnes os usará vazios.
-        // Opcionalmente, você pode passar os filtros vazios diretamente:
-        // fetchCarnes(id_cliente, null, null, null, null); // Isso requer mudar a assinatura de fetchCarnes
-        // A forma mais simples é deixar o useEffect (se tiver os filtros como dependência) ou o botão "Aplicar" cuidar.
-        // Para o botão Limpar, é melhor forçar uma busca sem filtros.
-        // Criamos uma função específica para isso para clareza:
-        refetchWithoutFilters();
+        // fetchCarnes será chamado pelo useEffect quando estas dependências mudarem
+        // ou podemos chamar explicitamente fetchCarnes() aqui se o useEffect não tiver os filtros como dep.
     };
 
-    const refetchWithoutFilters = useCallback(async () => {
-        try {
-            setLoading(true);
-            setError('');
-            const response = await carnes.getAll(id_cliente, null, null, null, null); // Força sem filtros
-            setCarnesList(response.data || []);
-        } catch (err) {
-            // ... (tratamento de erro como em fetchCarnes) ...
-             setGlobalAlert({ message: 'Falha ao limpar filtros e recarregar carnês.', type: 'error' });
-        } finally {
-            setLoading(false);
-        }
-    }, [id_cliente, setGlobalAlert]);
-
+    // Removida a função handleAdicionarNovoCarne daqui, pois a lógica de seleção de cliente e navegação
+    // para o formulário de carnê foi para NovaVendaPage.jsx
+    // No entanto, se estivermos na página de um cliente específico, podemos adicionar um botão
+    // que vá direto para o formulário de carnê com esse cliente pré-selecionado.
 
     if (loading) {
         return <LoadingSpinner message="Carregando carnês..." />;
     }
 
-    // Opcional: exibir erro localmente se GlobalAlert não for suficiente para o contexto da página
-    if (error && carnesList.length === 0) {
-        return <p style={{ color: 'red', textAlign: 'center' }}>{error}</p>;
-    }
-
     return (
-        <> {/* Adicionado React.Fragment para o Modal */}
-            <div className="table-container"> {/* Usando classe do index.css */}
+        <>
+            <div className="table-container">
                 <h2 className="text-center">
-                    Lista de Carnês 
-                    {id_cliente && clientOptions.find(c => String(c.id_cliente) === id_cliente) ? 
-                    `: Cliente ${clientOptions.find(c => String(c.id_cliente) === id_cliente).nome}` : ''}
+                    Lista de Carnês
+                    {/* Lógica para exibir nome do cliente se id_cliente estiver na URL pode ser adicionada aqui
+                        buscando o nome do cliente separadamente ou passando como prop se possível */}
                 </h2>
                 
-                {/* Seção de Filtros */}
                 <div className="form-container" style={{maxWidth: 'none', margin: '0 0 20px 0', padding: '20px'}}>
                     <h3>Filtrar Carnês:</h3>
+                    {/* Seção de Filtros (mantida como no seu último upload) */}
                     <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', alignItems: 'flex-end'}}>
                         <div className="form-group">
                             <label>Status:</label>
@@ -200,40 +153,16 @@ function CarnesPage() {
                     </div>
                 </div>
 
-                {/* Seção para Adicionar Novo Carnê */}
-                {!id_cliente && ( // Só mostra se não estiver na página de carnês de um cliente específico
-                    <div className="form-container" style={{maxWidth: 'none', margin: '0 0 20px 0', padding: '20px', display: 'flex', alignItems: 'flex-end', gap: '15px'}}>
-                        <div className="form-group" style={{flexGrow: 1}}>
-                            <label>Selecione o Cliente para Novo Carnê:</label>
-                            <select
-                                value={clienteSelecionadoParaNovoCarne}
-                                onChange={(e) => setClienteSelecionadoParaNovoCarne(e.target.value)}
-                                className="form-select"
-                            >
-                                <option value="">-- Selecione um Cliente --</option>
-                                {clientOptions.map(client => (
-                                    <option key={client.id_cliente} value={client.id_cliente}>
-                                        {client.nome} ({client.cpf_cnpj})
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                        <button
-                            onClick={handleAdicionarNovoCarne}
-                            className="btn btn-success"
-                            style={{width: 'auto', marginBottom: '20px'}}
-                            disabled={!clienteSelecionadoParaNovoCarne}
-                        >
-                            + Adicionar Carnê
-                        </button>
-                    </div>
-                )}
-                 {id_cliente && ( // Se estiver na página de um cliente específico
-                     <button onClick={handleAdicionarNovoCarne} className="btn btn-success" style={{width: 'auto', marginBottom: '20px'}}>
+                {/* Botão para ir para a nova página de registrar venda OU para adicionar carnê para cliente específico */}
+                {id_cliente ? (
+                     <button onClick={() => navigate(`/carnes/new/${id_cliente}`)} className="btn btn-success" style={{width: 'auto', marginBottom: '20px'}}>
                         + Adicionar Carnê para este Cliente
                     </button>
-                 )}
-
+                ) : (
+                    <button onClick={() => navigate('/nova-venda')} className="btn btn-success" style={{width: 'auto', marginBottom: '20px'}}>
+                        + Registrar Nova Venda/Carnê
+                    </button>
+                )}
 
                 {carnesList.length === 0 ? (
                     <p className="text-center" style={{padding: '20px', backgroundColor: '#f8f9fa', borderRadius: '5px'}}>
@@ -241,6 +170,7 @@ function CarnesPage() {
                     </p>
                 ) : (
                     <table className="styled-table">
+                        {/* Cabeçalho e corpo da tabela como no seu último upload */}
                         <thead>
                             <tr>
                                 <th >Cliente</th>
@@ -283,7 +213,6 @@ function CarnesPage() {
                 )}
             </div>
 
-            {/* Renderiza o Modal de Confirmação */}
             <ConfirmationModal
                 isOpen={showDeleteConfirmModal}
                 title="Confirmar Exclusão de Carnê"
@@ -296,23 +225,5 @@ function CarnesPage() {
         </>
     );
 }
-
-// Mantendo estilos inline que eram específicos deste componente e não foram para o index.css
-// Idealmente, muitos destes poderiam virar classes também.
-// const containerStyle = { maxWidth: '1000px', margin: '20px auto', padding: '20px', border: '1px solid #eee', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' };
-// const headerStyle = { textAlign: 'center', marginBottom: '20px' };
-// ... e outros que você tinha definido como constantes de estilo.
-// Por agora, usei as classes .table-container e .form-container do index.css onde apropriado.
-
-// Função getStatusStyle (importante estar aqui ou importada de utils)
-const getStatusStyle = (status) => {
-    switch (status) {
-        case 'Quitado': return { color: '#28a745', fontWeight: 'bold' };
-        case 'Em Atraso': return { color: '#dc3545', fontWeight: 'bold' };
-        case 'Cancelado': return { color: '#6c757d', fontWeight: 'bold' };
-        case 'Ativo':
-        default: return { color: '#007bff', fontWeight: 'bold' };
-    }
-};
 
 export default CarnesPage;
