@@ -21,17 +21,25 @@ LOGO_PATH = Path(__file__).resolve().parent / "static" / "logobios.jpg"
 
 
 class PDF(FPDF):
-    def header(self):
-        # Logo
-        if os.path.exists(LOGO_PATH):
-           # self.image(str(LOGO_PATH), 10, 8, 33) # <-- CORREÇÃO APLICADA AQUI
-            
-            # ADICIONE ESTA LINHA para que o bloco 'if' não fique vazio
-            self.set_font('Arial', 'B', 10)
-            self.cell(0, 10, '>>> LOGO TESTE OK <<<', 0, 1, 'L')
+    def __init__(self, orientation='P', unit='mm', format='A4'):
+        super().__init__(orientation, unit, format)
+        # ADICIONE AQUI: Carregar uma fonte para garantir
+        # Assumindo que arial.ttf está em backend/app/static/arial.ttf
+        FONT_PATH = Path(__file__).resolve().parent / "static" / "arial.ttf"
+        if os.path.exists(str(FONT_PATH)):
+            try:
+                self.add_font('Arial', '', str(FONT_PATH)) # Carrega a fonte regular
+                self.add_font('Arial', 'B', str(FONT_PATH)) # Carrega a fonte bold (mesmo arquivo se Arial TrueType)
+                # Se você tem um arquivo para o bold, seria self.add_font('Arial', 'B', str(FONT_PATH_BOLD))
+            except Exception as e:
+                print(f"DEBUG: ERRO ao carregar fonte: {e}")
+                # Fallback para fonte padrão se não carregar a personalizada
+                self.set_font('Arial', 'B', 10)
+                self.cell(0, 10, 'ERRO AO CARREGAR FONTE', 0, 1, 'L')
         else:
-            self.set_font('Arial', 'B', 10)
-            self.cell(0, 10, 'Logo Nao Encontrado', 0, 1, 'L')
+            print("DEBUG: ARQUIVO DE FONTE NAO ENCONTRADO NO PATH")
+            self.set_font('Arial', 'B', 10) # Fallback para fonte padrão
+            self.cell(0, 10, 'FONTE PADRAO USADA (ARQUIVO AUSENTE)', 0, 1, 'L')
 
         # Informações da Loja
         self.set_font('Arial', 'B', 15)
