@@ -28,7 +28,7 @@ class PDF(FPDF):
             
             # ADICIONE ESTA LINHA para que o bloco 'if' não fique vazio
             self.set_font('Arial', 'B', 10)
-            self.cell(0, 10, '>>> LOGO PRESENTE (IMAGEM DESABILITADA PARA TESTE) <<<', 0, 1, 'L')
+            self.cell(0, 10, '>>> LOGO TESTE OK <<<', 0, 1, 'L')
         else:
             self.set_font('Arial', 'B', 10)
             self.cell(0, 10, 'Logo Nao Encontrado', 0, 1, 'L')
@@ -93,63 +93,67 @@ class PDF(FPDF):
 
 
 def generate_carne_pdf_bytes(db_carne: models.Carne) -> bytes:
-    print(f"DEBUG: Dados do Carnê recebidos para PDF: ID={db_carne.id_carne}, Cliente={db_carne.cliente.nome if db_carne.cliente else 'N/A'}, Parcelas={len(db_carne.parcelas) if db_carne.parcelas else 0}")
-    print(f"DEBUG: Descricao do Carne: {db_carne.descricao}")
-    print(f"DEBUG: Valor Total Original: {db_carne.valor_total_original}")
-    pdf = PDF()
-    pdf.add_page()
+    # pdf = PDF()
+    # pdf.add_page()
+
+    pdf.set_font('Arial', 'B', 16)
+    pdf.cell(0, 10, 'TESTE SIMPLES', 0, 1, 'C') # Deve aparecer no topo
+    pdf.set_font('Arial', '', 10)
+    pdf.multi_cell(0, 5, 'Este é um texto de teste. Se você vir isso, o FPDF está desenhando.')
+    pdf.ln(5)
+
 
     # Dados do Cliente
-    pdf.chapter_title('Dados do Cliente')
-    pdf.chapter_body(f"Nome: {db_carne.cliente.nome}")
-    pdf.chapter_body(f"CPF/CNPJ: {db_carne.cliente.cpf_cnpj}")
-    if db_carne.cliente.endereco:
-        pdf.chapter_body(f"Endereço: {db_carne.cliente.endereco}")
-    if db_carne.cliente.telefone:
-        pdf.chapter_body(f"Telefone: {db_carne.cliente.telefone}")
-    pdf.ln(5)
+    #pdf.chapter_title('Dados do Cliente')
+    #pdf.chapter_body(f"Nome: {db_carne.cliente.nome}")
+    #pdf.chapter_body(f"CPF/CNPJ: {db_carne.cliente.cpf_cnpj}")
+    #if db_carne.cliente.endereco:
+   #     pdf.chapter_body(f"Endereço: {db_carne.cliente.endereco}")
+    #if db_carne.cliente.telefone:
+    #    pdf.chapter_body(f"Telefone: {db_carne.cliente.telefone}")
+    #pdf.ln(5)
 
     # Dados do Carnê
-    pdf.chapter_title('Detalhes do Carnê')
-    if db_carne.descricao:
-        pdf.chapter_body(f"Descrição: {db_carne.descricao}")
-    pdf.chapter_body(f"Valor Total Original: R$ {db_carne.valor_total_original:.2f}".replace('.', ','))
-    if db_carne.valor_entrada > 0:
-        pdf.chapter_body(f"Valor de Entrada: R$ {db_carne.valor_entrada:.2f}".replace('.', ','))
-        pdf.chapter_body(f"Forma Pag. Entrada: {db_carne.forma_pagamento_entrada or 'N/A'}")
+    #pdf.chapter_title('Detalhes do Carnê')
+   # if db_carne.descricao:
+    #    pdf.chapter_body(f"Descrição: {db_carne.descricao}")
+   # pdf.chapter_body(f"Valor Total Original: R$ {db_carne.valor_total_original:.2f}".replace('.', ','))
+   # if db_carne.valor_entrada > 0:
+    #    pdf.chapter_body(f"Valor de Entrada: R$ {db_carne.valor_entrada:.2f}".replace('.', ','))
+     #   pdf.chapter_body(f"Forma Pag. Entrada: {db_carne.forma_pagamento_entrada or 'N/A'}")
     
-    valor_a_parcelar = db_carne.valor_total_original - (db_carne.valor_entrada or 0)
-    pdf.chapter_body(f"Valor a Parcelar: R$ {valor_a_parcelar:.2f}".replace('.', ','))
-    pdf.chapter_body(f"Número de Parcelas: {db_carne.numero_parcelas}")
-    pdf.chapter_body(f"Valor da Parcela Original: R$ {db_carne.valor_parcela_original:.2f}".replace('.', ','))
-    pdf.chapter_body(f"Primeiro Vencimento: {db_carne.data_primeiro_vencimento.strftime('%d/%m/%Y')}")
-    pdf.chapter_body(f"Frequência: {db_carne.frequencia_pagamento.capitalize()}")
-    if db_carne.observacoes:
-         pdf.chapter_body(f"Observações: {db_carne.observacoes}")
-    pdf.ln(5)
+  #  valor_a_parcelar = db_carne.valor_total_original - (db_carne.valor_entrada or 0)
+   # pdf.chapter_body(f"Valor a Parcelar: R$ {valor_a_parcelar:.2f}".replace('.', ','))
+   # pdf.chapter_body(f"Número de Parcelas: {db_carne.numero_parcelas}")
+   # pdf.chapter_body(f"Valor da Parcela Original: R$ {db_carne.valor_parcela_original:.2f}".replace('.', ','))
+  #  pdf.chapter_body(f"Primeiro Vencimento: {db_carne.data_primeiro_vencimento.strftime('%d/%m/%Y')}")
+   # pdf.chapter_body(f"Frequência: {db_carne.frequencia_pagamento.capitalize()}")
+    #if db_carne.observacoes:
+     #    pdf.chapter_body(f"Observações: {db_carne.observacoes}")
+   # pdf.ln(5)
 
     # Tabela de Parcelas
-    pdf.chapter_title('Parcelas')
-    if db_carne.parcelas:
-        pdf.installment_table(db_carne.parcelas)
-    else:
-        pdf.chapter_body("Nenhuma parcela gerada para este carnê.")
+   # pdf.chapter_title('Parcelas')
+  #  if db_carne.parcelas:
+   #     pdf.installment_table(db_carne.parcelas)
+  #  else:
+   #     pdf.chapter_body("Nenhuma parcela gerada para este carnê.")
     
     # Termos e Assinatura
-    pdf.ln(10)
-    pdf.chapter_title('Termos e Assinatura do Devedor')
-    texto_termos = (
-        "Declaro que recebi o(s) produto(s) e/ou serviço(s) referente(s) a este carnê e concordo com os termos de pagamento aqui estabelecidos. "
-        "O não pagamento de qualquer parcela na data de vencimento implicará na cobrança de multa e juros conforme legislação vigente e/ou contrato."
-    )
-    pdf.chapter_body(texto_termos, is_multicell=True)
-    pdf.ln(15)
-    pdf.cell(0, 5, "_" * 60, 0, 1, 'C') # Linha para assinatura
-    pdf.set_font('Arial', '', 10)
-    pdf.cell(0, 5, db_carne.cliente.nome, 0, 1, 'C') # Nome do cliente abaixo da linha
-    pdf.cell(0, 5, f"CPF/CNPJ: {db_carne.cliente.cpf_cnpj}", 0, 1, 'C')
-    pdf.ln(5)
-    pdf.cell(0, 5, f"Data: ___/___/_____", 0, 0, 'L')
+   # pdf.ln(10)
+  #  pdf.chapter_title('Termos e Assinatura do Devedor')
+  #  texto_termos = (
+   #     "Declaro que recebi o(s) produto(s) e/ou serviço(s) referente(s) a este carnê e concordo com os termos de pagamento aqui estabelecidos. "
+    #    "O não pagamento de qualquer parcela na data de vencimento implicará na cobrança de multa e juros conforme legislação vigente e/ou contrato."
+ #   )
+  #  pdf.chapter_body(texto_termos, is_multicell=True)
+  #  pdf.ln(15)
+  #  pdf.cell(0, 5, "_" * 60, 0, 1, 'C') # Linha para assinatura
+  #  pdf.set_font('Arial', '', 10)
+   # pdf.cell(0, 5, db_carne.cliente.nome, 0, 1, 'C') # Nome do cliente abaixo da linha
+  #  pdf.cell(0, 5, f"CPF/CNPJ: {db_carne.cliente.cpf_cnpj}", 0, 1, 'C')
+  #  pdf.ln(5)
+   # pdf.cell(0, 5, f"Data: ___/___/_____", 0, 0, 'L')
 
     pdf_byte_data = pdf.output(dest='S')
     if isinstance(pdf_byte_data, bytearray):
