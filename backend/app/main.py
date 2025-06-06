@@ -27,14 +27,10 @@ app = FastAPI(
 
 # --- SEÇÃO DE CONFIGURAÇÃO DO CORS ---
 origins = [
-    "http://localhost:5173",    # Frontend Vite em desenvolvimento
-    "http://127.0.0.1:5173",   # Frontend Vite em desenvolvimento
-    "http://localhost:3000",    # Outra porta comum para frontend dev
-    "http://127.0.0.1:3000",
-    # Adicione aqui o URL do seu frontend no Netlify/produção quando tiver, ex:
-    # "https://seusite.netlify.app"
-    "http://localhost:8000", # Adicione o próprio backend se o frontend for servido por ele
-    "http://127.0.0.1:8000",
+    "https://biosxambioa.netlify.app",    # SEU DOMÍNIO DO NETLIFY
+    "http://localhost:5173",            # Para desenvolvimento local do frontend
+    "http://localhost:8000",            # Para desenvolvimento local do backend/Swagger
+    "https://carne.onrender.com"        # Seu próprio domínio do backend (opcional, mas boa prática para requests internas)
 ]
 
 app.add_middleware(
