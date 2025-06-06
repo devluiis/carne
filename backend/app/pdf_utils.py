@@ -90,11 +90,10 @@ class PDF(FPDF):
 
     # NOVO MÉTODO para desenhar uma única parcela com QR Code
     def draw_parcela_with_qr(self, parcela, pix_cnpj, carne_descricao=""):
-        # Adicionar margem superior para espaçamento entre parcelas
+    # Adicionar margem superior para espaçamento entre parcelas
         self.set_y(self.get_y() + 5) 
         
         self.set_font('Arial', 'B', 12)
-        # Borda para cada seção de parcela para clareza
         self.cell(0, 8, f'PARCELA {parcela.numero_parcela} / {parcela.id_carne} - {carne_descricao}', 1, 1, 'L', fill=True)
         
         self.set_font('Arial', '', 10)
@@ -108,33 +107,35 @@ class PDF(FPDF):
         self.cell(0, 6, f"PIX CNPJ: {pix_cnpj}", 0, 1, 'L')
         self.ln(2)
 
-        # Geração do QR Code
-        # Conteúdo do QR Code: você pode ajustar isso para um link de pagamento PIX real (QR Code Estático/Dinâmico)
-        # Por enquanto, é uma string de exemplo.
         qr_content = f"CNPJ PIX: {pix_cnpj}, Valor: R$ {parcela.valor_devido:.2f}, Parcela: {parcela.numero_parcela}, Carnê ID: {parcela.id_carne}"
-        
+    
         try:
+            # Gera QR Code
             qr_img = qrcode.make(qr_content)
-            buffer = io.BytesIO()
-            qr_img.save(buffer, format="PNG") 
-            buffer.seek(0)
-            
-            # Posição do QR Code (ajuste x e y conforme necessário)
-            # self.get_x() + 10 ou self.get_x() + 150
-            # self.get_y()
-            qr_x = self.get_x() + 150 # Exemplo: Mover para a direita da página
-            qr_y = self.get_y() - 30 # Exemplo: Subir um pouco para ficar ao lado dos textos da parcela
-            self.image(buffer, qr_x, qr_y, 30) # Tamanho de 30x30mm
+        
+        # Salva em arquivo temporário
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp_qr:
+                qr_img.save(tmp_qr, format="PNG")
+                tmp_qr_path = tmp_qr.name
+
+        # Adiciona ao PDF
+            qr_x = self.get_x() + 150
+            qr_y = self.get_y() - 30
+            self.image(tmp_qr_path, qr_x, qr_y, 30)
+
+            # Remove imagem temporária após uso
+            os.remove(tmp_qr_path)
+
         except Exception as e:
             self.set_font('Arial', 'I', 8)
             self.cell(0, 10, f"Erro ao gerar QR Code: {e}", 0, 1, 'L')
-            print(f"Erro ao gerar QR Code: {e}") # Debugging no log do Render
+            print(f"Erro ao gerar QR Code: {e}")
         
-        self.ln(10) # Espaço após o QR Code e a linha de recebido
-        self.cell(0, 5, "_" * 60, 0, 1, 'C') # Linha para assinatura
-        self.set_font('Arial', '', 9)
-        self.cell(0, 5, 'Assinatura do Credor', 0, 1, 'C')
-        self.ln(10)
+            self.ln(10)
+            self.cell(0, 5, "_" * 60, 0, 1, 'C')
+            self.set_font('Arial', '', 9)
+            self.cell(0, 5, 'Assinatura do Credor', 0, 1, 'C')
+            self.ln(10)
 
 
 def generate_carne_pdf_bytes(db_carne: models.Carne) -> bytes:
