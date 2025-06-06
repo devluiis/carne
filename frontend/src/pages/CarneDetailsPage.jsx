@@ -113,11 +113,17 @@ function CarneDetailsPage() {
         setPdfLoading(true);
         setGlobalAlert({message: "Gerando PDF do carnê...", type: "info"});
 
-        const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
-        const pdfUrl = `${apiUrl}/carnes/${carne.id_carne}/pdf`;
+        // CORREÇÃO AQUI: Use a instância 'api' diretamente com o caminho relativo
+        // A linha original era: const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+        // E a linha original era: const pdfUrl = `${apiUrl}/carnes/${carne.id_carne}/pdf`;
+        // Agora, usamos api.get() com o endpoint relativo para que o baseURL de api.js seja aplicado.
+        const pdfEndpoint = `/carnes/${carne.id_carne}/pdf`; 
 
         try {
-            const response = await api.get(pdfUrl, { responseType: 'blob' });
+            // A chamada deve ser feita usando a instância 'api' com o endpoint relativo.
+            // A baseURL (https://carne.onrender.com) de 'api' será automaticamente pré-adicionada.
+            const response = await api.get(pdfEndpoint, { responseType: 'blob' });
+            
             const file = new Blob([response.data], { type: 'application/pdf' });
             const fileURL = URL.createObjectURL(file);
             window.open(fileURL, '_blank');
