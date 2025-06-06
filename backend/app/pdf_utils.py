@@ -93,6 +93,9 @@ class PDF(FPDF):
 
 
 def generate_carne_pdf_bytes(db_carne: models.Carne) -> bytes:
+    print(f"DEBUG: Dados do Carnê recebidos para PDF: ID={db_carne.id_carne}, Cliente={db_carne.cliente.nome if db_carne.cliente else 'N/A'}, Parcelas={len(db_carne.parcelas) if db_carne.parcelas else 0}")
+    print(f"DEBUG: Descricao do Carne: {db_carne.descricao}")
+    print(f"DEBUG: Valor Total Original: {db_carne.valor_total_original}")
     pdf = PDF()
     pdf.add_page()
 
