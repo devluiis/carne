@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import qrcode
 import io
+import tempfile
 
 # Informações da Loja
 STORE_NAME = "Bios Store"
