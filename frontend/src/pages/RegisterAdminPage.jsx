@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useAuth } from '../components/AuthProvider.jsx'; // Corrigido o caminho
+import { useAuth } from '../components/AuthProvider.jsx';
 import { useNavigate } from 'react-router-dom';
 import { useGlobalAlert } from '../App.jsx';
 
@@ -7,9 +7,8 @@ function RegisterAdminPage() {
     const [email, setEmail] = useState('');
     const [nome, setNome] = useState('');
     const [senha, setSenha] = useState('');
-    // O perfil é sempre 'admin' para este formulário específico
     const [loading, setLoading] = useState(false);
-    const { registerAdmin } = useAuth(); // Assumindo que existe essa função no AuthProvider
+    const { registerAdmin } = useAuth(); // <-- registerAdmin já está aqui
     const { setGlobalAlert } = useGlobalAlert();
     const navigate = useNavigate();
 
@@ -18,12 +17,9 @@ function RegisterAdminPage() {
         setLoading(true);
 
         try {
-            // A função auth.registerAdmin que existia no seu código antigo deve estar no api.js
-            // e ser chamada pelo AuthProvider
-            // Por agora, vamos assumir que AuthProvider tem `registerAdmin`
-             await auth.registerAdmin({ email, nome, senha, perfil: 'admin' }); // Chamada direta ao API
+            // CORREÇÃO AQUI: Chame registerAdmin diretamente
+            await registerAdmin({ email, nome, senha, perfil: 'admin' }); 
             setGlobalAlert({ message: 'Usuário administrador registrado com sucesso!', type: 'success' });
-            // Limpar campos ou redirecionar
             setEmail('');
             setNome('');
             setSenha('');
@@ -36,10 +32,8 @@ function RegisterAdminPage() {
         }
     };
     
-    // Precisamos importar 'auth' da api.js se a função não estiver no AuthProvider
-    // Para este exemplo, vou assumir que você tem auth.registerAdmin em '../api.js'
-    // Se não, você precisará ajustar ou adicionar essa função no AuthProvider
-    // import { auth } from '../api'; // Descomente se registerAdmin não estiver no AuthProvider
+    // Remova ou comente esta linha, pois 'auth' não é mais necessário diretamente aqui
+    // import { auth } from '../api'; 
 
 
     return (
@@ -80,7 +74,7 @@ function RegisterAdminPage() {
                 <button type="submit" className="btn btn-success" disabled={loading}>
                     {loading ? 'Registrando...' : 'Registrar Administrador'}
                 </button>
-                 <button type="button" onClick={() => navigate('/dashboard')} className="btn btn-secondary mt-2">
+                   <button type="button" onClick={() => navigate('/dashboard')} className="btn btn-secondary mt-2">
                     Cancelar
                 </button>
             </form>
