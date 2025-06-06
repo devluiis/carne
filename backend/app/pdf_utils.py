@@ -141,12 +141,12 @@ def generate_carne_pdf_bytes(db_carne: models.Carne) -> bytes:
             <div class="section">
                 <h3>Detalhes do Carnê</h3>
                 <p><strong>Descrição:</strong> {db_carne.descricao or 'N/A'}</p>
-                <p><strong>Valor Total Original:</strong> R$ {db_carne.valor_total_original:.2f}".replace('.', ',')}</p>
-                <p><strong>Valor de Entrada:</strong> R$ {db_carne.valor_entrada:.2f}".replace('.', ',')}</p>
+                <p><strong>Valor Total Original:</strong> R$ {db_carne.valor_total_original:.2f}".replace('.', ',')</p>
+                <p><strong>Valor de Entrada:</strong> R$ {db_carne.valor_entrada:.2f}".replace('.', ',')</p>
                 <p><strong>Forma Pag. Entrada:</strong> {db_carne.forma_pagamento_entrada or 'N/A'}</p>
-                <p><strong>Valor a Parcelar:</strong> R$ {(db_carne.valor_total_original - (db_carne.valor_entrada or 0)):.2f}".replace('.', ',')}</p>
+                <p><strong>Valor a Parcelar:</strong> R$ {(db_carne.valor_total_original - (db_carne.valor_entrada or 0)):.2f}".replace('.', ',')</p>
                 <p><strong>Número de Parcelas:</strong> {db_carne.numero_parcelas}</p>
-                <p><strong>Valor da Parcela Original:</strong> R$ {db_carne.valor_parcela_original:.2f}".replace('.', ',')}</p>
+                <p><strong>Valor da Parcela Original:</strong> R$ {db_carne.valor_parcela_original:.2f}".replace('.', ',')</p>
                 <p><strong>Primeiro Vencimento:</strong> {db_carne.data_primeiro_vencimento.strftime('%d/%m/%Y')}</p>
                 <p><strong>Frequência:</strong> {db_carne.frequencia_pagamento.capitalize()}</p>
                 <p><strong>Observações:</strong> {db_carne.observacoes or 'N/A'}</p>
@@ -192,10 +192,10 @@ def generate_carne_pdf_bytes(db_carne: models.Carne) -> bytes:
                             <p><strong>Carnê ID:</strong> {parcela.id_carne} - {db_carne.descricao or 'N/A'}</p>
                             <p><strong>Cliente:</strong> {db_carne.cliente.nome}</p>
                             <p><strong>CPF/CNPJ:</strong> {db_carne.cliente.cpf_cnpj}</p>
-                            <p><strong>Valor Devido:</strong> R$ {parcela.valor_devido:.2f}".replace('.', ',')}</p>
+                            <p><strong>Valor Devido:</strong> R$ {parcela.valor_devido:.2f}".replace('.', ',')</p>
                             <p><strong>Vencimento:</strong> {parcela.data_vencimento.strftime('%d/%m/%Y')}</p>
-                            <p><strong>Juros/Multa:</strong> R$ {parcela.juros_multa:.2f}".replace('.', ',')}</p>
-                            <p><strong>Saldo Devedor:</strong> R$ {parcela.saldo_devedor:.2f}".replace('.', ',')}</p>
+                            <p><strong>Juros/Multa:</strong> R$ {parcela.juros_multa:.2f}".replace('.', ',')</p>
+                            <p><strong>Saldo Devedor:</strong> R$ {parcela.saldo_devedor:.2f}".replace('.', ',')</p>
                             <p><strong>Status:</strong> {parcela.status_parcela}</p>
                             <p><strong>PIX CNPJ:</strong> {PIX_CNPJ_CONSTANT}</p>
                         </div>
