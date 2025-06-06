@@ -24,7 +24,7 @@ class PDF(FPDF):
     def header(self):
         # Logo
         if os.path.exists(LOGO_PATH):
-            self.image(LOGO_PATH, 10, 8, 33)
+            self.image(str(LOGO_PATH), 10, 8, 33) # <-- CORREÇÃO APLICADA AQUI
         else:
             self.set_font('Arial', 'B', 10)
             self.cell(0, 10, 'Logo Nao Encontrado', 0, 1, 'L')
