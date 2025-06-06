@@ -25,6 +25,10 @@ class PDF(FPDF):
         # Logo
         if os.path.exists(LOGO_PATH):
            # self.image(str(LOGO_PATH), 10, 8, 33) # <-- CORREÇÃO APLICADA AQUI
+            
+            # ADICIONE ESTA LINHA para que o bloco 'if' não fique vazio
+            self.set_font('Arial', 'B', 10)
+            self.cell(0, 10, '>>> LOGO PRESENTE (IMAGEM DESABILITADA PARA TESTE) <<<', 0, 1, 'L')
         else:
             self.set_font('Arial', 'B', 10)
             self.cell(0, 10, 'Logo Nao Encontrado', 0, 1, 'L')
