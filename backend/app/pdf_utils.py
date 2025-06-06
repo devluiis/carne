@@ -93,8 +93,8 @@ class PDF(FPDF):
 
 
 def generate_carne_pdf_bytes(db_carne: models.Carne) -> bytes:
-     pdf = PDF()
-     pdf.add_page()
+    pdf = PDF()
+    pdf.add_page()
 
     pdf.set_font('Arial', 'B', 16)
     pdf.cell(0, 10, 'TESTE SIMPLES', 0, 1, 'C') # Deve aparecer no topo
