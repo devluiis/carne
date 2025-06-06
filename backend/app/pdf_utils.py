@@ -15,7 +15,7 @@ STORE_EMAIL = "leandroxam@hotmail.com"
 
 # Caminho para o logo e QR Code estático
 LOGO_PATH = Path(__file__).resolve().parent / "static" / "logobios.jpg"
-QR_CODE_PATH = Path(__file__).resolve().parent / "static" / "meu_qrcode_pix.jpeg" # AJUSTE O NOME DO SEU ARQUIVO AQUI!
+QR_CODE_PATH = Path(__file__).resolve().parent / "static" / "meu_qrcode_pix.png" # AJUSTE O NOME DO SEU ARQUIVO AQUI!
 
 # CNPJ PIX Constante (para ser usado no texto)
 PIX_CNPJ_CONSTANT = "23888763000116"
@@ -43,7 +43,7 @@ def generate_carne_pdf_bytes(db_carne: models.Carne) -> bytes:
     logo_html = f'<img class="logo" src="{logo_base64}">' if logo_base64 else '<div class="logo-placeholder">Logo não encontrada</div>'
 
     qr_code_base64 = image_to_base64(QR_CODE_PATH, "png") # Ajuste "png" para o formato do seu QR Code
-    qr_code_html = f'<div class="qr-container"><img class="qr-code-img" src="{qr_code_base64}" /><div class="qr-code-label">Scan para pagar!</div></div>' if qr_code_base64 else '<div class="qr-container"><p>QR Code não disponível</p></div>'
+    qr_code_html = f'<div class="qr-code-img-container"><img class="qr-code-img" src="{qr_code_base64}" /></div>' if qr_code_base64 else '<div class="qr-code-img-container"><p>QR Code não disponível</p></div>'
 
     html_content = f"""
     <!DOCTYPE html>
@@ -77,45 +77,65 @@ def generate_carne_pdf_bytes(db_carne: models.Carne) -> bytes:
             .signature-name, .signature-cpf, .signature-date {{ text-align: center; font-size: 8pt; margin: 0; }}
             .signature-date {{ text-align: left; margin-top: 10px; }}
 
-            /* Layout para Comprovantes de Parcela (Múltiplos por página) */
-            .installments-grid {{
+            /* Layout para Comprovantes de Parcela (2 por página, similar ao boleto) */
+            .installments-page-grid {{
                 display: flex;
                 flex-wrap: wrap;
-                justify-content: flex-start; /* Alinhar à esquerda */
-                align-content: flex-start;
-                /* Altura aproximada de uma folha A4 menos margens para quebra automática */
-                min-height: 270mm; 
-                max-height: 270mm; 
+                justify-content: space-between; /* Espaço entre os itens */
+                align-content: flex-start; /* Alinhar ao topo */
+                /* Altura para 2 comprovantes (aproximadamente A4/2 - margens) */
+                min-height: 270mm; /* A4 total height (297mm) - 20mm (top/bottom margin) */
+                max-height: 270mm; /* Força quebra de página se exceder */
+                page-break-after: always;
             }}
-            .installment-block {{
-                width: 48%; /* Para 2 comprovantes por linha (2x48% + margens) */
-                box-sizing: border-box;
-                border: 1px solid #000; /* Borda externa do comprovante */
-                padding: 8px; /* Padding interno */
-                margin-right: 1%; /* Espaço entre os comprovantes na mesma linha */
-                margin-left: 0.5%; /* Pequena margem para centralizar */
-                margin-bottom: 10px; /* Espaço entre linhas */
-                position: relative;
-                min-height: 150px; /* Altura mínima para o conteúdo, ajuste conforme necessário */
+            .installments-page-grid:last-child {{
+                page-break-after: avoid; /* Não quebrar página após o último grid */
+            }}
+
+            .installment-receipt-block {{
+                width: 49%; /* Para 2 comprovantes por linha (2x49% + 2% de gap) */
+                box-sizing: border-box; /* Incluir padding/border na largura */
+                border: 1px solid #000;
+                padding: 5px; /* Reduzir padding interno */
+                margin-bottom: 10px; /* Espaço entre linhas de comprovantes */
                 page-break-inside: avoid; /* Evita que o bloco seja quebrado no meio da página */
+                position: relative;
+                min-height: 120mm; /* Altura de cada comprovante (aproximadamente metade de uma folha A4) */
             }}
-            /* Ajuste para o último item de cada linha para não ter margem à direita */
-            .installment-block:nth-child(2n) {{ margin-right: 0; }} /* Cada segundo item */
+            /* Ajuste para alinhar o primeiro item de cada linha à esquerda */
+            .installment-receipt-block:nth-child(2n+1) {{ margin-right: 1%; }} 
+            .installment-receipt-block:nth-child(2n) {{ margin-left: 1%; }}
 
-            .installment-header {{ text-align: center; font-size: 10pt; font-weight: bold; margin: 0 0 5px 0; }}
-            
-            .installment-content {{ overflow: hidden; }} /* Para conter floats */
-            .installment-details {{ float: left; width: 65%; font-size: 8pt; }}
-            .installment-details p {{ margin: 0 0 2px 0; }}
+            .receipt-header {{
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 5px;
+            }}
+            .receipt-header .logo {{ width: 30px; height: auto; border: none; padding: 0; }} /* Logo menor no comprovante */
+            .receipt-header h4 {{ font-size: 9pt; margin: 0; }}
 
-            .qr-container {{ float: right; width: 30%; text-align: center; }}
-            .qr-code-img {{ width: 50px; height: 50px; margin-top: 5px; }}
-            .qr-code-label {{ font-size: 6pt; margin-top: 2px; }}
+            .receipt-section {{
+                border: 1px solid #ccc;
+                margin-bottom: 5px;
+                padding: 3px;
+                font-size: 8pt;
+                overflow: hidden; /* Para conter floats */
+            }}
+            .receipt-section h5 {{ font-size: 7pt; margin: 0 0 2px 0; color: #555; font-weight: normal; }}
+            .receipt-section p {{ margin: 0; font-size: 8pt; }}
+            .receipt-section strong {{ font-size: 9pt; }}
 
-            .received-signature {{ text-align: center; margin-top: 10px; }}
-            .received-signature span {{ border-bottom: 1px solid black; padding: 0 30px; display: inline-block; }}
-            .received-label {{ font-size: 7pt; margin-top: 2px; }}
-            
+            .receipt-col {{ float: left; width: 49%; }}
+            .receipt-col.right {{ float: right; text-align: right; }}
+
+            .qr-section {{
+                text-align: center;
+                margin-top: 5px;
+            }}
+            .qr-code-img {{ width: 70px; height: 70px; border: 1px solid #ccc; padding: 2px; }}
+            .qr-code-label {{ font-size: 7pt; margin-top: 2px; }}
+
             /* Rodapé de página */
             @page {{
                 @bottom-center {{ content: "Página " counter(page) " de " counter(pages); }}
@@ -178,35 +198,59 @@ def generate_carne_pdf_bytes(db_carne: models.Carne) -> bytes:
         sorted_parcelas = sorted(db_carne.parcelas, key=lambda p: p.numero_parcela)
         
         # Iniciar a área de grid para as parcelas em uma nova página
-        html_content += """<div class="page-break"></div><div class="installments-grid">"""
+        html_content += """<div class="page-break"></div><div class="installments-page-grid">"""
         
         for i, parcela in enumerate(sorted_parcelas):
             html_content += f"""
-                <div class="installment-block">
-                    <h3 class="installment-header">COMPROVANTE - PARCELA {parcela.numero_parcela}</h3>
-                    <div class="installment-content">
-                        <div class="installment-details">
-                            <p><strong>Carnê ID:</strong> {parcela.id_carne} - {db_carne.descricao or 'N/A'}</p>
-                            <p><strong>Cliente:</strong> {db_carne.cliente.nome}</p>
-                            <p><strong>CPF/CNPJ:</strong> {db_carne.cliente.cpf_cnpj}</p>
-                            <p><strong>Valor Devido:</strong> R$ {f"{parcela.valor_devido:.2f}".replace('.', ',')}</p>
-                            <p><strong>Vencimento:</strong> {parcela.data_vencimento.strftime('%d/%m/%Y')}</p>
-                            <p><strong>Juros/Multa:</strong> R$ {f"{parcela.juros_multa:.2f}".replace('.', ',')}</p>
-                            <p><strong>Saldo Devedor:</strong> R$ {f"{parcela.saldo_devedor:.2f}".replace('.', ',')}</p>
-                            <p><strong>Status:</strong> {parcela.status_parcela}</p>
-                            <p><strong>PIX CNPJ:</strong> {PIX_CNPJ_CONSTANT}</p>
-                        </div>
-                        {qr_code_html} </div>
-
-                    <div style="clear:both;"></div>
-                    <div class="received-signature">
-                        <span></span>
-                        <p class="received-label">Assinatura do Recebedor</p>
+                <div class="installment-receipt-block">
+                    <div class="receipt-header">
+                        <img class="logo" src="{logo_base64}">
+                        <h4>COMPROVANTE - PARCELA {parcela.numero_parcela}</h4>
                     </div>
-                    <p class="signature-date" style="text-align: left;">Data do Pagamento: ___/___/_____</p>
+                    
+                    <div class="receipt-section">
+                        <div class="receipt-col">
+                            <h5>Recibo do Pagador</h5>
+                            <p><strong>{db_carne.cliente.nome}</strong></p>
+                            <p>CPF/CNPJ: {db_carne.cliente.cpf_cnpj}</p>
+                        </div>
+                        <div class="receipt-col right">
+                            <h5>Vencimento</h5>
+                            <p><strong>{parcela.data_vencimento.strftime('%d/%m/%Y')}</strong></p>
+                        </div>
+                        <div style="clear:both;"></div>
+                    </div>
+
+                    <div class="receipt-section">
+                        <div class="receipt-col">
+                            <h5>Beneficiário</h5>
+                            <p><strong>{STORE_NAME}</strong></p>
+                            <p>CNPJ: {STORE_CNPJ}</p>
+                        </div>
+                        <div class="receipt-col right">
+                            <h5>Valor</h5>
+                            <p><strong>R$ {f"{parcela.valor_devido:.2f}".replace('.', ',')}</strong></p>
+                        </div>
+                        <div style="clear:both;"></div>
+                    </div>
+
+                    <div class="qr-section">
+                        {qr_code_html}
+                        <p class="qr-code-label">Pague sua cobrança usando o Pix</p>
+                    </div>
+                    
+                    <p style="font-size: 7pt; text-align: center; margin-top: 5px;">
+                        CNPJ PIX: {PIX_CNPJ_CONSTANT}
+                    </p>
+                    <p style="font-size: 7pt; text-align: center; margin-top: 5px;">
+                        Verifique dados antes de pagar: {db_carne.descricao or 'N/A'} - Parcela {parcela.numero_parcela}
+                    </p>
+                    <p style="font-size: 7pt; text-align: left; margin-top: 10px;">
+                        Data do Pagamento: ___/___/_____
+                    </p>
                 </div>
             """
-        html_content += """</div>""" # Fechar o installments-grid
+        html_content += """</div>""" # Fechar o último installments-page-grid
 
     else: # Caso não haja parcelas para o carnê
         html_content += """
