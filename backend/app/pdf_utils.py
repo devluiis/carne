@@ -26,18 +26,18 @@ class PDF(FPDF):
         # Logo
         if os.path.exists(str(LOGO_PATH)): # Converter Path para string para os.path.exists
             # self.image(str(LOGO_PATH), 10, 8, 33) # Descomente para ativar a imagem
-            self.set_font('Arial', 'B', 10)
+            self.set_font('Helvetica', 'B', 10)
             self.cell(0, 10, '>>> LOGO TESTE OK <<<', 0, 1, 'L') # Placeholder para o logo
         else:
-            self.set_font('Arial', 'B', 10)
+            self.set_font('Helvetica', 'B', 10)
             self.cell(0, 10, 'Logo Nao Encontrado', 0, 1, 'L')
 
         # Informações da Loja
-        self.set_font('Arial', 'B', 15)
+        self.set_font('Helvetica', 'B', 15)
         self.cell(80) # Mover para a direita do logo
         self.cell(30, 10, STORE_NAME, 0, 1, 'L')
         
-        self.set_font('Arial', '', 9)
+        self.set_font('Helvetica', '', 9)
         self.cell(80)
         self.cell(30, 5, f"CNPJ: {STORE_CNPJ}", 0, 1, 'L')
         self.cell(80)
@@ -47,64 +47,44 @@ class PDF(FPDF):
         
         # Título do Carnê
         self.ln(15) # Pular linha
-        self.set_font('Arial', 'B', 16)
+        self.set_font('Helvetica', 'B', 16)
         self.cell(0, 10, 'CARNÊ DE PAGAMENTO', 0, 1, 'C')
         self.ln(5)
 
     def footer(self):
         self.set_y(-15)
-        self.set_font('Arial', 'I', 8)
+        self.set_font('Helvetica', 'I', 8)
         self.cell(0, 10, f'Página {self.page_no()}', 0, 0, 'C')
 
     def chapter_title(self, title):
-        self.set_font('Arial', 'B', 12)
+        self.set_font('Helvetica', 'B', 12)
         self.cell(0, 6, title, 0, 1, 'L')
         self.ln(2)
 
     def chapter_body(self, data, is_multicell=False):
-        self.set_font('Arial', '', 10)
+        self.set_font('Helvetica', '', 10)
         if is_multicell:
             self.multi_cell(0, 5, data)
         else:
             self.cell(0, 5, data)
         self.ln()
-        
-    # MÉTODO ANTIGO DA TABELA DE PARCELAS (NÃO MAIS USADO DIRETAMENTE PARA CADA PARCELA)
-    # def installment_table(self, parcelas):
-    #     self.set_font('Arial', 'B', 10)
-    #     col_widths = [20, 40, 40, 90] 
-    #     
-    #     self.cell(col_widths[0], 7, 'Parcela', 1, 0, 'C')
-    #     self.cell(col_widths[1], 7, 'Vencimento', 1, 0, 'C')
-    #     self.cell(col_widths[2], 7, 'Valor (R$)', 1, 0, 'C')
-    #     self.cell(col_widths[3], 7, 'Recebi (Assinatura do Credor)', 1, 1, 'C')
-    #     self.set_font('Arial', '', 10)
-    #     for parcela in parcelas:
-    #         vencimento_str = parcela.data_vencimento.strftime('%d/%m/%Y')
-    #         valor_str = f"{parcela.valor_devido:.2f}".replace('.', ',')
-    #         
-    #         self.cell(col_widths[0], 7, str(parcela.numero_parcela), 1, 0, 'C')
-    #         self.cell(col_widths[1], 7, vencimento_str, 1, 0, 'C')
-    #         self.cell(col_widths[2], 7, valor_str, 1, 0, 'R')
-    #         self.cell(col_widths[3], 7, '', 1, 1, 'C')
-    #     self.ln(5)
 
     # NOVO MÉTODO para desenhar uma única parcela com QR Code
     def draw_parcela_with_qr(self, parcela, pix_cnpj, carne_descricao=""):
     # Adicionar margem superior para espaçamento entre parcelas
         self.set_y(self.get_y() + 5) 
         
-        self.set_font('Arial', 'B', 12)
+        self.set_font('Helvetica', 'B', 12)
         self.cell(0, 8, f'PARCELA {parcela.numero_parcela} / {parcela.id_carne} - {carne_descricao}', 1, 1, 'L', fill=True)
         
-        self.set_font('Arial', '', 10)
+        self.set_font('Helvetica', '', 10)
         self.cell(0, 6, f"Valor Devido: R$ {parcela.valor_devido:.2f}".replace('.', ','), 0, 1, 'L')
         self.cell(0, 6, f"Vencimento: {parcela.data_vencimento.strftime('%d/%m/%Y')}", 0, 1, 'L')
         self.cell(0, 6, f"Status: {parcela.status_parcela}", 0, 1, 'L')
         self.cell(0, 6, f"Juros/Multa: R$ {parcela.juros_multa:.2f}".replace('.', ','), 0, 1, 'L')
         
         self.ln(3)
-        self.set_font('Arial', 'B', 10)
+        self.set_font('Helvetica', 'B', 10)
         self.cell(0, 6, f"PIX CNPJ: {pix_cnpj}", 0, 1, 'L')
         self.ln(2)
 
@@ -128,13 +108,13 @@ class PDF(FPDF):
             os.remove(tmp_qr_path)
 
         except Exception as e:
-            self.set_font('Arial', 'I', 8)
+            self.set_font('Helvetica', 'I', 8)
             self.cell(0, 10, f"Erro ao gerar QR Code: {e}", 0, 1, 'L')
             print(f"Erro ao gerar QR Code: {e}")
         
             self.ln(10)
             self.cell(0, 5, "_" * 60, 0, 1, 'C')
-            self.set_font('Arial', '', 9)
+            self.set_font('Helvetica', '', 9)
             self.cell(0, 5, 'Assinatura do Credor', 0, 1, 'C')
             self.ln(10)
 
@@ -145,6 +125,7 @@ def generate_carne_pdf_bytes(db_carne: models.Carne) -> bytes:
     print(f"DEBUG: Descricao do Carne: {db_carne.descricao}")
     print(f"DEBUG: Valor Total Original: {db_carne.valor_total_original}")
 
+    pdf.set_font("Helvetica", '', 12)
     # Inicialização do PDF (DESCOMENTADAS E CORRETAS)
     pdf = PDF()
     pdf.add_page() # PRIMEIRA PÁGINA
@@ -189,7 +170,7 @@ def generate_carne_pdf_bytes(db_carne: models.Carne) -> bytes:
     pdf.chapter_body(texto_termos, is_multicell=True)
     pdf.ln(15)
     pdf.cell(0, 5, "_" * 60, 0, 1, 'C')
-    pdf.set_font('Arial', '', 10)
+    pdf.set_font('Helvetica', '', 10)
     pdf.cell(0, 5, db_carne.cliente.nome, 0, 1, 'C')
     pdf.cell(0, 5, f"CPF/CNPJ: {db_carne.cliente.cpf_cnpj}", 0, 1, 'C')
     pdf.ln(5)
