@@ -2,10 +2,8 @@ import os
 from pathlib import Path
 from datetime import datetime, date
 from app import models
-from sqlalchemy.orm import Session # Mantido para type hinting, embora não usado diretamente
-import qrcode
-import io
-import base64
+from sqlalchemy.orm import Session # Mantido para type hinting
+import base64 # Importar para conversão para base64
 from weasyprint import HTML, CSS # Importar WeasyPrint
 
 # Informações da Loja
@@ -15,14 +13,15 @@ STORE_ADDRESS = "Rua José Bonifácio nº 27"
 STORE_PHONE = "(63) 99285-1025"
 STORE_EMAIL = "leandroxam@hotmail.com"
 
-# Caminho para o logo
+# Caminho para o logo e QR Code estático
 LOGO_PATH = Path(__file__).resolve().parent / "static" / "logobios.jpg"
+QR_CODE_PATH = Path(__file__).resolve().parent / "static" / "meu_qrcode_pix.jpeg" # AJUSTE O NOME DO SEU ARQUIVO AQUI!
 
-# CNPJ PIX Constante (para ser usado no QR Code)
+# CNPJ PIX Constante (para ser usado no texto)
 PIX_CNPJ_CONSTANT = "23888763000116"
 
 # Função auxiliar para converter imagem para Base64
-def image_to_base64(image_path, image_format="jpeg"):
+def image_to_base64(image_path, image_format="png"): # Default para PNG, ajuste se sua logo for JPG
     if os.path.exists(str(image_path)):
         try:
             with open(str(image_path), "rb") as image_file:
@@ -33,27 +32,18 @@ def image_to_base64(image_path, image_format="jpeg"):
             return None
     return None
 
-def generate_qr_code_base64(content, box_size=3, border=4):
-    try:
-        qr_img = qrcode.make(content, box_size=box_size, border=border)
-        buffer = io.BytesIO()
-        qr_img.save(buffer, format="PNG") 
-        encoded_string = base64.b64encode(buffer.getvalue()).decode('utf-8')
-        return f"data:image/png;base64,{encoded_string}"
-    except Exception as e:
-        print(f"Erro ao gerar QR Code para '{content}': {e}")
-        return None
-
-
 def generate_carne_pdf_bytes(db_carne: models.Carne) -> bytes:
     # DEBUG: Dados do Carnê (manter temporariamente para depuração)
     print(f"DEBUG: Dados do Carnê recebidos para PDF: ID={db_carne.id_carne}, Cliente={db_carne.cliente.nome if db_carne.cliente else 'N/A'}, Parcelas={len(db_carne.parcelas) if db_carne.parcelas else 0}")
     print(f"DEBUG: Descricao do Carne: {db_carne.descricao}")
     print(f"DEBUG: Valor Total Original: {db_carne.valor_total_original}")
 
-    # Converter logo para base64
-    logo_base64 = image_to_base64(LOGO_PATH, "jpeg") # Assegure o formato correto da sua logo
+    # Converte logo e QR Code estático para base64 UMA VEZ
+    logo_base64 = image_to_base64(LOGO_PATH, "jpeg") # Ajuste "jpeg" para o formato da sua logo
     logo_html = f'<img class="logo" src="{logo_base64}">' if logo_base64 else '<div class="logo-placeholder">Logo não encontrada</div>'
+
+    qr_code_base64 = image_to_base64(QR_CODE_PATH, "png") # Ajuste "png" para o formato do seu QR Code
+    qr_code_html = f'<div class="qr-container"><img class="qr-code-img" src="{qr_code_base64}" /><div class="qr-code-label">Scan para pagar!</div></div>' if qr_code_base64 else '<div class="qr-container"><p>QR Code não disponível</p></div>'
 
     html_content = f"""
     <!DOCTYPE html>
@@ -61,56 +51,65 @@ def generate_carne_pdf_bytes(db_carne: models.Carne) -> bytes:
     <head>
         <title>Carnê de Pagamento - {db_carne.descricao}</title>
         <style>
-            body {{ font-family: 'Arial', sans-serif; font-size: 10pt; margin: 10mm; }} /* Reduzir margem para mais espaço */
-            .page {{ page-break-after: always; padding: 5mm; }} /* Reduzir padding */
+            body {{ font-family: 'Arial', sans-serif; font-size: 10pt; margin: 10mm; }}
+            .page {{ page-break-after: always; padding: 5mm; }}
             .page:last-child {{ page-break-after: avoid; }}
             
+            /* Header e Título da Primeira Página (Resumo) */
             .header-info {{ overflow: hidden; margin-bottom: 10px; border-bottom: 1px solid #ccc; padding-bottom: 5px; }}
-            .logo {{ width: 50px; height: auto; float: left; margin-right: 10px; }} /* Ajustar tamanho da logo */
+            .logo {{ width: 50px; height: auto; float: left; margin-right: 10px; border: 1px solid #eee; padding: 5px; }}
             .logo-placeholder {{ width: 50px; height: 50px; float: left; margin-right: 10px; border: 1px dashed gray; text-align: center; line-height: 50px; font-size: 7pt; }}
             .store-details {{ float: left; margin-top: -5px; }}
-            .store-details h1 {{ font-size: 12pt; margin: 0 0 3px 0; }} /* Ajustar fonte */
-            .store-details p {{ font-size: 7pt; margin: 0 0 1px 0; }} /* Ajustar fonte */
+            .store-details h1 {{ font-size: 12pt; margin: 0 0 3px 0; }}
+            .store-details p {{ font-size: 7pt; margin: 0 0 1px 0; }}
             
-            .title {{ text-align: center; font-size: 14pt; font-weight: bold; margin: 10px 0; }} /* Ajustar fonte */
+            .title {{ text-align: center; font-size: 14pt; font-weight: bold; margin: 10px 0; }}
             
-            .section {{ margin-bottom: 10px; border: 1px solid #eee; padding: 8px; background-color: #f9f9f9; border-radius: 5px; }} /* Reduzir padding */
-            .section h3 {{ font-size: 10pt; margin-top: 0; margin-bottom: 5px; border-bottom: 1px solid #ddd; padding-bottom: 3px; }} /* Ajustar fonte */
-            .section p {{ font-size: 9pt; margin: 0 0 3px 0; }} /* Ajustar fonte */
+            .section {{ margin-bottom: 10px; border: 1px solid #eee; padding: 8px; background-color: #f9f9f9; border-radius: 5px; }}
+            .section h3 {{ font-size: 10pt; margin-top: 0; margin-bottom: 5px; border-bottom: 1px solid #ddd; padding-bottom: 3px; }}
+            .section p {{ font-size: 9pt; margin: 0 0 3px 0; }}
 
             .terms {{ margin-top: 15px; }}
             .terms h3 {{ text-align: center; font-size: 10pt; margin-bottom: 8px; }}
-            .terms p {{ font-size: 8pt; }} /* Ajustar fonte */
+            .terms p {{ font-size: 8pt; }}
             .signature-line {{ text-align: center; margin-top: 25px; margin-bottom: 3px; }}
             .signature-line span {{ border-bottom: 1px solid black; padding: 0 40px; display: inline-block; }}
             .signature-name, .signature-cpf, .signature-date {{ text-align: center; font-size: 8pt; margin: 0; }}
             .signature-date {{ text-align: left; margin-top: 10px; }}
 
-            /* Layout para 3 comprovantes por página */
+            /* Layout para Comprovantes de Parcela (Múltiplos por página) */
             .installments-grid {{
-                display: flex; /* Usar flexbox */
-                flex-wrap: wrap; /* Quebrar para a próxima linha */
-                justify-content: space-between; /* Espaço entre os itens */
-                align-content: flex-start; /* Alinhar ao topo */
-                height: 270mm; /* Altura da página A4 menos margens */
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: flex-start; /* Alinhar à esquerda */
+                align-content: flex-start;
+                /* Altura aproximada de uma folha A4 menos margens para quebra automática */
+                min-height: 270mm; 
+                max-height: 270mm; 
             }}
             .installment-block {{
-                width: 32%; /* Aproximadamente 1/3 da largura, ajuste para caber 3 */
-                box-sizing: border-box; /* Incluir padding/border na largura */
-                border: 1px solid #ccc;
-                padding: 5px; /* Reduzir padding */
-                margin-bottom: 10px; /* Espaçamento entre blocos */
+                width: 48%; /* Para 2 comprovantes por linha (2x48% + margens) */
+                box-sizing: border-box;
+                border: 1px solid #000; /* Borda externa do comprovante */
+                padding: 8px; /* Padding interno */
+                margin-right: 1%; /* Espaço entre os comprovantes na mesma linha */
+                margin-left: 0.5%; /* Pequena margem para centralizar */
+                margin-bottom: 10px; /* Espaço entre linhas */
                 position: relative;
-                min-height: 140px; /* Ajuste a altura mínima */
+                min-height: 150px; /* Altura mínima para o conteúdo, ajuste conforme necessário */
+                page-break-inside: avoid; /* Evita que o bloco seja quebrado no meio da página */
             }}
-            .installment-block .header-info, .installment-block .title {{ display: none; }} /* Ocultar header/title repetidos nas parcelas */
+            /* Ajuste para o último item de cada linha para não ter margem à direita */
+            .installment-block:nth-child(2n) {{ margin-right: 0; }} /* Cada segundo item */
+
+            .installment-header {{ text-align: center; font-size: 10pt; font-weight: bold; margin: 0 0 5px 0; }}
             
-            .installment-details-wrapper {{ overflow: hidden; }}
-            .installment-details {{ float: left; width: 65%; font-size: 8pt; }} /* Ajustar fonte e largura */
+            .installment-content {{ overflow: hidden; }} /* Para conter floats */
+            .installment-details {{ float: left; width: 65%; font-size: 8pt; }}
             .installment-details p {{ margin: 0 0 2px 0; }}
 
-            .qr-container {{ float: right; width: 30%; text-align: center; }} /* Ajustar largura */
-            .qr-code-img {{ width: 50px; height: 50px; margin-top: 5px; }} /* Ajustar tamanho do QR */
+            .qr-container {{ float: right; width: 30%; text-align: center; }}
+            .qr-code-img {{ width: 50px; height: 50px; margin-top: 5px; }}
             .qr-code-label {{ font-size: 6pt; margin-top: 2px; }}
 
             .received-signature {{ text-align: center; margin-top: 10px; }}
@@ -174,21 +173,18 @@ def generate_carne_pdf_bytes(db_carne: models.Carne) -> bytes:
         </div>
     """
 
-    # --- SEÇÕES: PARCELAS INDIVIDUAIS (agrupadas em 3 por página) ---
+    # --- SEÇÕES: PARCELAS INDIVIDUAIS (agrupadas para múltiplos por página) ---
     if db_carne.parcelas:
         sorted_parcelas = sorted(db_carne.parcelas, key=lambda p: p.numero_parcela)
         
-        html_content += """<div class="page-break"></div><div class="installments-grid">""" # Iniciar nova página e grid
+        # Iniciar a área de grid para as parcelas em uma nova página
+        html_content += """<div class="page-break"></div><div class="installments-grid">"""
         
         for i, parcela in enumerate(sorted_parcelas):
-            qr_data_content = f"pix_cnpj={PIX_CNPJ_CONSTANT}&valor={parcela.valor_devido:.2f}&parcela={parcela.numero_parcela}&carne_id={parcela.id_carne}"
-            qr_base64 = generate_qr_code_base64(qr_data_content)
-            qr_html = f'<div class="qr-container"><img class="qr-code-img" src="{qr_base64}" /><div class="qr-code-label">Scan para pagar!</div></div>' if qr_base64 else '<div class="qr-container"><p>QR Code não gerado</p></div>'
-
             html_content += f"""
                 <div class="installment-block">
-                    <h3 style="text-align: center; margin: 0 0 5px 0; font-size: 10pt;">COMPROVANTE - PARCELA {parcela.numero_parcela}</h3>
-                    <div class="installment-details-wrapper">
+                    <h3 class="installment-header">COMPROVANTE - PARCELA {parcela.numero_parcela}</h3>
+                    <div class="installment-content">
                         <div class="installment-details">
                             <p><strong>Carnê ID:</strong> {parcela.id_carne} - {db_carne.descricao or 'N/A'}</p>
                             <p><strong>Cliente:</strong> {db_carne.cliente.nome}</p>
@@ -200,8 +196,7 @@ def generate_carne_pdf_bytes(db_carne: models.Carne) -> bytes:
                             <p><strong>Status:</strong> {parcela.status_parcela}</p>
                             <p><strong>PIX CNPJ:</strong> {PIX_CNPJ_CONSTANT}</p>
                         </div>
-                        {qr_html}
-                    </div>
+                        {qr_code_html} </div>
 
                     <div style="clear:both;"></div>
                     <div class="received-signature">
@@ -211,11 +206,7 @@ def generate_carne_pdf_bytes(db_carne: models.Carne) -> bytes:
                     <p class="signature-date" style="text-align: left;">Data do Pagamento: ___/___/_____</p>
                 </div>
             """
-            # Se for a última parcela de um grupo de 3, ou a última de todas, fechar o grid e abrir nova página.
-            if (i + 1) % 3 == 0 and (i + 1) < len(sorted_parcelas):
-                html_content += """</div><div class="page-break"></div><div class="installments-grid">"""
-            
-        html_content += """</div>""" # Fechar o último installments-grid
+        html_content += """</div>""" # Fechar o installments-grid
 
     else: # Caso não haja parcelas para o carnê
         html_content += """
@@ -231,16 +222,7 @@ def generate_carne_pdf_bytes(db_carne: models.Carne) -> bytes:
     """
 
     # Geração do PDF com WeasyPrint
-    # base_url é importante para WeasyPrint resolver caminhos relativos de CSS/imagens
     html = HTML(string=html_content, base_url=str(Path(__file__).resolve().parent))
-    # Para CSS externo, você poderia carregar assim:
-    # css_file_path = Path(__file__).resolve().parent / "static" / "styles.css"
-    # if os.path.exists(str(css_file_path)):
-    #     css = CSS(filename=str(css_file_path))
-    #     pdf_bytes = html.write_pdf(stylesheets=[css])
-    # else:
-    #     pdf_bytes = html.write_pdf()
-
-    pdf_bytes = html.write_pdf() # Gera o PDF em bytes
+    pdf_bytes = html.write_pdf()
 
     return pdf_bytes
