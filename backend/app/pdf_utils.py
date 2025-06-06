@@ -166,7 +166,6 @@ def generate_carne_pdf_bytes(db_carne: models.Carne) -> bytes:
         if db_carne.parcelas:
             sorted_parcelas = sorted(db_carne.parcelas, key=lambda p: p.numero_parcela)
             pix_cnpj_constant = "23888763000116"
-
             for parcela in sorted_parcelas:
                 pdf.add_page()
                 pdf.draw_parcela_with_qr(parcela, pix_cnpj_constant, db_carne.descricao)
