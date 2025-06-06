@@ -1,45 +1,35 @@
 from fpdf import FPDF
-from datetime import datetime
-from app import models # Para type hinting
-from sqlalchemy.orm import Session # Para type hinting
+from datetime import datetime, date
+from app import models
+from sqlalchemy.orm import Session
 from app.config import DATABASE_URL # Apenas para exemplo, não usado diretamente aqui
 import os
 from pathlib import Path
+import qrcode
+import io
 
-# Informações da Loja (você forneceu estes dados)
+# Informações da Loja
 STORE_NAME = "Bios Store"
 STORE_CNPJ = "23.123.123/0001-01"
 STORE_ADDRESS = "Rua José Bonifácio nº 27"
 STORE_PHONE = "(63) 99285-1025"
 STORE_EMAIL = "leandroxam@hotmail.com"
 
-# Caminho para o logo - Ajuste se o nome/local do seu logo for diferente
-# Assume que o script está rodando a partir da raiz do projeto backend,
-# ou que o path é relativo ao local de execução do FastAPI.
-# Uma forma mais robusta é usar caminhos absolutos ou configurar no config.py
+# Caminho para o logo - CORREÇÃO APLICADA AQUI
+# Assumindo que logobios.jpg está em backend/app/static/logobios.jpg
 LOGO_PATH = Path(__file__).resolve().parent / "static" / "logobios.jpg"
 
 
 class PDF(FPDF):
-    def __init__(self, orientation='P', unit='mm', format='A4'):
-        super().__init__(orientation, unit, format)
-        # ADICIONE AQUI: Carregar uma fonte para garantir
-        # Assumindo que arial.ttf está em backend/app/static/arial.ttf
-        FONT_PATH = Path(__file__).resolve().parent / "static" / "arial.ttf"
-        if os.path.exists(str(FONT_PATH)):
-            try:
-                self.add_font('Arial', '', str(FONT_PATH)) # Carrega a fonte regular
-                self.add_font('Arial', 'B', str(FONT_PATH)) # Carrega a fonte bold (mesmo arquivo se Arial TrueType)
-                # Se você tem um arquivo para o bold, seria self.add_font('Arial', 'B', str(FONT_PATH_BOLD))
-            except Exception as e:
-                print(f"DEBUG: ERRO ao carregar fonte: {e}")
-                # Fallback para fonte padrão se não carregar a personalizada
-                self.set_font('Arial', 'B', 10)
-                self.cell(0, 10, 'ERRO AO CARREGAR FONTE', 0, 1, 'L')
+    def header(self):
+        # Logo
+        if os.path.exists(str(LOGO_PATH)): # Converter Path para string para os.path.exists
+            # self.image(str(LOGO_PATH), 10, 8, 33) # Descomente para ativar a imagem
+            self.set_font('Arial', 'B', 10)
+            self.cell(0, 10, '>>> LOGO TESTE OK <<<', 0, 1, 'L') # Placeholder para o logo
         else:
-            print("DEBUG: ARQUIVO DE FONTE NAO ENCONTRADO NO PATH")
-            self.set_font('Arial', 'B', 10) # Fallback para fonte padrão
-            self.cell(0, 10, 'FONTE PADRAO USADA (ARQUIVO AUSENTE)', 0, 1, 'L')
+            self.set_font('Arial', 'B', 10)
+            self.cell(0, 10, 'Logo Nao Encontrado', 0, 1, 'L')
 
         # Informações da Loja
         self.set_font('Arial', 'B', 15)
@@ -78,39 +68,86 @@ class PDF(FPDF):
             self.cell(0, 5, data)
         self.ln()
         
-    def installment_table(self, parcelas):
-        self.set_font('Arial', 'B', 10)
-        col_widths = [20, 40, 40, 90] # Larguras das colunas: Nº, Vencimento, Valor, Recebi (Assinatura)
-        
-        # Cabeçalho da Tabela
-        self.cell(col_widths[0], 7, 'Parcela', 1, 0, 'C')
-        self.cell(col_widths[1], 7, 'Vencimento', 1, 0, 'C')
-        self.cell(col_widths[2], 7, 'Valor (R$)', 1, 0, 'C')
-        self.cell(col_widths[3], 7, 'Recebi (Assinatura do Credor)', 1, 1, 'C') # Alterado
+    # MÉTODO ANTIGO DA TABELA DE PARCELAS (NÃO MAIS USADO DIRETAMENTE PARA CADA PARCELA)
+    # def installment_table(self, parcelas):
+    #     self.set_font('Arial', 'B', 10)
+    #     col_widths = [20, 40, 40, 90] 
+    #     
+    #     self.cell(col_widths[0], 7, 'Parcela', 1, 0, 'C')
+    #     self.cell(col_widths[1], 7, 'Vencimento', 1, 0, 'C')
+    #     self.cell(col_widths[2], 7, 'Valor (R$)', 1, 0, 'C')
+    #     self.cell(col_widths[3], 7, 'Recebi (Assinatura do Credor)', 1, 1, 'C')
+    #     self.set_font('Arial', '', 10)
+    #     for parcela in parcelas:
+    #         vencimento_str = parcela.data_vencimento.strftime('%d/%m/%Y')
+    #         valor_str = f"{parcela.valor_devido:.2f}".replace('.', ',')
+    #         
+    #         self.cell(col_widths[0], 7, str(parcela.numero_parcela), 1, 0, 'C')
+    #         self.cell(col_widths[1], 7, vencimento_str, 1, 0, 'C')
+    #         self.cell(col_widths[2], 7, valor_str, 1, 0, 'R')
+    #         self.cell(col_widths[3], 7, '', 1, 1, 'C')
+    #     self.ln(5)
 
+    # NOVO MÉTODO para desenhar uma única parcela com QR Code
+    def draw_parcela_with_qr(self, parcela, pix_cnpj, carne_descricao=""):
+        # Adicionar margem superior para espaçamento entre parcelas
+        self.set_y(self.get_y() + 5) 
+        
+        self.set_font('Arial', 'B', 12)
+        # Borda para cada seção de parcela para clareza
+        self.cell(0, 8, f'PARCELA {parcela.numero_parcela} / {parcela.id_carne} - {carne_descricao}', 1, 1, 'L', fill=True)
+        
         self.set_font('Arial', '', 10)
-        for parcela in parcelas:
-            vencimento_str = parcela.data_vencimento.strftime('%d/%m/%Y')
-            valor_str = f"{parcela.valor_devido:.2f}".replace('.', ',')
+        self.cell(0, 6, f"Valor Devido: R$ {parcela.valor_devido:.2f}".replace('.', ','), 0, 1, 'L')
+        self.cell(0, 6, f"Vencimento: {parcela.data_vencimento.strftime('%d/%m/%Y')}", 0, 1, 'L')
+        self.cell(0, 6, f"Status: {parcela.status_parcela}", 0, 1, 'L')
+        self.cell(0, 6, f"Juros/Multa: R$ {parcela.juros_multa:.2f}".replace('.', ','), 0, 1, 'L')
+        
+        self.ln(3)
+        self.set_font('Arial', 'B', 10)
+        self.cell(0, 6, f"PIX CNPJ: {pix_cnpj}", 0, 1, 'L')
+        self.ln(2)
+
+        # Geração do QR Code
+        # Conteúdo do QR Code: você pode ajustar isso para um link de pagamento PIX real (QR Code Estático/Dinâmico)
+        # Por enquanto, é uma string de exemplo.
+        qr_content = f"CNPJ PIX: {pix_cnpj}, Valor: R$ {parcela.valor_devido:.2f}, Parcela: {parcela.numero_parcela}, Carnê ID: {parcela.id_carne}"
+        
+        try:
+            qr_img = qrcode.make(qr_content)
+            buffer = io.BytesIO()
+            qr_img.save(buffer, format="PNG") 
+            buffer.seek(0)
             
-            self.cell(col_widths[0], 7, str(parcela.numero_parcela), 1, 0, 'C')
-            self.cell(col_widths[1], 7, vencimento_str, 1, 0, 'C')
-            self.cell(col_widths[2], 7, valor_str, 1, 0, 'R')
-            self.cell(col_widths[3], 7, '', 1, 1, 'C') # Espaço para assinatura do credor
-        self.ln(5)
+            # Posição do QR Code (ajuste x e y conforme necessário)
+            # self.get_x() + 10 ou self.get_x() + 150
+            # self.get_y()
+            qr_x = self.get_x() + 150 # Exemplo: Mover para a direita da página
+            qr_y = self.get_y() - 30 # Exemplo: Subir um pouco para ficar ao lado dos textos da parcela
+            self.image(buffer, qr_x, qr_y, 30) # Tamanho de 30x30mm
+        except Exception as e:
+            self.set_font('Arial', 'I', 8)
+            self.cell(0, 10, f"Erro ao gerar QR Code: {e}", 0, 1, 'L')
+            print(f"Erro ao gerar QR Code: {e}") # Debugging no log do Render
+        
+        self.ln(10) # Espaço após o QR Code e a linha de recebido
+        self.cell(0, 5, "_" * 60, 0, 1, 'C') # Linha para assinatura
+        self.set_font('Arial', '', 9)
+        self.cell(0, 5, 'Assinatura do Credor', 0, 1, 'C')
+        self.ln(10)
 
 
 def generate_carne_pdf_bytes(db_carne: models.Carne) -> bytes:
+    # DEBUG: Dados do Carnê (manter temporariamente para depuração)
+    print(f"DEBUG: Dados do Carnê recebidos para PDF: ID={db_carne.id_carne}, Cliente={db_carne.cliente.nome if db_carne.cliente else 'N/A'}, Parcelas={len(db_carne.parcelas) if db_carne.parcelas else 0}")
+    print(f"DEBUG: Descricao do Carne: {db_carne.descricao}")
+    print(f"DEBUG: Valor Total Original: {db_carne.valor_total_original}")
+
+    # Inicialização do PDF (DESCOMENTADAS E CORRETAS)
     pdf = PDF()
-    pdf.add_page()
+    pdf.add_page() # PRIMEIRA PÁGINA
 
-    pdf.set_font('Arial', 'B', 16)
-    pdf.cell(0, 10, 'TESTE SIMPLES', 0, 1, 'C') # Deve aparecer no topo
-    pdf.set_font('Arial', '', 10)
-    pdf.multi_cell(0, 5, 'Este é um texto de teste. Se você vir isso, o FPDF está desenhando.')
-    pdf.ln(5)
-
-
+    # --- SEÇÃO: PRIMEIRA PÁGINA ---
     # Dados do Cliente
     pdf.chapter_title('Dados do Cliente')
     pdf.chapter_body(f"Nome: {db_carne.cliente.nome}")
@@ -121,7 +158,7 @@ def generate_carne_pdf_bytes(db_carne: models.Carne) -> bytes:
         pdf.chapter_body(f"Telefone: {db_carne.cliente.telefone}")
     pdf.ln(5)
 
-    # Dados do Carnê
+    # Detalhes do Carnê
     pdf.chapter_title('Detalhes do Carnê')
     if db_carne.descricao:
         pdf.chapter_body(f"Descrição: {db_carne.descricao}")
@@ -140,14 +177,7 @@ def generate_carne_pdf_bytes(db_carne: models.Carne) -> bytes:
          pdf.chapter_body(f"Observações: {db_carne.observacoes}")
     pdf.ln(5)
 
-     Tabela de Parcelas
-    pdf.chapter_title('Parcelas')
-    if db_carne.parcelas:
-        pdf.installment_table(db_carne.parcelas)
-    else:
-        pdf.chapter_body("Nenhuma parcela gerada para este carnê.")
-    
-    # Termos e Assinatura
+    # Termos e Assinatura do Devedor (NA PRIMEIRA PÁGINA)
     pdf.ln(10)
     pdf.chapter_title('Termos e Assinatura do Devedor')
     texto_termos = (
@@ -156,12 +186,25 @@ def generate_carne_pdf_bytes(db_carne: models.Carne) -> bytes:
     )
     pdf.chapter_body(texto_termos, is_multicell=True)
     pdf.ln(15)
-    pdf.cell(0, 5, "_" * 60, 0, 1, 'C') # Linha para assinatura
+    pdf.cell(0, 5, "_" * 60, 0, 1, 'C')
     pdf.set_font('Arial', '', 10)
-    pdf.cell(0, 5, db_carne.cliente.nome, 0, 1, 'C') # Nome do cliente abaixo da linha
+    pdf.cell(0, 5, db_carne.cliente.nome, 0, 1, 'C')
     pdf.cell(0, 5, f"CPF/CNPJ: {db_carne.cliente.cpf_cnpj}", 0, 1, 'C')
     pdf.ln(5)
     pdf.cell(0, 5, f"Data: ___/___/_____", 0, 0, 'L')
+    
+    # --- SEÇÃO: SEGUNDA PÁGINA EM DIANTE: PARCELAS INDIVIDUAIS ---
+    if db_carne.parcelas:
+        sorted_parcelas = sorted(db_carne.parcelas, key=lambda p: p.numero_parcela)
+        
+        pix_cnpj_constant = "23888763000116" # Seu CNPJ PIX
+
+        for i, parcela in enumerate(sorted_parcelas):
+            pdf.add_page() # Adiciona uma nova página para cada parcela
+            pdf.draw_parcela_with_qr(parcela, pix_cnpj_constant, db_carne.descricao)
+    else:
+        pdf.add_page() # Adiciona uma página para o caso de não ter parcelas
+        pdf.chapter_body("Nenhuma parcela gerada para este carnê.")
 
     pdf_byte_data = pdf.output(dest='S')
     if isinstance(pdf_byte_data, bytearray):
