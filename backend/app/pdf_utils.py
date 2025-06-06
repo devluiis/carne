@@ -4,6 +4,7 @@ from app import models # Para type hinting
 from sqlalchemy.orm import Session # Para type hinting
 from app.config import DATABASE_URL # Apenas para exemplo, não usado diretamente aqui
 import os
+from pathlib import Path
 
 # Informações da Loja (você forneceu estes dados)
 STORE_NAME = "Bios Store"
@@ -16,7 +17,7 @@ STORE_EMAIL = "leandroxam@hotmail.com"
 # Assume que o script está rodando a partir da raiz do projeto backend,
 # ou que o path é relativo ao local de execução do FastAPI.
 # Uma forma mais robusta é usar caminhos absolutos ou configurar no config.py
-LOGO_PATH = os.path.join(os.path.dirname(__file__), "static/logobios.jpg")
+LOGO_PATH = Path(__file__).resolve().parent / "static" / "logobios.jpg"
 
 
 class PDF(FPDF):
