@@ -1,4 +1,4 @@
-import React, { useState, createContext, useContext, useEffect, useCallback } from 'react'; // Adicionar useEffect
+import React, { useState, createContext, useContext, useEffect } from 'react'; // Adicionado useEffect
 import { BrowserRouter as Router, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './components/AuthProvider.jsx';
 
@@ -63,18 +63,7 @@ const AdminRoute = ({ children }) => {
 function App() {
     const [globalAlert, setGlobalAlert] = useState(null);
     const clearGlobalAlert = () => setGlobalAlert(null);
-    // Adicionar classe 'menu-open' ao body quando o menu estiver aberto
-    const { isMenuOpen } = useAuth().isMenuOpen; // Acessar o estado do menu do contexto, se movido para AuthProvider
-
-    // Usar useEffect para adicionar/remover classe no body
-    // useEffect(() => {
-    //     if (isMenuOpen) {
-    //         document.body.classList.add('menu-open');
-    //     } else {
-    //         document.body.classList.remove('menu-open');
-    //     }
-    // }, [isMenuOpen]);
-
+    // REMOVIDO: const { isMenuOpen } = useAuth().isMenuOpen; // Esta linha causava o erro!
 
     return (
         <Router>
@@ -134,7 +123,7 @@ function Header() {
     const location = useLocation();
     const [isMenuOpen, setIsMenuOpen] = useState(false); // Estado para controlar o menu hamburger
 
-    // Adiciona/remove classe 'menu-open' do body para empurrar o conteúdo principal
+    // Adiciona/remove classe 'menu-open' do body quando o menu estiver aberto
     useEffect(() => {
         if (isMenuOpen) {
             document.body.classList.add('menu-open');
@@ -168,7 +157,7 @@ function Header() {
                 </button>
             )}
             <h1 className="app-title"> 
-                <Link to={user ? "/dashboard" : "/"} className="text-white text-decoration-none"> {/* Classes Bootstrap */}
+                <Link to={user ? "/dashboard" : "/"} className="text-white text-decoration-none">
                     Gestor de Carnês
                 </Link>
             </h1>
@@ -182,7 +171,7 @@ function Header() {
 
             {user && (
                 <nav className={`main-nav ${isMenuOpen ? 'open' : ''}`}> 
-                    <ul className="navbar-nav"> {/* Usar navbar-nav do Bootstrap */}
+                    <ul className="navbar-nav"> 
                         <li className="nav-item"><Link to="/dashboard" className={`nav-link ${isLinkActive('/dashboard') ? activeLinkClass : inactiveLinkClass}`} onClick={toggleMenu}>Dashboard</Link></li>
                         <li className="nav-item"><Link to="/nova-venda" className={`nav-link ${isLinkActive('/nova-venda') ? activeLinkClass : inactiveLinkClass}`} onClick={toggleMenu}>Nova Venda</Link></li>
                         <li className="nav-item"><Link to="/clients" className={`nav-link ${isLinkActive('/clients') ? activeLinkClass : inactiveLinkClass}`} onClick={toggleMenu}>Clientes</Link></li>
@@ -202,6 +191,13 @@ function Header() {
                         <li className="nav-item"><Link to="/profile" className={`nav-link ${isLinkActive('/profile') ? activeLinkClass : inactiveLinkClass}`} onClick={toggleMenu}>Meu Perfil</Link></li>
                     </ul>
                 </nav>
+            )}
+
+            {user && (
+                <div className="user-info-section"> 
+                    <span>Olá, {user.nome}! ({user.perfil})</span>
+                    <button onClick={logout} className="btn btn-danger btn-sm">Sair</button>
+                </div>
             )}
         </header>
     );

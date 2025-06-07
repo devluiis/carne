@@ -5,6 +5,21 @@ import { useAuth } from '../components/AuthProvider.jsx';
 import { useGlobalAlert } from '../App.jsx';
 import LoadingSpinner from '../components/LoadingSpinner.jsx';
 
+// Função auxiliar para classes de badge do Bootstrap
+const getStatusBadgeClass = (status) => {
+    switch (status) {
+        case 'Paga':
+        case 'Paga com Atraso':
+            return 'success';
+        case 'Atrasada':
+            return 'danger';
+        case 'Parcialmente Paga':
+            return 'warning';
+        default: // Pendente
+            return 'primary';
+    }
+};
+
 function ClientDetailsPage() { 
     const { id } = useParams();
     const navigate = useNavigate();
@@ -36,7 +51,7 @@ function ClientDetailsPage() {
 
 
     if (loading) return <LoadingSpinner message="Carregando resumo do cliente..." />;
-    if (error && !clientSummary) return <p className="text-center text-danger p-3">{error}</p>; /* Classes Bootstrap */
+    if (error && !clientSummary) return <p className="text-center text-danger p-3">{error}</p>; 
     if (!clientSummary) return <p className="text-center">Resumo do cliente não encontrado.</p>;
 
     return (
@@ -52,7 +67,7 @@ function ClientDetailsPage() {
                 <p><strong>Data de Cadastro:</strong> {new Date(clientSummary.data_cadastro).toLocaleDateString()}</p>
             </div>
 
-            <h3 className="mb-3">Estatísticas de Carnês:</h3> {/* mb-3 do Bootstrap */}
+            <h3 className="mb-3">Estatísticas de Carnês:</h3> 
             <div className="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3"> {/* Grid Bootstrap */}
                 <div className="col">
                     <div className="card text-center p-3 shadow-sm"> {/* card text-center p-3 shadow-sm do Bootstrap */}
@@ -86,7 +101,7 @@ function ClientDetailsPage() {
                 </div>
             </div>
 
-            <h3 className="mt-4 mb-3">Carnês do Cliente:</h3> {/* mt-4 mb-3 do Bootstrap */}
+            <h3 className="mt-4 mb-3">Carnês do Cliente:</h3> 
             {clientSummary.carnes && clientSummary.carnes.length > 0 ? (
                 <div className="table-responsive"> {/* table-responsive do Bootstrap */}
                     <table className="table table-striped table-hover">
@@ -129,24 +144,14 @@ function ClientDetailsPage() {
                 <p className="text-center">Nenhum carnê associado a este cliente.</p>
             )}
             
-            <button onClick={() => navigate(`/carnes/new/${id}`)} className="btn btn-success mt-3"> {/* mt-3 do Bootstrap */}
+            <button onClick={() => navigate(`/carnes/new/${id}`)} className="btn btn-success mt-3"> 
                 + Adicionar Novo Carnê para este Cliente
             </button>
-            <button onClick={() => navigate('/clients')} className="btn btn-secondary mt-3 ms-2"> {/* ms-2 do Bootstrap */}
+            <button onClick={() => navigate('/clients')} className="btn btn-secondary mt-3 ms-2"> 
                 Voltar para Clientes
             </button>
         </div>
     );
 }
-
-// Reutilizar getStatusStyle de CarnesPage.jsx
-const getStatusBadgeClass = (status) => { // Renomeado para getStatusBadgeClass
-    switch (status) {
-        case 'Quitado': return 'success';
-        case 'Em Atraso': return 'danger';
-        case 'Cancelado': return 'secondary';
-        case 'Ativo': default: return 'primary';
-    }
-};
 
 export default ClientDetailsPage;

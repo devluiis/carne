@@ -5,18 +5,18 @@ import { useAuth } from '../components/AuthProvider.jsx';
 import { useGlobalAlert } from '../App.jsx';
 import LoadingSpinner from '../components/LoadingSpinner.jsx';
 
-const getStatusStyle = (status) => {
+const getStatusBadgeClass = (status) => {
     switch (status) {
         case 'Paga':
         case 'Paga com Atraso':
-            return { color: '#28a745', fontWeight: 'bold' };
+            return 'success';
         case 'Atrasada':
-            return { color: '#dc3545', fontWeight: 'bold' };
+            return 'danger';
         case 'Parcialmente Paga':
-            return { color: '#fd7e14', fontWeight: 'bold' };
+            return 'warning';
         case 'Pendente':
         default:
-            return { color: '#007bff', fontWeight: 'bold' };
+            return 'primary';
     }
 };
 
@@ -77,7 +77,7 @@ function PendingDebtsReportPage() {
             setGlobalAlert({ message: errorMsg, type: 'error' });
             setReportData(null);
         } finally {
-            setLoadingReport(false);
+                setLoadingReport(false);
         }
     }, [setGlobalAlert]);
 
@@ -209,15 +209,5 @@ function PendingDebtsReportPage() {
         </div>
     );
 }
-
-const getStatusBadgeClass = (status) => {
-    switch (status) {
-        case 'Paga': return 'success';
-        case 'Paga com Atraso': return 'success';
-        case 'Atrasada': return 'danger';
-        case 'Parcialmente Paga': return 'warning';
-        case 'Pendente': default: return 'primary';
-    }
-};
 
 export default PendingDebtsReportPage;

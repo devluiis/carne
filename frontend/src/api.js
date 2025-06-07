@@ -1,9 +1,7 @@
-// api.js
 import axios from 'axios';
 
 const API_BASE_URL = "https://carne.onrender.com";
 
-// Instância do Axios exportada para uso direto se necessário
 export const api = axios.create({
     baseURL: API_BASE_URL,
 });
@@ -21,7 +19,6 @@ api.interceptors.request.use(
     }
 );
 
-// Rotas de autenticação (geralmente na raiz, sem /api global no main.py)
 export const auth = {
     login: (email, senha) => {
         const formData = new URLSearchParams();
@@ -38,7 +35,6 @@ export const auth = {
     updateProfile: (userData) => api.put('/me', userData),
 };
 
-// Outras rotas que NÃO usam /api globalmente no seu main.py
 export const clients = {
     getAll: (searchQuery = null) => api.get('/clients/', { params: searchQuery ? { search_query: searchQuery } : {} }),
     getById: (id) => api.get(`/clients/${id}`),
@@ -85,12 +81,9 @@ export const reports = {
     getPendingDebtsReportByClient: (clientId) => api.get(`/reports/pending-debts-by-client/${clientId}`),
 };
 
-// Para Produtos, o seu main.py inclui produtos_router com prefix="/api"
-// e o produtos_router.py tem prefix="/produtos"
-// então o caminho completo é /api/produtos/
 const PRODUTOS_API_PREFIX = "/api"; 
 
-export const produtos = { // <<<< ESTA É A EXPORTAÇÃO QUE ESTAVA FALTANDO OU INCORRETA
+export const produtos = { 
     getAll: (skip = 0, limit = 100, searchQuery = null, categoria = null, marca = null) => {
         const params = { skip, limit };
         if (searchQuery) params.search_query = searchQuery;

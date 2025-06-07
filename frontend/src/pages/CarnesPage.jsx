@@ -6,12 +6,12 @@ import { useGlobalAlert } from '../App.jsx';
 import LoadingSpinner from '../components/LoadingSpinner.jsx';
 import ConfirmationModal from '../components/ConfirmationModal.jsx';
 
-const getStatusStyle = (status) => {
+const getStatusBadgeClass = (status) => {
     switch (status) {
-        case 'Quitado': return { color: '#28a745', fontWeight: 'bold' };
-        case 'Em Atraso': return { color: '#dc3545', fontWeight: 'bold' };
-        case 'Cancelado': return { color: '#6c757d', fontWeight: 'bold' };
-        case 'Ativo': default: return { color: '#007bff', fontWeight: 'bold' };
+        case 'Quitado': return 'success';
+        case 'Em Atraso': return 'danger';
+        case 'Cancelado': return 'secondary';
+        case 'Ativo': default: return 'primary';
     }
 };
 
@@ -209,15 +209,5 @@ function CarnesPage() {
         </>
     );
 }
-
-// Função auxiliar para classes de badge do Bootstrap
-const getStatusBadgeClass = (status) => {
-    switch (status) {
-        case 'Quitado': return 'success';
-        case 'Em Atraso': return 'danger';
-        case 'Cancelado': return 'secondary';
-        case 'Ativo': default: return 'primary'; // Ou info
-    }
-};
 
 export default CarnesPage;

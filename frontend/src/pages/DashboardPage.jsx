@@ -39,10 +39,10 @@ function DashboardPage() {
 
     if (!summaryData) { 
         return (
-            <div className="container form-container text-center"> {/* container do Bootstrap */}
-                <h2 className="mb-4">Dashboard</h2> {/* mb-4 do Bootstrap */}
+            <div className="container form-container text-center"> 
+                <h2 className="mb-4">Dashboard</h2> 
                 <p>Não foi possível carregar os dados do dashboard ou não há dados disponíveis.</p>
-                <button onClick={fetchDashboardSummary} className="btn btn-primary mt-3"> {/* mt-3 do Bootstrap */}
+                <button onClick={fetchDashboardSummary} className="btn btn-primary mt-3"> 
                     Tentar Novamente
                 </button>
             </div>
@@ -50,13 +50,13 @@ function DashboardPage() {
     }
 
     return (
-        <div className="container form-container"> {/* container do Bootstrap */}
-            <h2 className="text-center mb-4">Painel de Controle</h2> {/* mb-4 do Bootstrap */}
-            <div className="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3"> {/* Grid Bootstrap */}
+        <div className="container form-container"> 
+            <h2 className="text-center mb-4">Painel de Controle</h2> 
+            <div className="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3"> 
                 <div className="col">
-                    <div className="card text-center p-3 shadow-sm"> {/* card text-center p-3 shadow-sm do Bootstrap */}
-                        <h3 className="fs-6">Total de Clientes</h3> {/* fs-6 para fonte menor */}
-                        <p className="fs-4 fw-bold text-dark">{summaryData.total_clientes}</p> {/* fs-4 fw-bold do Bootstrap */}
+                    <div className="card text-center p-3 shadow-sm"> 
+                        <h3 className="fs-6">Total de Clientes</h3> 
+                        <p className="fs-4 fw-bold text-dark">{summaryData.total_clientes}</p> 
                     </div>
                 </div>
                 <div className="col">
@@ -68,19 +68,19 @@ function DashboardPage() {
                 <div className="col">
                     <div className="card text-center p-3 shadow-sm">
                         <h3 className="fs-6">Carnês Ativos</h3>
-                        <p className="fs-4 fw-bold text-primary">{summaryData.total_carnes_ativos}</p> {/* text-primary do Bootstrap */}
+                        <p className="fs-4 fw-bold text-primary">{summaryData.total_carnes_ativos}</p> 
                     </div>
                 </div>
                 <div className="col">
                     <div className="card text-center p-3 shadow-sm">
                         <h3 className="fs-6">Carnês Quitados</h3>
-                        <p className="fs-4 fw-bold text-success">{summaryData.total_carnes_quitados}</p> {/* text-success do Bootstrap */}
+                        <p className="fs-4 fw-bold text-success">{summaryData.total_carnes_quitados}</p> 
                     </div>
                 </div>
                 <div className="col">
                     <div className="card text-center p-3 shadow-sm">
                         <h3 className="fs-6">Carnês em Atraso</h3>
-                        <p className="fs-4 fw-bold text-danger">{summaryData.total_carnes_atrasados}</p> {/* text-danger do Bootstrap */}
+                        <p className="fs-4 fw-bold text-danger">{summaryData.total_carnes_atrasados}</p> 
                     </div>
                 </div>
                 <div className="col">

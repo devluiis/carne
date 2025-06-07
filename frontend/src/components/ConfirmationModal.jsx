@@ -13,59 +13,12 @@ function ConfirmationModal({
         return null;
     }
 
-    // Estilos podem ser movidos para o seu index.css para melhor organização
-    const modalOverlayStyle = {
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.6)',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        zIndex: 1000, // Garante que fique sobre outros elementos
-    };
-
-    const modalContentStyle = {
-        backgroundColor: '#fff',
-        padding: '30px',
-        borderRadius: '8px',
-        boxShadow: '0 5px 15px rgba(0, 0, 0, 0.3)',
-        width: 'auto',
-        maxWidth: '500px',
-        textAlign: 'center',
-    };
-
-    const modalTitleStyle = {
-        marginTop: 0,
-        marginBottom: '15px',
-        fontSize: '1.5rem',
-        color: '#333',
-    };
-
-    const modalMessageStyle = {
-        marginBottom: '30px',
-        fontSize: '1rem',
-        color: '#555',
-        lineHeight: '1.5',
-    };
-
-    const modalActionsStyle = {
-        display: 'flex',
-        justifyContent: 'flex-end', // Alinha botões à direita por padrão
-        gap: '10px',
-    };
-    
-    // As classes .btn, .btn-danger, .btn-secondary vêm do seu index.css
-    // Adicionei width: 'auto' para que não ocupem 100% se .btn tiver width: 100%
-
     return (
-        <div style={modalOverlayStyle} onClick={onCancel}> {/* Clicar fora fecha */}
-            <div style={modalContentStyle} onClick={(e) => e.stopPropagation()}> {/* Evita fechar ao clicar dentro do modal */}
-                {title && <h2 style={modalTitleStyle}>{title}</h2>}
-                <p style={modalMessageStyle}>{message}</p>
-                <div style={modalActionsStyle}>
+        <div className="modal-overlay"> {/* Nova classe */}
+            <div className="modal-content"> {/* Nova classe */}
+                {title && <h2 className="modal-title">{title}</h2>} {/* Nova classe */}
+                <p className="modal-message">{message}</p> {/* Nova classe */}
+                <div className="modal-actions"> {/* Nova classe */}
                     <button onClick={onCancel} className="btn btn-secondary" style={{width: 'auto'}}>
                         {cancelText}
                     </button>

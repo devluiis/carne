@@ -1,4 +1,3 @@
-// frontend/src/components/GlobalAlert.jsx
 import React, { useEffect, useState } from 'react';
 
 function GlobalAlert({ message, type = 'info', onClose }) {
@@ -6,62 +5,34 @@ function GlobalAlert({ message, type = 'info', onClose }) {
 
     useEffect(() => {
         setIsVisible(true);
-        // Fecha o alerta automaticamente após alguns segundos
         const timer = setTimeout(() => {
             setIsVisible(false);
             if (onClose) {
                 onClose();
             }
-        }, 5000); // Alerta visível por 5 segundos
+        }, 5000); 
 
-        return () => clearTimeout(timer); // Limpa o timer se o componente for desmontado
+        return () => clearTimeout(timer); 
     }, [message, type, onClose]);
-
-    const alertStyle = {
-        position: 'fixed',
-        top: '10px',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        padding: '12px 25px',
-        borderRadius: '8px',
-        color: 'white',
-        fontWeight: 'bold',
-        zIndex: 1000,
-        boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
-        display: isVisible ? 'flex' : 'none',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        minWidth: '300px',
-        maxWidth: '90%',
-    };
 
     const getBackgroundColor = () => {
         switch (type) {
             case 'success':
-                return '#28a745'; // Verde
+                return '#28a745'; 
             case 'error':
-                return '#dc3545'; // Vermelho
+                return '#dc3545'; 
             case 'warning':
-                return '#ffc107'; // Amarelo
+                return '#ffc107'; 
             case 'info':
             default:
-                return '#17a2b8'; // Azul claro
+                return '#17a2b8'; 
         }
     };
 
-    const closeButtonStyle = {
-        background: 'none',
-        border: 'none',
-        color: 'white',
-        fontSize: '1.2em',
-        cursor: 'pointer',
-        marginLeft: '15px',
-    };
-
     return (
-        <div style={{ ...alertStyle, backgroundColor: getBackgroundColor() }}>
+        <div className="global-alert" style={{backgroundColor: getBackgroundColor(), display: isVisible ? 'flex' : 'none'}}> {/* Usando classe CSS */}
             <span>{message}</span>
-            <button onClick={() => { setIsVisible(false); if (onClose) onClose(); }} style={closeButtonStyle}>
+            <button onClick={() => { setIsVisible(false); if (onClose) onClose(); }} className="close-button"> {/* Usando classe CSS */}
                 &times;
             </button>
         </div>

@@ -71,7 +71,7 @@ function ClientForm() {
     return (
         <div className="container form-container"> {/* Usando container do Bootstrap */}
             <h2 className="text-center mb-4">{isEditing ? 'Editar Cliente' : 'Cadastrar Novo Cliente'}</h2> {/* mb-4 do Bootstrap */}
-            {formError && <p className="text-danger text-center mb-3 fw-bold">{formError}</p>} {/* Classes Bootstrap */}
+            {formError && <p className="text-danger text-center mb-3 fw-bold">{formError}</p>} {/* Classes Bootstrap para erro */}
             <form onSubmit={handleSubmit}>
                 <div className="mb-3"> {/* mb-3 do Bootstrap */}
                     <label htmlFor="nome" className="form-label">Nome Completo / Razão Social:</label> {/* form-label do Bootstrap */}
