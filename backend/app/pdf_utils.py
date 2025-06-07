@@ -15,21 +15,22 @@ STORE_EMAIL = "leandroxam@hotmail.com"
 
 # Caminho para o logo e QR Code estático
 LOGO_PATH = Path(__file__).resolve().parent / "static" / "logobios.jpg"
-QR_CODE_PATH = Path(__file__).resolve().parent / "static" / "meu_qrcode_pix.png" # AJUSTE O NOME DO SEU ARQUIVO AQUI!
+QR_CODE_PATH = Path(__file__).resolve().parent / "static" / "meu_qrcode_pix.jpeg" # AJUSTE AQUI PARA .jpeg OU .jpg !
 
 # CNPJ PIX Constante (para ser usado no texto)
 PIX_CNPJ_CONSTANT = "23888763000116"
 
 # Função auxiliar para converter imagem para Base64
-def image_to_base64(image_path, image_format="png"): # Default para PNG, ajuste se sua logo for JPG
+def image_to_base64(image_path, image_format="jpeg"): # Default para JPEG, ajuste se sua logo for JPG
     if os.path.exists(str(image_path)):
         try:
             with open(str(image_path), "rb") as image_file:
                 encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
                 return f"data:image/{image_format};base64,{encoded_string}"
         except Exception as e:
-            print(f"Erro ao ler imagem {image_path}: {e}")
+            print(f"DEBUG: Erro ao ler imagem {image_path}: {e}") # Print de depuração
             return None
+    print(f"DEBUG: Arquivo de imagem NÃO ENCONTRADO: {image_path}") # Print de depuração
     return None
 
 def generate_carne_pdf_bytes(db_carne: models.Carne) -> bytes:
@@ -39,10 +40,10 @@ def generate_carne_pdf_bytes(db_carne: models.Carne) -> bytes:
     print(f"DEBUG: Valor Total Original: {db_carne.valor_total_original}")
 
     # Converte logo e QR Code estático para base64 UMA VEZ
-    logo_base64 = image_to_base64(LOGO_PATH, "jpeg") # Ajuste "jpeg" para o formato da sua logo
+    logo_base64 = image_to_base64(LOGO_PATH, "jpeg") # Assegure o formato correto da sua logo
     logo_html = f'<img class="logo" src="{logo_base64}">' if logo_base64 else '<div class="logo-placeholder">Logo não encontrada</div>'
 
-    qr_code_base64 = image_to_base64(QR_CODE_PATH, "png") # Ajuste "png" para o formato do seu QR Code
+    qr_code_base64 = image_to_base64(QR_CODE_PATH, "jpeg") # AJUSTE AQUI O FORMATO DO SEU QR CODE JPG/JPEG
     qr_code_html = f'<div class="qr-code-img-container"><img class="qr-code-img" src="{qr_code_base64}" /></div>' if qr_code_base64 else '<div class="qr-code-img-container"><p>QR Code não disponível</p></div>'
 
     html_content = f"""
@@ -77,14 +78,13 @@ def generate_carne_pdf_bytes(db_carne: models.Carne) -> bytes:
             .signature-name, .signature-cpf, .signature-date {{ text-align: center; font-size: 8pt; margin: 0; }}
             .signature-date {{ text-align: left; margin-top: 10px; }}
 
-            /* Layout para Comprovantes de Parcela (Múltiplos por página) */
+            /* Layout para Comprovantes de Parcela (2 por página, similar ao boleto) */
             .installments-page-grid {{
                 display: flex;
                 flex-wrap: wrap;
                 justify-content: space-between; /* Espaço entre os itens */
                 align-content: flex-start; /* Alinhar ao topo */
-                /* Altura para 2 comprovantes (aproximadamente A4/2 - margens) */
-                min-height: 270mm; /* A4 total height (297mm) - 20mm (top/bottom margin) */
+                min-height: 270mm; /* Altura da página A4 menos margens */
                 max-height: 270mm; /* Força quebra de página se exceder */
                 page-break-after: always;
             }}
@@ -97,48 +97,43 @@ def generate_carne_pdf_bytes(db_carne: models.Carne) -> bytes:
                 box-sizing: border-box; /* Incluir padding/border na largura */
                 border: 1px solid #000;
                 padding: 5px; /* Reduzir padding interno */
-                margin-right: 1%; /* Espaço entre os comprovantes na mesma linha */
-                margin-left: 0.5%; /* Pequena margem para centralizar */
                 margin-bottom: 10px; /* Espaço entre linhas de comprovantes */
                 page-break-inside: avoid; /* Evita que o bloco seja quebrado no meio da página */
                 position: relative;
-                min-height: 120mm; /* Altura de cada comprovante (aproximadamente metade de uma folha A4) */
+                min-height: 125mm; /* Altura de cada comprovante (aprox. metade de uma folha A4) */
             }}
-            /* Ajuste para alinhar o primeiro item de cada linha à esquerda */
-            .installment-receipt-block:nth-child(2n+1) {{ margin-right: 1%; }} 
-            .installment-receipt-block:nth-child(2n) {{ margin-left: 1%; }}
+            /* Ajuste para o segundo item de cada linha */
+            .installment-receipt-block:nth-child(2n) {{ margin-left: 1%; margin-right: 0; }} 
+            /* Ajuste para o primeiro item de cada linha */
+            .installment-receipt-block:nth-child(2n+1) {{ margin-right: 1%; margin-left: 0; }}
 
-            .receipt-header {{
+
+            /* Layout interno do comprovante (estilo PJBank) */
+            .receipt-content {{
+                border: 1px solid #ccc;
+                padding: 5px;
+                margin-bottom: 5px;
+            }}
+            .receipt-row {{
                 display: flex;
                 justify-content: space-between;
-                align-items: center;
-                margin-bottom: 5px;
+                align-items: flex-start;
+                margin-bottom: 3px;
             }}
-            .receipt-header .logo {{ width: 30px; height: auto; border: none; padding: 0; }} /* Logo menor no comprovante */
-            .receipt-header h4 {{ font-size: 9pt; margin: 0; }}
+            .receipt-field {{ flex: 1; font-size: 8pt; }}
+            .receipt-field.half {{ width: 49%; }} /* Para campos lado a lado */
+            .receipt-field.value {{ text-align: right; font-weight: bold; }}
+            .receipt-label {{ font-size: 6pt; color: #555; margin-bottom: 1px; }}
+            .receipt-value {{ font-size: 9pt; font-weight: bold; margin-top: 0; }}
 
-            .receipt-section {{
-                border: 1px solid #ccc;
-                margin-bottom: 5px;
-                padding: 3px;
-                font-size: 8pt;
-                overflow: hidden; /* Para conter floats */
-            }}
-            .receipt-section h5 {{ font-size: 7pt; margin: 0 0 2px 0; color: #555; font-weight: normal; }}
-            .receipt-section p {{ margin: 0; font-size: 8pt; }}
-            .receipt-section strong {{ font-size: 9pt; }}
-
-            .receipt-col {{ float: left; width: 49%; }}
-            .receipt-col.right {{ float: right; text-align: right; }}
-
-            .qr-section {{
-                text-align: center;
-                margin-top: 5px;
-            }}
-            .qr-code-img-container {{ text-align: center; }} /* Para centralizar a imagem */
-            .qr-code-img {{ width: 70px; height: 70px; border: 1px solid #ccc; padding: 2px; }}
+            .qr-code-area {{ text-align: center; margin-top: 5px; }}
+            .qr-code-img-container {{ display: inline-block; border: 1px solid #ccc; padding: 2px; }}
+            .qr-code-img {{ width: 60px; height: 60px; }} /* Tamanho do QR */
             .qr-code-label {{ font-size: 7pt; margin-top: 2px; }}
 
+            .bottom-info {{ font-size: 7pt; text-align: center; margin-top: 5px; }}
+            .date-signature-line {{ font-size: 7pt; text-align: left; margin-top: 10px; }}
+            
             /* Rodapé de página */
             @page {{
                 @bottom-center {{ content: "Página " counter(page) " de " counter(pages); }}
@@ -207,46 +202,51 @@ def generate_carne_pdf_bytes(db_carne: models.Carne) -> bytes:
             html_content += f"""
                 <div class="installment-receipt-block">
                     <div class="receipt-header">
-                        {logo_html}
+                        <img class="logo" src="{logo_base64}">
                         <h4 style="font-size: 10pt; text-align: right; flex-grow: 1;">COMPROVANTE - PARCELA {parcela.numero_parcela}</h4>
                     </div>
                     
-                    <div class="receipt-section">
-                        <div class="receipt-col">
-                            <h5>Recibo do Pagador</h5>
-                            <p><strong>{db_carne.cliente.nome}</strong></p>
-                            <p>CPF/CNPJ: {db_carne.cliente.cpf_cnpj}</p>
-                            <p>Carnê ID: {parcela.id_carne} - {db_carne.descricao or 'N/A'}</p>
+                    <div class="receipt-content">
+                        <div class="receipt-row">
+                            <div class="receipt-field">
+                                <p class="receipt-label">Recibo do Pagador</p>
+                                <p class="receipt-value">{db_carne.cliente.nome}</p>
+                                <p class="receipt-label">CPF/CNPJ</p>
+                                <p class="receipt-value">{db_carne.cliente.cpf_cnpj}</p>
+                                <p class="receipt-label">Carnê ID / Descrição</p>
+                                <p class="receipt-value">{parcela.id_carne} - {db_carne.descricao or 'N/A'}</p>
+                            </div>
+                            <div class="receipt-field value">
+                                <p class="receipt-label">Vencimento</p>
+                                <p class="receipt-value">{parcela.data_vencimento.strftime('%d/%m/%Y')}</p>
+                                <p class="receipt-label">Valor</p>
+                                <p class="receipt-value">R$ {f"{parcela.valor_devido:.2f}".replace('.', ',')}</p>
+                            </div>
                         </div>
-                        <div class="receipt-col right">
-                            <h5>Vencimento</h5>
-                            <p><strong>{parcela.data_vencimento.strftime('%d/%m/%Y')}</strong></p>
-                            <h5>Valor</h5>
-                            <p><strong>R$ {f"{parcela.valor_devido:.2f}".replace('.', ',')}</strong></p>
-                        </div>
-                        <div style="clear:both;"></div>
                     </div>
 
-                    <div class="receipt-section">
-                        <div class="receipt-col">
-                            <h5>Beneficiário</h5>
-                            <p><strong>{STORE_NAME}</strong></p>
-                            <p>CNPJ: {STORE_CNPJ}</p>
-                            <p>Tel: {STORE_PHONE}</p>
+                    <div class="receipt-content">
+                        <div class="receipt-row">
+                            <div class="receipt-field">
+                                <p class="receipt-label">Beneficiário</p>
+                                <p class="receipt-value">{STORE_NAME}</p>
+                                <p class="receipt-label">CNPJ</p>
+                                <p class="receipt-value">{STORE_CNPJ}</p>
+                                <p class="receipt-label">Telefone</p>
+                                <p class="receipt-value">{STORE_PHONE}</p>
+                            </div>
+                            <div class="receipt-field value">
+                                <div class="qr-code-area">
+                                    {qr_code_html}
+                                    <p class="qr-code-label">Pague sua cobrança usando o Pix</p>
+                                    <p class="qr-code-label">CNPJ PIX: {PIX_CNPJ_CONSTANT}</p>
+                                </div>
+                            </div>
                         </div>
-                        <div class="receipt-col right">
-                            {qr_code_html}
-                            <p class="qr-code-label">Pague sua cobrança usando o Pix</p>
-                        </div>
-                        <div style="clear:both;"></div>
                     </div>
                     
-                    <div style="font-size: 7pt; text-align: center; margin-top: 5px;">
-                        CNPJ PIX: {PIX_CNPJ_CONSTANT}
-                    </div>
-                    <div style="font-size: 7pt; text-align: left; margin-top: 10px;">
-                        Data do Pagamento: ___/___/_____
-                    </div>
+                    <p class="bottom-info">Verifique os dados antes de pagar: {db_carne.descricao or 'N/A'} - Parcela {parcela.numero_parcela}</p>
+                    <p class="date-signature-line">Data do Pagamento: ___/___/_____</p>
                 </div>
             """
         html_content += """</div>""" # Fechar o último installments-page-grid
