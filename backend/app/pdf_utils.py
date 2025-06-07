@@ -1,10 +1,10 @@
 import os
 from pathlib import Path
 from datetime import datetime, date
-from app import models # Para type hinting
-from sqlalchemy.orm import Session # Mantido para type hinting
-import base64 # Importar para conversão para base64
-from weasyprint import HTML, CSS # Importar WeasyPrint
+from app import models 
+from sqlalchemy.orm import Session 
+import base64 
+from weasyprint import HTML, CSS 
 
 # Informações da Loja
 STORE_NAME = "Bios Store"
@@ -15,13 +15,13 @@ STORE_EMAIL = "leandroxam@hotmail.com"
 
 # Caminho para o logo e QR Code estático
 LOGO_PATH = Path(__file__).resolve().parent / "static" / "logobios.jpg"
-QR_CODE_PATH = Path(__file__).resolve().parent / "static" / "meu_qrcode_pix.jpeg" # AJUSTE AQUI PARA .jpeg OU .jpg !
+QR_CODE_PATH = Path(__file__).resolve().parent / "static" / "meu_qrcode_pix.jpeg" # AJUSTE O NOME E FORMATO DO SEU ARQUIVO AQUI!
 
 # CNPJ PIX Constante (para ser usado no texto)
 PIX_CNPJ_CONSTANT = "23888763000116"
 
 # Função auxiliar para converter imagem para Base64
-def image_to_base64(image_path, image_format="jpeg"): # Default para JPEG, ajuste se sua logo for JPG
+def image_to_base64(image_path, image_format="jpeg"): # Default para JPEG, ajuste se sua logo for JPG/PNG
     if os.path.exists(str(image_path)):
         try:
             with open(str(image_path), "rb") as image_file:
@@ -202,8 +202,8 @@ def generate_carne_pdf_bytes(db_carne: models.Carne) -> bytes:
             html_content += f"""
                 <div class="installment-receipt-block">
                     <div class="receipt-header">
-                        <img class="logo" src="{logo_base64}">
-                        <h4 style="font-size: 10pt; text-align: right; flex-grow: 1; padding-left: 5px;">COMPROVANTE - PARCELA {parcela.numero_parcela}</h4>
+                        <img class="logo" src="{logo_base64}" style="width: 20px; height: auto; float: left; margin-right: 5px; margin-top: 0px; padding: 0;">
+                        <h4 style="font-size: 10pt; text-align: left; flex-grow: 1; margin: 0; padding-left: 25px;">COMPROVANTE - PARCELA {parcela.numero_parcela}</h4>
                     </div>
                     
                     <div class="receipt-content">
@@ -225,7 +225,7 @@ def generate_carne_pdf_bytes(db_carne: models.Carne) -> bytes:
                         </div>
                     </div>
 
-                    <div class="receipt-content">
+                    <div class="receipt-content" style="border-top: none;">
                         <div class="receipt-row">
                             <div class="receipt-field">
                                 <p class="receipt-label">Beneficiário</p>
@@ -239,17 +239,14 @@ def generate_carne_pdf_bytes(db_carne: models.Carne) -> bytes:
                                 <div class="qr-code-area">
                                     {qr_code_html}
                                     <p class="qr-code-label">Pague sua cobrança usando o Pix</p>
+                                    <p class="qr-code-label">CNPJ PIX: {PIX_CNPJ_CONSTANT}</p>
                                 </div>
                             </div>
                         </div>
                     </div>
                     
-                    <div style="font-size: 7pt; text-align: center; margin-top: 5px;">
-                        CNPJ PIX: {PIX_CNPJ_CONSTANT}
-                    </div>
-                    <div style="font-size: 7pt; text-align: left; margin-top: 10px;">
-                        Data do Pagamento: ___/___/_____
-                    </div>
+                    <p class="bottom-info">Verifique os dados antes de pagar: {db_carne.descricao or 'N/A'} - Parcela {parcela.numero_parcela}</p>
+                    <p class="date-signature-line">Data do Pagamento: ___/___/_____</p>
                 </div>
             """
         html_content += """</div>""" # Fechar o último installments-page-grid
