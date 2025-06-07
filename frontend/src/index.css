@@ -40,7 +40,7 @@ header h1 {
 }
 
 .menu-toggle {
-    display: none;
+    display: none; /* Oculto por padrão em desktop */
     background: none;
     border: none;
     color: white;
@@ -49,8 +49,22 @@ header h1 {
     padding: 5px 10px;
 }
 
-.main-nav {
+/* Regra para esconder a info do usuário no desktop, que será substituída no mobile */
+.user-info {
     display: flex;
+    align-items: center;
+    gap: 10px;
+    white-space: nowrap;
+    color: white;
+}
+
+/* Oculta a versão mobile da info do usuário no desktop */
+.mobile-only-user-info { 
+    display: none;
+}
+
+.main-nav {
+    display: flex; /* Flexbox para desktop */
     flex-wrap: wrap;
     align-items: center;
     gap: 15px;
@@ -87,19 +101,6 @@ header h1 {
     border-radius: 5px;
     font-weight: bold;
 }
-
-.user-info {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    white-space: nowrap;
-    color: white;
-}
-/* Oculta mobile-user-info por padrão no desktop */
-.user-info.mobile-user-info { 
-    display: none;
-}
-
 
 .logout-btn {
     padding: 8px 12px;
@@ -659,9 +660,9 @@ main {
         justify-content: space-between;
     }
     
-    /* Oculta os itens do menu de desktop e mostra o toggle */
+    /* Oculta os itens do menu de desktop */
     .main-nav .nav-list,
-    .main-nav .user-info { /* Esconde a info do usuário normal */
+    .user-info:not(.mobile-only-user-info) { /* Esconde a info do usuário normal no desktop */
         display: none;
     }
 
@@ -670,26 +671,25 @@ main {
     }
 
     .main-nav {
-        /* Posição inicial do menu fora da tela */
         position: fixed;
         top: 0;
-        right: -300px; /* Ajuste a largura do menu aqui, ex: 300px */
-        width: 300px; /* Largura do menu quando aberto */
+        right: -250px; /* Ajuste a largura do menu aqui (ex: 250px) */
+        width: 250px; /* Largura do menu quando aberto */
         height: 100%;
         background-color: #444;
         box-shadow: -2px 0 5px rgba(0,0,0,0.5);
         transition: right 0.3s ease-in-out;
         padding-top: 60px; /* Espaço para o botão de fechar */
         z-index: 950;
-        display: flex; /* Ajustado para flexbox para alinhar conteúdo */
+        display: flex;
         flex-direction: column;
-        justify-content: flex-start; /* Alinha o conteúdo ao topo */
-        align-items: stretch; /* Estica os itens para preencher a largura */
+        justify-content: flex-start;
+        align-items: stretch;
     }
 
     .main-nav.menu-open {
-        right: 0; /* Desliza para dentro da tela */
-        display: flex; /* Garante que o menu seja flex quando aberto */
+        right: 0;
+        display: flex;
     }
 
     .main-nav .nav-list {
@@ -698,7 +698,7 @@ main {
         width: 100%;
         gap: 10px;
         padding: 20px;
-        flex-grow: 1; /* Permite que a lista ocupe o espaço restante */
+        flex-grow: 1;
     }
 
     .main-nav .nav-link {
@@ -712,7 +712,7 @@ main {
     }
 
     /* Exibe e estiliza a informação do usuário e botão de sair para mobile */
-    .user-info.mobile-user-info {
+    .mobile-only-user-info { /* Agora esta classe é exibida no mobile */
         display: flex;
         flex-direction: column;
         align-items: flex-start;
@@ -721,12 +721,12 @@ main {
         border-top: 1px solid #555; /* Separador */
         margin-top: auto; /* Empurra para o final do menu */
     }
-    .user-info.mobile-user-info span {
+    .mobile-only-user-info span { /* Ajustado para usar mobile-only-user-info */
         margin-bottom: 10px;
         font-weight: bold;
-        color: white; /* Garante que o texto seja branco */
+        color: white;
     }
-    .user-info.mobile-user-info .logout-btn {
+    .mobile-only-user-info .logout-btn { /* Ajustado para usar mobile-only-user-info */
         width: 100%;
     }
 
