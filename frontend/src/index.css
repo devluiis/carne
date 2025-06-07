@@ -733,13 +733,37 @@ main {
     }
     /* Estilo específico para o botão de sair no menu mobile */
     .logout-btn-mobile {
-        width: 100%;
-        padding: 10px 15px;
-        font-size: 1rem;
-        /* Garante que o botão seja exibido como um bloco flexível */
-        display: block; 
-        box-sizing: border-box; /* Para que padding não adicione largura extra */
-    }
+    width: 100%;
+    padding: 10px 15px;
+    font-size: 1rem;
+    display: block;
+    box-sizing: border-box;
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-weight: bold;
+    text-align: center;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: background-color 0.2s ease;
+}
+
+.logout-btn-mobile:hover {
+    background-color: #c82333;
+}
+
+.mobile-only-user-info-section {
+    display: flex !important;
+    flex-direction: column;
+    align-items: flex-start;
+    width: 100%;
+    padding: 20px;
+    border-top: 1px solid #555;
+    margin-top: auto;
+    background-color: rgba(255, 255, 255, 0.02); /* opcional para depuração visual */
+}
+
 
     /* Botão de fechar o menu */
     .close-menu-button {
@@ -817,23 +841,3 @@ main {
     }
 }
 
-.logout-btn-mobile {
-    width: 100%;
-    padding: 10px 15px;
-    font-size: 1rem;
-    display: block;
-    box-sizing: border-box;
-    background-color: #dc3545;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    font-weight: bold;
-    text-align: center;
-    cursor: pointer;
-    margin-top: 10px;
-    transition: background-color 0.2s ease;
-}
-
-.logout-btn-mobile:hover {
-    background-color: #c82333;
-}
