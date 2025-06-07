@@ -70,8 +70,8 @@ function ClientForm() {
 
     return (
         <div className="container form-container"> {/* Usando container do Bootstrap */}
-            <h2 className="text-center">{isEditing ? 'Editar Cliente' : 'Cadastrar Novo Cliente'}</h2>
-            {formError && <p className="text-danger text-center mb-3">{formError}</p>} {/* Classes Bootstrap para erro */}
+            <h2 className="text-center mb-4">{isEditing ? 'Editar Cliente' : 'Cadastrar Novo Cliente'}</h2> {/* mb-4 do Bootstrap */}
+            {formError && <p className="text-danger text-center mb-3 fw-bold">{formError}</p>} {/* Classes Bootstrap */}
             <form onSubmit={handleSubmit}>
                 <div className="mb-3"> {/* mb-3 do Bootstrap */}
                     <label htmlFor="nome" className="form-label">Nome Completo / Razão Social:</label> {/* form-label do Bootstrap */}
@@ -125,13 +125,13 @@ function ClientForm() {
                         className="form-control"
                     />
                 </div>
-                <button type="submit" className="btn btn-primary" disabled={submitLoading}>
+                <button type="submit" className="btn btn-primary w-100" disabled={submitLoading}>
                     {submitLoading ? 'Salvando...' : (isEditing ? 'Atualizar Cliente' : 'Cadastrar Cliente')}
                 </button>
                 <button
                     type="button"
                     onClick={() => navigate('/clients')}
-                    className="btn btn-secondary mt-2" 
+                    className="btn btn-secondary w-100 mt-2" 
                 >
                     Cancelar
                 </button>

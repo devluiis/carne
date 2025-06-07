@@ -5,7 +5,7 @@ import { useAuth } from '../components/AuthProvider.jsx';
 import { useGlobalAlert } from '../App.jsx';
 import LoadingSpinner from '../components/LoadingSpinner.jsx';
 
-// Função auxiliar para estilos de status (adaptada para Bootstrap)
+// Função auxiliar para classes de badge do Bootstrap
 const getStatusBadgeClass = (status) => {
     switch (status) {
         case 'Paga':
@@ -171,7 +171,7 @@ function CarneDetailsPage() {
                 )}
                 <p><strong>Número de Parcelas:</strong> {carne.numero_parcelas}</p>
                 <p><strong>Valor por Parcela (Original):</strong> R$ {Number(carne.valor_parcela_original).toFixed(2)}</p>
-                <p><strong>Primeiro Vencimento:</strong> {new Date(carne.data_primeiro_vencimento).toLocaleDateString()}</p>
+                <p><strong>Primeiro Vencimento:</strong> {new Date(carne.data_primeiro_vencimento + 'T00:00:00').toLocaleDateString()}</p>
                 <p><strong>Frequência:</strong> {carne.frequencia_pagamento}</p>
                 <p><strong>Status do Carnê:</strong> {carne.status_carne}</p>
                 <p><strong>Observações:</strong> {carne.observacoes || 'N/A'}</p>
@@ -336,20 +336,5 @@ function CarneDetailsPage() {
         </div>
     );
 }
-
-// Função auxiliar para classes de badge do Bootstrap
-const getStatusBadgeClass = (status) => {
-    switch (status) {
-        case 'Paga':
-        case 'Paga com Atraso':
-            return 'success';
-        case 'Atrasada':
-            return 'danger';
-        case 'Parcialmente Paga':
-            return 'warning';
-        default: // Pendente
-            return 'primary';
-    }
-};
 
 export default CarneDetailsPage;
