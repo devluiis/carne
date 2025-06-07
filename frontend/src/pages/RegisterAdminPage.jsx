@@ -8,7 +8,7 @@ function RegisterAdminPage() {
     const [nome, setNome] = useState('');
     const [senha, setSenha] = useState('');
     const [loading, setLoading] = useState(false);
-    const { registerAdmin } = useAuth(); // <-- registerAdmin já está aqui
+    const { registerAdmin } = useAuth(); 
     const { setGlobalAlert } = useGlobalAlert();
     const navigate = useNavigate();
 
@@ -17,13 +17,11 @@ function RegisterAdminPage() {
         setLoading(true);
 
         try {
-            // CORREÇÃO AQUI: Chame registerAdmin diretamente
             await registerAdmin({ email, nome, senha, perfil: 'admin' }); 
             setGlobalAlert({ message: 'Usuário administrador registrado com sucesso!', type: 'success' });
             setEmail('');
             setNome('');
             setSenha('');
-            // navigate('/dashboard'); // ou para outra página
         } catch (err) {
             const errorMsg = `Erro ao registrar administrador: ${err.response?.data?.detail || err.message}`;
             setGlobalAlert({ message: errorMsg, type: 'error' });
@@ -32,12 +30,8 @@ function RegisterAdminPage() {
         }
     };
     
-    // Remova ou comente esta linha, pois 'auth' não é mais necessário diretamente aqui
-    // import { auth } from '../api'; 
-
-
     return (
-        <div className="form-container" style={{maxWidth: '450px'}}>
+        <div className="form-container" style={{maxWidth: '450px'}}> {/* Mantido maxWidth para este formulário específico */}
             <h2>Registrar Novo Administrador</h2>
             <form onSubmit={handleSubmit}>
                 <div className="form-group">

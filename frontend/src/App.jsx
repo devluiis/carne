@@ -29,10 +29,14 @@ import GlobalAlert from './components/GlobalAlert.jsx';
 const GlobalAlertContext = createContext(null);
 export const useGlobalAlert = () => useContext(GlobalAlertContext);
 
-// Componente de Spinner simples (pode ser movido para components/ se preferir)
+// Componente de Spinner simples (movido para components/LoadingSpinner.jsx)
+// A versão globalmente importada no App.jsx pode ser removida se você usa o componente separado.
+// Mantido aqui APENAS se você não tem LoadingSpinner.jsx como um arquivo separado e apenas usa a definição interna.
+// Caso contrário, use `import LoadingSpinner from './components/LoadingSpinner.jsx';` e remova a definição abaixo.
+// Já que você me forneceu LoadingSpinner.jsx, vou remover esta definição interna.
+/*
 const LoadingSpinner = ({ message }) => (
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh', flexDirection: 'column' }}>
-        {/* Se você tiver um CSS para loading-spinner-animation, ótimo! Senão, um texto simples. */}
         <div className="loading-spinner-animation" style={{border: '4px solid #f3f3f3', borderTop: '4px solid #3498db', borderRadius: '50%', width: '40px', height: '40px', animation: 'spin 1s linear infinite'}}></div>
         <p style={{marginTop: '10px'}}>{message || 'Carregando...'}</p>
         <style>
@@ -45,11 +49,14 @@ const LoadingSpinner = ({ message }) => (
         </style>
     </div>
 );
+*/
+
 
 // Componentes de Rota Protegida
 const PrivateRoute = ({ children }) => {
     const { user, loading } = useAuth();
     if (loading) {
+        // Agora usa o componente LoadingSpinner importado
         return <LoadingSpinner message="Verificando autenticação..." />;
     }
     return user ? children : <Navigate to="/" />;
@@ -60,6 +67,7 @@ const AdminRoute = ({ children }) => {
     const alertContext = useContext(GlobalAlertContext); 
 
     if (loading) {
+        // Agora usa o componente LoadingSpinner importado
         return <LoadingSpinner message="Verificando permissões..." />;
     }
     if (!user) {
@@ -136,50 +144,46 @@ function Header() {
 
     const isLinkActive = (path) => {
         if (path === '/') return location.pathname === path;
-        // Verifica se o pathname é exatamente igual ao path ou se começa com o path seguido de uma barra (para sub-rotas)
-        // ou se o path é uma sub-rota do pathname atual (para links como /reports/pending-debts-by-client quando o ID está na URL)
         return location.pathname === path || 
                location.pathname.startsWith(path + '/') || 
                (path.includes(':') && location.pathname.startsWith(path.substring(0, path.indexOf(':'))));
     };
 
-    const activeLinkStyle = { backgroundColor: '#555', padding: '10px 15px', borderRadius: '5px', color: 'white', textDecoration: 'none', transition: 'background-color 0.2s ease', display: 'inline-block' };
-    const inactiveLinkStyle = { padding: '10px 15px', color: 'white', textDecoration: 'none', transition: 'background-color 0.2s ease', display: 'inline-block' };
-    const listItemStyle = { marginRight: '5px' };
-
+    const activeLinkClass = "active-link"; // Definir a classe ativa
+    const inactiveLinkClass = ""; // Definir a classe inativa para padronização
 
     return (
         <header>
-            <h1 style={{ margin: 0, fontSize: '1.5rem' }}>
+            <h1>
                 <Link to={user ? "/dashboard" : "/"} style={{ color: 'white', textDecoration: 'none' }}>
                     Gestor de Carnês
                 </Link>
             </h1>
             {user && (
-                <nav style={{ display: 'flex', alignItems: 'center' }}>
-                    <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexWrap: 'wrap', alignItems: 'center' }}>
-                        <li style={listItemStyle}><Link to="/dashboard" style={isLinkActive('/dashboard') ? activeLinkStyle : inactiveLinkStyle}>Dashboard</Link></li>
-                        <li style={listItemStyle}><Link to="/nova-venda" style={isLinkActive('/nova-venda') ? activeLinkStyle : inactiveLinkStyle}>Nova Venda</Link></li>
-                        <li style={listItemStyle}><Link to="/clients" style={isLinkActive('/clients') ? activeLinkStyle : inactiveLinkStyle}>Clientes</Link></li>
-                        <li style={listItemStyle}><Link to="/carnes" style={isLinkActive('/carnes') ? activeLinkStyle : inactiveLinkStyle}>Carnês</Link></li>
+                <nav className="main-nav"> {/* Usar a classe */}
+                    <ul> {/* Usar a classe */}
+                        <li className="nav-item"><Link to="/dashboard" className={isLinkActive('/dashboard') ? activeLinkClass : inactiveLinkClass}>Dashboard</Link></li>
+                        <li className="nav-item"><Link to="/nova-venda" className={isLinkActive('/nova-venda') ? activeLinkClass : inactiveLinkClass}>Nova Venda</Link></li>
+                        <li className="nav-item"><Link to="/clients" className={isLinkActive('/clients') ? activeLinkClass : inactiveLinkClass}>Clientes</Link></li>
+                        <li className="nav-item"><Link to="/carnes" className={isLinkActive('/carnes') ? activeLinkClass : inactiveLinkClass}>Carnês</Link></li>
                         
                         {/* <<<< NOVO LINK PARA PRODUTOS >>>> */}
-                        <li style={listItemStyle}><Link to="/produtos" style={isLinkActive('/produtos') ? activeLinkStyle : inactiveLinkStyle}>Produtos</Link></li>
+                        <li className="nav-item"><Link to="/produtos" className={isLinkActive('/produtos') ? activeLinkClass : inactiveLinkClass}>Produtos</Link></li>
                         
-                        <li style={listItemStyle}><Link to="/reports/receipts" style={isLinkActive('/reports/receipts') ? activeLinkStyle : inactiveLinkStyle}>Rel. Receb.</Link></li>
-                        <li style={listItemStyle}><Link to="/reports/pending-debts-by-client" style={isLinkActive('/reports/pending-debts-by-client') ? activeLinkStyle : inactiveLinkStyle}>Rel. Dívidas</Link></li>
+                        <li className="nav-item"><Link to="/reports/receipts" className={isLinkActive('/reports/receipts') ? activeLinkClass : inactiveLinkClass}>Rel. Receb.</Link></li>
+                        <li className="nav-item"><Link to="/reports/pending-debts-by-client" className={isLinkActive('/reports/pending-debts-by-client') ? activeLinkClass : inactiveLinkClass}>Rel. Dívidas</Link></li>
                         
                         {user.perfil === 'admin' && ( 
                             <>
-                                <li style={listItemStyle}><Link to="/register-admin" style={isLinkActive('/register-admin') ? activeLinkStyle : inactiveLinkStyle}>Reg. Admin</Link></li>
-                                <li style={listItemStyle}><Link to="/register-atendente" style={isLinkActive('/register-atendente') ? activeLinkStyle : inactiveLinkStyle}>Reg. Atendente</Link></li>
+                                <li className="nav-item"><Link to="/register-admin" className={isLinkActive('/register-admin') ? activeLinkClass : inactiveLinkClass}>Reg. Admin</Link></li>
+                                <li className="nav-item"><Link to="/register-atendente" className={isLinkActive('/register-atendente') ? activeLinkClass : inactiveLinkStyle}>Reg. Atendente</Link></li>
                             </>
                         )}
-                        <li style={listItemStyle}><Link to="/profile" style={isLinkActive('/profile') ? activeLinkStyle : inactiveLinkStyle}>Meu Perfil</Link></li>
+                        <li className="nav-item"><Link to="/profile" className={isLinkActive('/profile') ? activeLinkClass : inactiveLinkClass}>Meu Perfil</Link></li>
                     </ul>
-                    <div style={{ marginLeft: '20px', display: 'flex', alignItems: 'center', whiteSpace: 'nowrap' }}>
-                         <span style={{ marginRight: '10px' }}>Olá, {user.nome}! ({user.perfil})</span>
-                        <button onClick={logout} className="btn btn-danger btn-sm" style={{width: 'auto', padding: '8px 12px'}}>Sair</button>
+                    <div className="user-info-section"> {/* Usar a classe */}
+                         <span>Olá, {user.nome}! ({user.perfil})</span>
+                        <button onClick={logout} className="btn btn-danger btn-sm">Sair</button>
                     </div>
                 </nav>
             )}

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useAuth } from '../components/AuthProvider.jsx'; // Corrigido o caminho
+import { useAuth } from '../components/AuthProvider.jsx'; 
 import { useNavigate, Link } from 'react-router-dom';
 import { useGlobalAlert } from '../App.jsx';
 
@@ -16,14 +16,11 @@ function RegisterUserPage() {
         e.preventDefault();
         setLoading(true);
         try {
-            await register({ email, nome, senha, perfil: "atendente" }); // Perfil é 'atendente' por padrão
+            await register({ email, nome, senha, perfil: "atendente" }); 
             setGlobalAlert({ message: 'Usuário registrado com sucesso! Você pode fazer login agora.', type: 'success' });
-            // Limpa os campos após o sucesso
             setNome('');
             setEmail('');
             setSenha('');
-            // Opcional: redirecionar para o login
-            // navigate('/');
         } catch (err) {
             setGlobalAlert({ message: `Erro ao registrar: ${err.response?.data?.detail || err.message}`, type: 'error' });
         } finally {
@@ -32,7 +29,7 @@ function RegisterUserPage() {
     };
 
     return (
-        <div className="form-container" style={{maxWidth: '450px'}}>
+        <div className="form-container" style={{maxWidth: '450px'}}> {/* Mantido maxWidth para este formulário específico */}
             <h2>Registrar Novo Usuário (Atendente)</h2>
             <form onSubmit={handleSubmit}>
                 <div className="form-group">

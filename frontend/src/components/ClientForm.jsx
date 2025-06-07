@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { clients } from '../api';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useGlobalAlert } from '../App.jsx';
-import LoadingSpinner from './LoadingSpinner.jsx'; // Assumindo que este componente já foi criado
+import LoadingSpinner from './LoadingSpinner.jsx'; 
 
 function ClientForm() {
     const [nome, setNome] = useState('');
@@ -10,15 +10,17 @@ function ClientForm() {
     const [endereco, setEndereco] = useState('');
     const [telefone, setTelefone] = useState('');
     const [email, setEmail] = useState('');
-    const [error, setError] = useState(''); // Para erros de validação ou de API no formulário
-    const [loadingInitial, setLoadingInitial] = useState(false); // Para carregamento inicial de dados na edição
-    const [submitLoading, setSubmitLoading] = useState(false); // Para o estado de envio do formulário
+    const [formError, setFormError] = useState(''); 
+    const [loadingInitial, setLoadingInitial] = useState(false); 
+    const [submitLoading, setSubmitLoading] = useState(false); 
     const navigate = useNavigate();
     const { id } = useParams();
     const { setGlobalAlert } = useGlobalAlert();
 
+    const isEditing = Boolean(id);
+
     useEffect(() => {
-        if (id) {
+        if (isEditing) {
             setLoadingInitial(true);
             clients.getById(id)
                 .then(response => {
@@ -36,16 +38,16 @@ function ClientForm() {
                 })
                 .finally(() => setLoadingInitial(false));
         }
-    }, [id, navigate, setGlobalAlert]);
+    }, [id, isEditing, navigate, setGlobalAlert]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setError(''); // Limpa erros locais antes de submeter
+        setFormError(''); 
         setSubmitLoading(true);
         const clientData = { nome, cpf_cnpj: cpfCnpj, endereco, telefone, email };
 
         try {
-            if (id) {
+            if (isEditing) {
                 await clients.update(id, clientData);
                 setGlobalAlert({ message: 'Cliente atualizado com sucesso!', type: 'success' });
             } else {
@@ -55,7 +57,7 @@ function ClientForm() {
             navigate('/clients');
         } catch (err) {
             const errorMessage = `Erro ao salvar cliente: ${err.response?.data?.detail || err.message}`;
-            setError(errorMessage); // Mostra erro localmente no formulário
+            setFormError(errorMessage); 
             setGlobalAlert({ message: errorMessage, type: 'error' });
         } finally {
             setSubmitLoading(false);
@@ -63,13 +65,13 @@ function ClientForm() {
     };
 
     if (loadingInitial) {
-        return <LoadingSpinner message="Carregando dados do cliente..." />;
+        return <LoadingSpinner message={isEditing ? "Carregando dados do cliente..." : "Preparando formulário..."} />;
     }
 
     return (
         <div className="form-container">
-            <h2>{id ? 'Editar Cliente' : 'Cadastrar Novo Cliente'}</h2>
-            {error && <p style={{ color: 'red', textAlign: 'center', marginBottom: '15px' }}>{error}</p>}
+            <h2>{isEditing ? 'Editar Cliente' : 'Cadastrar Novo Cliente'}</h2>
+            {formError && <p style={{ color: 'red', textAlign: 'center', marginBottom: '15px' }}>{formError}</p>}
             <form onSubmit={handleSubmit}>
                 <div className="form-group">
                     <label>Nome Completo / Razão Social:</label>
@@ -119,12 +121,12 @@ function ClientForm() {
                     />
                 </div>
                 <button type="submit" className="btn btn-primary" disabled={submitLoading}>
-                    {submitLoading ? 'Salvando...' : (id ? 'Atualizar Cliente' : 'Cadastrar Cliente')}
+                    {submitLoading ? 'Salvando...' : (isEditing ? 'Atualizar Cliente' : 'Cadastrar Cliente')}
                 </button>
                 <button
                     type="button"
                     onClick={() => navigate('/clients')}
-                    className="btn btn-secondary mt-2" // Adicionada classe mt-2 para margem
+                    className="btn btn-secondary mt-2" 
                 >
                     Cancelar
                 </button>

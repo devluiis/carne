@@ -15,7 +15,7 @@ function NovaVendaPage() {
     const fetchClientOptions = useCallback(async () => {
         try {
             setLoadingClients(true);
-            const response = await clients.getAll(''); // Passa query vazia para pegar todos
+            const response = await clients.getAll(''); 
             setClientOptions(response.data || []);
         } catch (err) {
             console.error('Erro ao carregar opções de clientes:', err);
@@ -42,7 +42,7 @@ function NovaVendaPage() {
     }
 
     return (
-        <div className="form-container" style={{maxWidth: '700px'}}>
+        <div className="form-container" style={{maxWidth: '700px'}}> {/* Mantido maxWidth para este formulário específico */}
             <h2 className="text-center">Registrar Nova Venda / Carnê</h2>
             <p className="text-center" style={{marginBottom: '30px'}}>Selecione o cliente para o qual deseja registrar uma nova venda e gerar um carnê.</p>
             
@@ -69,25 +69,25 @@ function NovaVendaPage() {
 
             <button
                 onClick={handleProceedToCarne}
-                className="btn btn-primary"
+                className="btn btn-primary mt-2" /* Adicionado mt-2 */
                 disabled={!selectedClientId || loadingClients}
-                style={{marginTop: '20px'}}
+                style={{width: '100%'}} /* Botão ocupando a largura total */
             >
                 Prosseguir para Criação do Carnê
             </button>
             <button
                 type="button"
-                onClick={() => navigate('/clients/new')} // Botão para cadastrar novo cliente rapidamente
-                className="btn btn-success mt-2" // Usa mt-2 do seu index.css
-                style={{width: 'auto', display: 'inline-block', marginRight: '10px'}}
+                onClick={() => navigate('/clients/new')} 
+                className="btn btn-success mt-2" 
+                style={{width: '100%', marginBottom: '10px'}} /* Ocupa largura total */
             >
                 + Cadastrar Novo Cliente
             </button>
             <button
                 type="button"
                 onClick={() => navigate('/carnes')}
-                className="btn btn-secondary mt-2"
-                 style={{width: 'auto', display: 'inline-block'}}
+                className="btn btn-secondary" /* Removido mt-2 aqui para usar a margem do botão anterior */
+                style={{width: '100%'}} /* Ocupa largura total */
             >
                 Cancelar / Ver Carnês
             </button>

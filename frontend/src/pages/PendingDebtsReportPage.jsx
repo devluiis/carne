@@ -5,7 +5,6 @@ import { useAuth } from '../components/AuthProvider.jsx';
 import { useGlobalAlert } from '../App.jsx';
 import LoadingSpinner from '../components/LoadingSpinner.jsx';
 
-// Função auxiliar para estilos de status (pode ser movida para um utils.js se usada em mais lugares)
 const getStatusStyle = (status) => {
     switch (status) {
         case 'Paga':
@@ -120,7 +119,6 @@ function PendingDebtsReportPage() {
         if (newClientId && newClientId !== '0') {
             navigate(`/reports/pending-debts-by-client/${newClientId}`, { replace: true });
         } else {
-            // Se selecionar "-- Selecione --", limpa o ID da URL e a mensagem inicial
             setInitialMessage('Selecione um cliente e clique em "Gerar Relatório".');
             navigate('/reports/pending-debts-by-client', { replace: true });
         }
@@ -130,11 +128,11 @@ function PendingDebtsReportPage() {
     if (loadingClients && clientOptions.length === 0) return <LoadingSpinner message="Carregando lista de clientes..." />;
 
     return (
-        <div className="form-container" style={{maxWidth: '1000px'}}>
+        <div className="form-container" style={{maxWidth: '1000px'}}> 
             <h2 className="text-center">Relatório de Dívidas Pendentes por Cliente</h2>
 
-            <form onSubmit={handleSubmit} className="form-group" style={{ display: 'flex', gap: '15px', alignItems: 'flex-end', borderBottom: '1px solid #eee', paddingBottom: '20px', marginBottom: '20px' }}>
-                <div style={{flexGrow: 1}}>
+            <form onSubmit={handleSubmit} className="form-grid-2-col" style={{gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', alignItems: 'flex-end', borderBottom: '1px solid #eee', paddingBottom: '20px', marginBottom: '20px' }}> {/* Usando form-grid-2-col */}
+                <div className="form-group"> {/* Removido style={{flexGrow: 1}} */}
                     <label>Cliente:</label>
                     <select
                         value={selectedClientId}
@@ -184,14 +182,14 @@ function PendingDebtsReportPage() {
                             <tbody>
                                 {reportData.parcelas_pendentes.map((parcela) => (
                                     <tr key={parcela.id_parcela}>
-                                        <td>{parcela.carnes_descricao || `ID ${parcela.id_carne}`}</td>
-                                        <td>{parcela.numero_parcela}</td>
-                                        <td>{new Date(parcela.data_vencimento + 'T00:00:00').toLocaleDateString()}</td>
-                                        <td>R$ {Number(parcela.valor_devido).toFixed(2)}</td>
-                                        <td>R$ {Number(parcela.juros_multa).toFixed(2)}</td>
-                                        <td>R$ {Number(parcela.valor_pago).toFixed(2)}</td>
-                                        <td>R$ {Number(parcela.saldo_devedor).toFixed(2)}</td>
-                                        <td>
+                                        <td data-label="Carnê">{parcela.carnes_descricao || `ID ${parcela.id_carne}`}</td>
+                                        <td data-label="Parcela Nº">{parcela.numero_parcela}</td>
+                                        <td data-label="Vencimento">{new Date(parcela.data_vencimento + 'T00:00:00').toLocaleDateString()}</td>
+                                        <td data-label="Valor Devido">R$ {Number(parcela.valor_devido).toFixed(2)}</td>
+                                        <td data-label="Juros/Multa">R$ {Number(parcela.juros_multa).toFixed(2)}</td>
+                                        <td data-label="Valor Pago">R$ {Number(parcela.valor_pago).toFixed(2)}</td>
+                                        <td data-label="Saldo Devedor">R$ {Number(parcela.saldo_devedor).toFixed(2)}</td>
+                                        <td data-label="Status Parcela">
                                             <span style={getStatusStyle(parcela.status_parcela)}>
                                                 {parcela.status_parcela}
                                             </span>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'; // Adicionado useCallback
+import React, { useState, useEffect, useCallback } from 'react';
 import { reports } from '../api';
 import { useAuth } from '../components/AuthProvider.jsx';
 import { useGlobalAlert } from '../App.jsx';
@@ -7,7 +7,7 @@ import LoadingSpinner from '../components/LoadingSpinner.jsx'; // Importar o spi
 function DashboardPage() {
     const [summaryData, setSummaryData] = useState(null);
     const [loading, setLoading] = useState(true);
-    const { user } = useAuth(); // user é usado para disparar o useEffect
+    const { user } = useAuth(); 
     const { setGlobalAlert } = useGlobalAlert();
 
     const fetchDashboardSummary = useCallback(async () => {
@@ -19,27 +19,25 @@ function DashboardPage() {
             console.error('Erro ao carregar dados do dashboard:', err);
             const errorMessage = `Falha ao carregar dashboard: ${err.response?.data?.detail || err.message}`;
             setGlobalAlert({ message: errorMessage, type: 'error' });
-            setSummaryData(null); // Garante que não tentará renderizar dados antigos/inválidos
+            setSummaryData(null); 
         } finally {
             setLoading(false);
         }
-    }, [setGlobalAlert]); // Dependência do useCallback
+    }, [setGlobalAlert]);
 
     useEffect(() => {
-        if (user) { // Apenas busca se o usuário estiver logado/carregado
+        if (user) { 
             fetchDashboardSummary();
-        } else if (!user && !useAuth().loading) { // Se não há usuário e AuthProvider não está carregando
-            setLoading(false); // Para o loading do dashboard
-            // O PrivateRoute já deve ter redirecionado, mas por segurança:
-            // setGlobalAlert({ message: 'Sessão encerrada. Faça login para ver o dashboard.', type: 'info' });
+        } else if (!user && !useAuth().loading) { 
+            setLoading(false); 
         }
-    }, [user, fetchDashboardSummary, useAuth().loading]); // Adicionada dependência loading do AuthProvider
+    }, [user, fetchDashboardSummary, useAuth().loading]); 
 
-    if (loading) { // Loading do DashboardPage
+    if (loading) { 
         return <LoadingSpinner message="Carregando Dashboard..." />;
     }
 
-    if (!summaryData) { // Se summaryData for null (após erro no fetch ou antes do primeiro fetch bem-sucedido)
+    if (!summaryData) { 
         return (
             <div className="form-container text-center">
                 <h2>Dashboard</h2>
@@ -51,15 +49,10 @@ function DashboardPage() {
         );
     }
 
-    // Se summaryData existir, renderiza o dashboard
     return (
-        <div className="form-container" style={{maxWidth: '1200px'}}> {/* Usando classe do index.css */}
+        <div className="form-container" style={{maxWidth: '1200px'}}> 
             <h2 className="text-center" style={{marginBottom: '30px'}}>Painel de Controle</h2>
-            <div style={{ 
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-                gap: '20px'
-            }}>
+            <div className="dashboard-grid"> {/* Usando a classe CSS */}
                 {/* Card Total de Clientes */}
                 <div className="card-dashboard">
                     <h3>Total de Clientes</h3>
@@ -114,13 +107,5 @@ function DashboardPage() {
         </div>
     );
 }
-
-// Sugestão: Mova estes estilos para o seu index.css para manter os componentes limpos
-// Exemplo de classes CSS que podem ser criadas:
-// .card-dashboard { background-color: #f9f9f9; border: 1px solid #ddd; ... }
-// .card-value { font-size: 2em; font-weight: bold; ... }
-// .card-value-green { color: #28a745; }
-// .card-value-red { color: #dc3545; }
-// .card-value-blue { color: #007bff; }
 
 export default DashboardPage;

@@ -19,8 +19,6 @@ export const AuthProvider = ({ children }) => {
             return;
         }
         
-        // Não precisa de setLoading(true) aqui se o loading inicial já é true
-        // e se o login já lida com seu próprio loading.
         try {
             const response = await auth.getMe(); // auth.getMe() usará o token via interceptor
             setUser(response.data);
@@ -37,8 +35,6 @@ export const AuthProvider = ({ children }) => {
     }, []); // Removida a dependência 'token' daqui para evitar loops se setToken for chamado dentro
 
     useEffect(() => {
-        // Ao montar, tenta carregar usuário do localStorage para UI rápida,
-        // mas fetchUser validará com o backend.
         const storedUser = localStorage.getItem('user');
         if (storedUser) {
             try {
@@ -63,11 +59,10 @@ export const AuthProvider = ({ children }) => {
             
             setToken(newToken); // Atualiza o estado do token
             setUser(userData);  // Atualiza o estado do usuário
-            setLoading(false);  // <<<< ADICIONADO: Finaliza o loading após sucesso
+            setLoading(false);  // Finaliza o loading após sucesso
             return true;        // Indica sucesso
         } catch (error) {
             console.error('Erro no login:', error);
-            // Limpa tudo em caso de falha
             localStorage.removeItem('token');
             localStorage.removeItem('user');
             setToken(null);
@@ -82,48 +77,36 @@ export const AuthProvider = ({ children }) => {
         localStorage.removeItem('user');
         setToken(null);
         setUser(null);
-        // O redirecionamento para '/' geralmente é feito no componente que chama logout
-        // ou por um useEffect que monitora 'user' no App.jsx ou PrivateRoute
     };
 
     const register = async (userData) => {
-        // setLoading(true); // Opcional, depende se você quer um loading global para registro
         try {
             await auth.register(userData);
-            // setLoading(false);
             return true;
         } catch (error) {
             console.error('Erro no registro:', error);
-            // setLoading(false);
             throw error;
         }
     };
 
     const registerAdmin = async (userData) => {
-        // setLoading(true);
         try {
             const response = await auth.registerAdmin(userData);
-            // setLoading(false);
             return response;
         } catch (error) {
-            // ... (tratamento de erro)
             throw error;
         }
     };
 
     const registerAtendenteByAdmin = async (userData) => {
-        // setLoading(true);
         try {
             const response = await auth.registerAtendenteByAdmin(userData); // Usa a função correta do api.js
-            // setLoading(false);
             return response;
         } catch (error) {
-            // ... (tratamento de erro)
             throw error;
         }
     };
     
-    // A função updateUser que discutimos para o ProfilePage
      const updateUser = (newUserData) => {
         const updatedUser = { ...user, ...newUserData };
         setUser(updatedUser);
@@ -132,7 +115,7 @@ export const AuthProvider = ({ children }) => {
 
     const value = {
         user,
-        token, // Exportando o token se algum componente precisar dele diretamente
+        token, 
         loading,
         login,
         logout,
@@ -144,11 +127,6 @@ export const AuthProvider = ({ children }) => {
 
     return (
         <AuthContext.Provider value={value}>
-            {/* Removido !loading && children para deixar o PrivateRoute/AdminRoute gerenciar o spinner
-                se o loading inicial ainda não terminou. Se children for null/undefined,
-                o React não renderiza nada, o que pode ser uma tela em branco.
-                Garantir que o <App /> tenha algo para renderizar é importante.
-                No entanto, o <PrivateRoute> já tem um spinner. */}
             {children}
         </AuthContext.Provider>
     );

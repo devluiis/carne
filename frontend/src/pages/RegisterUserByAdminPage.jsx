@@ -1,4 +1,3 @@
-// frontend/src/pages/RegisterUserByAdminPage.jsx
 import React, { useState } from 'react';
 import { useAuth } from '../components/AuthProvider.jsx';
 import { useNavigate } from 'react-router-dom';
@@ -9,7 +8,7 @@ function RegisterUserByAdminForm() {
     const [nome, setNome] = useState('');
     const [senha, setSenha] = useState('');
     const [loading, setLoading] = useState(false);
-    const { registerAtendenteByAdmin } = useAuth(); // Usar a nova função do AuthProvider
+    const { registerAtendenteByAdmin } = useAuth(); 
     const navigate = useNavigate();
     const { setGlobalAlert } = useGlobalAlert();
 
@@ -18,7 +17,6 @@ function RegisterUserByAdminForm() {
         setLoading(true);
 
         try {
-            // Chama a nova função registerAtendenteByAdmin que se comunica com o backend /register-atendente
             await registerAtendenteByAdmin({ email, nome, senha, perfil: "atendente" });
             setGlobalAlert({ message: 'Novo atendente registrado com sucesso!', type: 'success' });
             setEmail('');
@@ -33,56 +31,48 @@ function RegisterUserByAdminForm() {
     };
 
     return (
-        <div style={formContainerStyle}>
+        <div className="form-container" style={{maxWidth: '450px'}}> {/* Mantido maxWidth para este formulário específico */}
             <h2>Registrar Novo Atendente</h2>
             <form onSubmit={handleSubmit}>
-                <div style={formGroupStyle}>
-                    <label style={labelStyle}>Email:</label>
+                <div className="form-group">
+                    <label>Email:</label>
                     <input
                         type="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         required
-                        style={inputStyle}
+                        className="form-input"
                     />
                 </div>
-                <div style={formGroupStyle}>
-                    <label style={labelStyle}>Nome:</label>
+                <div className="form-group">
+                    <label>Nome:</label>
                     <input
                         type="text"
                         value={nome}
                         onChange={(e) => setNome(e.target.value)}
                         required
-                        style={inputStyle}
+                        className="form-input"
                     />
                 </div>
-                <div style={formGroupStyle}>
-                    <label style={labelStyle}>Senha:</label>
+                <div className="form-group">
+                    <label>Senha:</label>
                     <input
                         type="password"
                         value={senha}
                         onChange={(e) => setSenha(e.target.value)}
                         required
-                        style={inputStyle}
+                        className="form-input"
                     />
                 </div>
-                <button type="submit" disabled={loading} style={submitButtonStyle}>
+                <button type="submit" className="btn btn-success" disabled={loading}>
                     {loading ? 'Registrando...' : 'Registrar Atendente'}
                 </button>
-                <button type="button" onClick={() => navigate('/clients')} style={cancelButtonStyle}>
+                <button type="button" onClick={() => navigate('/clients')} className="btn btn-secondary mt-2">
                     Cancelar
                 </button>
             </form>
         </div>
     );
 }
-
-// Estilos (reutilizados ou adaptados)
-const formContainerStyle = { maxWidth: '450px', margin: '50px auto', padding: '20px', border: '1px solid #ccc', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' };
-const formGroupStyle = { marginBottom: '15px' };
-const labelStyle = { display: 'block', marginBottom: '5px', fontWeight: 'bold' };
-const inputStyle = { width: '100%', padding: '8px', boxSizing: 'border-box', borderRadius: '4px', border: '1px solid #ddd' };
-const submitButtonStyle = { width: '100%', padding: '10px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' };
-const cancelButtonStyle = { width: '100%', padding: '10px', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', marginTop: '10px' };
 
 export default RegisterUserByAdminForm;

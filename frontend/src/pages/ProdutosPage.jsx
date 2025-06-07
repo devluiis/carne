@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { produtos } from '../api'; // Importa as funções da API de produtos
+import { produtos } from '../api'; 
 import { useAuth } from '../components/AuthProvider.jsx';
 import { useGlobalAlert } from '../App.jsx';
 import LoadingSpinner from '../components/LoadingSpinner.jsx';
@@ -19,7 +19,7 @@ function ProdutosPage() {
     const [produtosList, setProdutosList] = useState([]);
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
-    const { user } = useAuth(); // Para verificar permissões (ex: admin para excluir)
+    const { user } = useAuth(); 
     const { setGlobalAlert } = useGlobalAlert();
 
     // Estados para filtros e busca
@@ -35,8 +35,8 @@ function ProdutosPage() {
         try {
             setLoading(true);
             const response = await produtos.getAll(
-                0, // skip
-                100, // limit (pode adicionar paginação no futuro)
+                0, 
+                100, 
                 searchQuery || null,
                 filterCategoria || null,
                 filterMarca || null
@@ -51,28 +51,27 @@ function ProdutosPage() {
     }, [searchQuery, filterCategoria, filterMarca, setGlobalAlert]);
 
     useEffect(() => {
-        if (user) { // Garante que o usuário está logado para buscar
+        if (user) { 
             fetchProdutos();
         }
-    }, [user, fetchProdutos]); // fetchProdutos está envolvido por useCallback
+    }, [user, fetchProdutos]); 
 
     const handleApplyFilters = () => {
-        fetchProdutos(); // O useEffect já faz isso, mas um botão explícito pode ser útil
+        fetchProdutos(); 
     };
 
     const handleClearFilters = () => {
         setSearchQuery('');
         setFilterCategoria('');
         setFilterMarca('');
-        // fetchProdutos será chamado pelo useEffect devido à mudança nos estados de filtro
     };
 
     const navigateToCreateProduto = () => {
-        navigate('/produtos/novo'); // Rota para o formulário de novo produto (a ser criada)
+        navigate('/produtos/novo'); 
     };
 
     const navigateToEditProduto = (id) => {
-        navigate(`/produtos/editar/${id}`); // Rota para o formulário de edição (a ser criada)
+        navigate(`/produtos/editar/${id}`); 
     };
 
     const handleOpenDeleteModal = (id) => {
@@ -90,7 +89,7 @@ function ProdutosPage() {
         try {
             await produtos.delete(produtoToDeleteId);
             setGlobalAlert({ message: 'Produto excluído com sucesso!', type: 'success' });
-            fetchProdutos(); // Atualiza a lista
+            fetchProdutos(); 
         } catch (err) {
             const errorMessage = `Falha ao excluir produto: ${err.response?.data?.detail || err.message}`;
             setGlobalAlert({ message: errorMessage, type: 'error' });
@@ -112,7 +111,7 @@ function ProdutosPage() {
                 {/* Seção de Filtros */}
                 <div className="form-container" style={{maxWidth: 'none', margin: '0 0 20px 0', padding: '20px'}}>
                     <h3>Filtrar Produtos:</h3>
-                    <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', alignItems: 'flex-end'}}>
+                    <div className="form-grid-2-col" style={{gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', alignItems: 'flex-end'}}> {/* Usando form-grid-2-col */}
                         <div className="form-group">
                             <label htmlFor="searchNome">Nome do Produto:</label>
                             <input
@@ -148,8 +147,7 @@ function ProdutosPage() {
                         </div>
                         <div className="form-group" style={{display: 'flex', gap: '10px'}}>
                             {/* Opcional: Botão Aplicar Filtros se não quiser re-fetch automático no onChange */}
-                            {/* <button onClick={handleApplyFilters} className="btn btn-primary" style={{width: '100%'}}>Aplicar</button> */}
-                            <button onClick={handleClearFilters} className="btn btn-secondary" style={{width: '100%'}}>Limpar Filtros</button>
+                            <button onClick={handleClearFilters} className="btn btn-secondary" style={{width: 'auto'}}>Limpar Filtros</button>
                         </div>
                     </div>
                 </div>
@@ -178,13 +176,13 @@ function ProdutosPage() {
                         <tbody>
                             {produtosList.map((produto) => (
                                 <tr key={produto.id_produto}>
-                                    <td>{produto.id_produto}</td>
-                                    <td>{produto.nome}</td>
-                                    <td>{produto.categoria || 'N/A'}</td>
-                                    <td>{produto.marca || 'N/A'}</td>
-                                    <td>{produto.preco_venda !== null ? formatCurrency(produto.preco_venda) : 'N/A'}</td>
-                                    <td>{produto.estoque_atual !== null ? produto.estoque_atual : 'N/A'} {produto.unidade_medida || ''}</td>
-                                    <td>
+                                    <td data-label="ID">{produto.id_produto}</td>
+                                    <td data-label="Nome">{produto.nome}</td>
+                                    <td data-label="Categoria">{produto.categoria || 'N/A'}</td>
+                                    <td data-label="Marca">{produto.marca || 'N/A'}</td>
+                                    <td data-label="Preço Venda">{produto.preco_venda !== null ? formatCurrency(produto.preco_venda) : 'N/A'}</td>
+                                    <td data-label="Estoque">{produto.estoque_atual !== null ? produto.estoque_atual : 'N/A'} {produto.unidade_medida || ''}</td>
+                                    <td data-label="Ações">
                                         <div className="table-actions">
                                             <button 
                                                 onClick={() => navigateToEditProduto(produto.id_produto)} 
@@ -192,7 +190,7 @@ function ProdutosPage() {
                                             >
                                                 Editar
                                             </button>
-                                            {user?.perfil === 'admin' && ( // Apenas admin pode excluir
+                                            {user?.perfil === 'admin' && ( 
                                                 <button 
                                                     onClick={() => handleOpenDeleteModal(produto.id_produto)} 
                                                     className="btn btn-danger btn-sm"

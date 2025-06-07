@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { produtos } from '../api'; // Funções da API de produtos
+import { produtos } from '../api'; 
 import { useGlobalAlert } from '../App.jsx';
 import LoadingSpinner from '../components/LoadingSpinner.jsx';
 
 function ProdutoFormPage() {
     const navigate = useNavigate();
-    const { id: produtoId } = useParams(); // Renomeado para clareza, se estiver editando
+    const { id: produtoId } = useParams(); 
     const { setGlobalAlert } = useGlobalAlert();
 
     const [nome, setNome] = useState('');
@@ -22,7 +22,7 @@ function ProdutoFormPage() {
 
     const [loadingInitial, setLoadingInitial] = useState(false);
     const [submitLoading, setSubmitLoading] = useState(false);
-    const [formError, setFormError] = useState(''); // Erro local para o formulário
+    const [formError, setFormError] = useState(''); 
 
     const isEditing = Boolean(produtoId);
 
@@ -45,7 +45,7 @@ function ProdutoFormPage() {
             } catch (error) {
                 console.error("Erro ao carregar produto para edição:", error);
                 setGlobalAlert({ message: `Erro ao carregar produto: ${error.response?.data?.detail || error.message}`, type: 'error' });
-                navigate('/produtos'); // Volta para a lista se não conseguir carregar
+                navigate('/produtos'); 
             } finally {
                 setLoadingInitial(false);
             }
@@ -89,11 +89,11 @@ function ProdutoFormPage() {
                 await produtos.create(produtoData);
                 setGlobalAlert({ message: 'Produto cadastrado com sucesso!', type: 'success' });
             }
-            navigate('/produtos'); // Volta para a lista de produtos
+            navigate('/produtos'); 
         } catch (error) {
             console.error("Erro ao salvar produto:", error);
             const errorMsg = error.response?.data?.detail || error.message || "Ocorreu um erro desconhecido.";
-            setFormError(errorMsg); // Mostra erro no formulário
+            setFormError(errorMsg); 
             setGlobalAlert({ message: `Erro ao salvar produto: ${errorMsg}`, type: 'error' });
         } finally {
             setSubmitLoading(false);
@@ -120,7 +120,7 @@ function ProdutoFormPage() {
                     <textarea id="descricao" value={descricao} onChange={(e) => setDescricao(e.target.value)} className="form-textarea" rows="3"></textarea>
                 </div>
 
-                <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px'}}>
+                <div className="form-grid-2-col"> {/* Usando classe CSS */}
                     <div className="form-group">
                         <label htmlFor="categoria">Categoria:</label>
                         <input type="text" id="categoria" value={categoria} onChange={(e) => setCategoria(e.target.value)} className="form-input" maxLength={100} />
@@ -131,7 +131,7 @@ function ProdutoFormPage() {
                     </div>
                 </div>
 
-                <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px'}}>
+                <div className="form-grid-2-col"> {/* Usando classe CSS */}
                     <div className="form-group">
                         <label htmlFor="imei">IMEI (para celulares):</label>
                         <input type="text" id="imei" value={imei} onChange={(e) => setImei(e.target.value)} className="form-input" maxLength={50} />
@@ -142,7 +142,7 @@ function ProdutoFormPage() {
                     </div>
                 </div>
 
-                <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px'}}>
+                <div className="form-grid-2-col"> {/* Usando classe CSS */}
                     <div className="form-group">
                         <label htmlFor="precoVenda">Preço de Venda (R$):</label>
                         <input type="number" id="precoVenda" value={precoVenda} onChange={(e) => setPrecoVenda(e.target.value)} step="0.01" min="0" className="form-input" />
@@ -153,7 +153,7 @@ function ProdutoFormPage() {
                     </div>
                 </div>
 
-                <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px'}}>
+                <div className="form-grid-2-col"> {/* Usando classe CSS */}
                     <div className="form-group">
                         <label htmlFor="estoqueAtual">Estoque Atual:</label>
                         <input type="number" id="estoqueAtual" value={estoqueAtual} onChange={(e) => setEstoqueAtual(e.target.value)} step="1" min="0" className="form-input" />

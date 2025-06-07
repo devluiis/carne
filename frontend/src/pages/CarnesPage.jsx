@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { carnes /* Removido 'clients' daqui, pois a busca de todos os clientes agora é em NovaVendaPage */ } from '../api';
+import { carnes } from '../api';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../components/AuthProvider.jsx';
 import { useGlobalAlert } from '../App.jsx';
@@ -20,12 +20,9 @@ function CarnesPage() {
     const [carnesList, setCarnesList] = useState([]);
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
-    const { id_cliente } = useParams(); // id_cliente da URL (para carnês de um cliente específico)
+    const { id_cliente } = useParams(); 
     const { user } = useAuth();
     const { setGlobalAlert } = useGlobalAlert();
-
-    // Removidos: clientOptions, clienteSelecionadoParaNovoCarne
-    // A função fetchClientOptions também foi removida daqui
 
     const [filterStatus, setFilterStatus] = useState('');
     const [filterDateStart, setFilterDateStart] = useState('');
@@ -38,7 +35,6 @@ function CarnesPage() {
     const fetchCarnes = useCallback(async () => {
         try {
             setLoading(true);
-            // Se id_cliente vier da URL, ele será usado. Caso contrário, será null.
             const currentClientId = id_cliente || null; 
             const response = await carnes.getAll(currentClientId, filterStatus, filterDateStart, filterDateEnd, filterSearchQuery);
             setCarnesList(response.data || []);
@@ -60,7 +56,7 @@ function CarnesPage() {
             setLoading(false);
             setGlobalAlert({ message: 'Faça login para ver os carnês.', type: 'error' });
         }
-    }, [user, fetchCarnes]); // fetchCarnes agora é a única dependência de fetch aqui
+    }, [user, fetchCarnes]); 
 
     const handleOpenDeleteModal = (id) => {
         setCarneToDeleteId(id);
@@ -92,14 +88,7 @@ function CarnesPage() {
         setFilterDateStart('');
         setFilterDateEnd('');
         setFilterSearchQuery('');
-        // fetchCarnes será chamado pelo useEffect quando estas dependências mudarem
-        // ou podemos chamar explicitamente fetchCarnes() aqui se o useEffect não tiver os filtros como dep.
     };
-
-    // Removida a função handleAdicionarNovoCarne daqui, pois a lógica de seleção de cliente e navegação
-    // para o formulário de carnê foi para NovaVendaPage.jsx
-    // No entanto, se estivermos na página de um cliente específico, podemos adicionar um botão
-    // que vá direto para o formulário de carnê com esse cliente pré-selecionado.
 
     if (loading) {
         return <LoadingSpinner message="Carregando carnês..." />;
@@ -110,14 +99,11 @@ function CarnesPage() {
             <div className="table-container">
                 <h2 className="text-center">
                     Lista de Carnês
-                    {/* Lógica para exibir nome do cliente se id_cliente estiver na URL pode ser adicionada aqui
-                        buscando o nome do cliente separadamente ou passando como prop se possível */}
                 </h2>
                 
                 <div className="form-container" style={{maxWidth: 'none', margin: '0 0 20px 0', padding: '20px'}}>
                     <h3>Filtrar Carnês:</h3>
-                    {/* Seção de Filtros (mantida como no seu último upload) */}
-                    <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', alignItems: 'flex-end'}}>
+                    <div className="form-grid-2-col" style={{gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', alignItems: 'flex-end'}}> {/* Usando form-grid-2-col */}
                         <div className="form-group">
                             <label>Status:</label>
                             <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="form-select">
@@ -147,13 +133,12 @@ function CarnesPage() {
                             />
                         </div>
                         <div className="form-group" style={{display: 'flex', gap: '10px'}}>
-                            <button onClick={fetchCarnes} className="btn btn-primary" style={{width: '100%'}}>Aplicar Filtros</button>
-                            <button onClick={handleClearFilters} className="btn btn-secondary" style={{width: '100%'}}>Limpar Filtros</button>
+                            <button onClick={fetchCarnes} className="btn btn-primary" style={{width: 'auto'}}>Aplicar Filtros</button>
+                            <button onClick={handleClearFilters} className="btn btn-secondary" style={{width: 'auto'}}>Limpar Filtros</button>
                         </div>
                     </div>
                 </div>
 
-                {/* Botão para ir para a nova página de registrar venda OU para adicionar carnê para cliente específico */}
                 {id_cliente ? (
                      <button onClick={() => navigate(`/carnes/new/${id_cliente}`)} className="btn btn-success" style={{width: 'auto', marginBottom: '20px'}}>
                         + Adicionar Carnê para este Cliente
@@ -170,7 +155,6 @@ function CarnesPage() {
                     </p>
                 ) : (
                     <table className="styled-table">
-                        {/* Cabeçalho e corpo da tabela como no seu último upload */}
                         <thead>
                             <tr>
                                 <th >Cliente</th>
@@ -186,18 +170,18 @@ function CarnesPage() {
                         <tbody>
                             {carnesList.map((carne) => (
                                 <tr key={carne.id_carne}>
-                                    <td>{carne.cliente?.nome || 'N/A'}</td>
-                                    <td>{carne.descricao || 'N/A'}</td>
-                                    <td>{carne.data_venda ? new Date(carne.data_venda + 'T00:00:00').toLocaleDateString() : 'N/A'}</td>
-                                    <td>R$ {Number(carne.valor_total_original).toFixed(2)}</td>
-                                    <td>R$ {Number(carne.valor_entrada || 0).toFixed(2)}</td>
-                                    <td>{carne.numero_parcelas}</td>
-                                    <td>
+                                    <td data-label="Cliente">{carne.cliente?.nome || 'N/A'}</td>
+                                    <td data-label="Descrição">{carne.descricao || 'N/A'}</td>
+                                    <td data-label="Data Venda">{carne.data_venda ? new Date(carne.data_venda + 'T00:00:00').toLocaleDateString() : 'N/A'}</td>
+                                    <td data-label="Valor Total">R$ {Number(carne.valor_total_original).toFixed(2)}</td>
+                                    <td data-label="Entrada">R$ {Number(carne.valor_entrada || 0).toFixed(2)}</td>
+                                    <td data-label="Nº Parc.">{carne.numero_parcelas}</td>
+                                    <td data-label="Status">
                                         <span style={getStatusStyle(carne.status_carne)}>
                                             {carne.status_carne}
                                         </span>
                                     </td>
-                                    <td>
+                                    <td data-label="Ações">
                                         <div className="table-actions">
                                             <button onClick={() => navigate(`/carnes/details/${carne.id_carne}`)} className="btn btn-info btn-sm">Detalhes</button>
                                             <button onClick={() => navigate(`/carnes/edit/${carne.id_carne}`)} className="btn btn-warning btn-sm">Editar</button>

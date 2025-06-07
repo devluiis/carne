@@ -26,6 +26,48 @@ header {
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
+header h1 {
+    margin: 0;
+    font-size: 1.5rem;
+}
+
+header nav {
+    display: flex;
+    align-items: center;
+}
+header nav ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap; /* Permitir quebra de linha em telas menores */
+    align-items: center;
+}
+header nav ul li {
+    margin-right: 5px;
+}
+header nav ul li a {
+    padding: 10px 15px;
+    color: white;
+    text-decoration: none;
+    transition: background-color 0.2s ease;
+    display: inline-block;
+}
+header nav ul li a.active-link { /* Nova classe para links ativos */
+    background-color: #555;
+    border-radius: 5px;
+}
+.user-info-section {
+    margin-left: 20px;
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+}
+.user-info-section span {
+    margin-right: 10px;
+}
+
+
 main {
   flex-grow: 1;
   padding: 20px;
@@ -33,7 +75,7 @@ main {
 
 /* --- ESTILOS DE FORMULÁRIO --- */
 .form-container {
-    max-width: 600px;
+    max-width: 600px; /* Padrão para telas maiores */
     margin: 40px auto;
     padding: 30px;
     background-color: white;
@@ -80,10 +122,17 @@ main {
     cursor: not-allowed;
 }
 
+/* Para grids de 2 colunas em formulários */
+.form-grid-2-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
 /* --- ESTILOS DE BOTÕES --- */
 .btn {
     display: inline-block;
-    width: 100%;
+    width: 100%; /* Ajustado para flexibilidade, será sobrescrito por width: auto onde necessário */
     padding: 12px 15px;
     border: none;
     border-radius: 5px;
@@ -120,6 +169,12 @@ main {
 .btn-sm {
     padding: 6px 12px;
     font-size: 0.875rem;
+    width: auto; /* Para botões em linha */
+}
+
+/* Margem utilitária */
+.mt-2 {
+    margin-top: 20px;
 }
 
 /* --- ESTILOS DE TABELA --- */
@@ -163,12 +218,11 @@ main {
     gap: 8px;
 }
 
-/* --- Classes utilitárias --- */
-.text-center {
-    text-align: center;
-}
-.mt-2 {
-    margin-top: 20px;
+/* --- ESTILOS DE DASHBOARD --- */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
 }
 
 .card-dashboard {
@@ -204,4 +258,216 @@ main {
 
 .card-dashboard .card-value-blue {
     color: #007bff;
+}
+
+/* --- ESTILOS DE ALERTA GLOBAL --- */
+.global-alert {
+    position: fixed;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 12px 25px;
+    border-radius: 8px;
+    color: white;
+    font-weight: bold;
+    z-index: 1000;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-width: 300px;
+    max-width: 90%;
+}
+
+.global-alert .close-button {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.2em;
+    cursor: pointer;
+    margin-left: 15px;
+}
+
+/* -- Media Queries -- */
+/* Para telas menores (celulares) */
+@media (max-width: 768px) {
+    body {
+        font-size: 0.85rem; /* Reduzir tamanho base da fonte */
+    }
+    #root {
+        padding: 0.5rem; /* Reduzir padding do root */
+    }
+    header {
+        flex-direction: column; /* Empilhar itens no header */
+        align-items: flex-start;
+        padding: 10px;
+    }
+    header h1 {
+        font-size: 1.3rem; /* Menor em mobile */
+    }
+    header nav {
+        width: 100%;
+        margin-top: 10px;
+    }
+    header nav ul {
+        flex-direction: column; /* Links da navegação em coluna */
+        align-items: flex-start;
+        width: 100%;
+        margin-top: 5px;
+    }
+    header nav ul li {
+        margin-right: 0;
+        margin-bottom: 3px; /* Espaço entre links empilhados */
+        width: 100%;
+    }
+    header nav ul li a {
+        padding: 6px 8px; /* Reduzir padding dos links */
+        font-size: 0.85rem;
+        width: calc(100% - 16px); /* Ajuste para padding */
+        text-align: left;
+    }
+    .user-info-section { /* Para 'Olá, usuário! Sair' */
+        margin-left: 0; /* Remover margem extra */
+        margin-top: 10px;
+        width: 100%;
+        justify-content: space-between;
+        font-size: 0.85rem;
+    }
+    .user-info-section span {
+        margin-right: 5px;
+    }
+    .user-info-section .btn-sm {
+        padding: 6px 10px;
+        font-size: 0.8rem;
+    }
+
+    .form-container, .table-container {
+        margin: 15px auto; /* Reduzir margem vertical */
+        padding: 10px; /* Reduzir padding */
+        max-width: 98%; /* Ocupa quase toda a largura em telas menores */
+    }
+
+    .form-container h2 {
+        font-size: 1.3rem;
+        margin-bottom: 15px;
+    }
+
+    .form-group label {
+        font-size: 0.85rem;
+    }
+
+    .form-input, .form-select, .form-textarea {
+        padding: 8px;
+        font-size: 0.85rem;
+    }
+
+    .btn {
+        padding: 10px 10px;
+        font-size: 0.9rem;
+    }
+
+    /* Layout de grid em formulários (ex: ProdutoFormPage) */
+    .form-grid-2-col {
+        grid-template-columns: 1fr !important; /* Uma coluna em telas pequenas */
+        gap: 10px !important;
+    }
+
+    /* Dashboard Cards */
+    .dashboard-grid {
+        grid-template-columns: 1fr !important; /* Uma coluna em telas pequenas */
+        gap: 10px !important;
+    }
+    .card-dashboard h3 {
+        font-size: 1rem;
+    }
+    .card-dashboard .card-value {
+        font-size: 1.8em;
+    }
+
+    /* Tabelas Responsivas: Transformar em blocos empilhados */
+    .styled-table {
+        display: block; /* Para permitir que o overflow-x: auto funcione */
+        width: 100%; /* Ocupa largura total */
+        overflow-x: auto; /* Adiciona scroll horizontal */
+        border-collapse: collapse; /* Mantenha o collapse */
+    }
+    /* Estilos para células em mobile: esconder thead e exibir labels */
+    .styled-table thead, .styled-table tbody tr {
+        position: absolute; /* Esconde o cabeçalho */
+        top: -9999px;
+        left: -9999px;
+    }
+    .styled-table tr {
+        border: 1px solid #ccc;
+        display: block; /* Cada linha vira um bloco */
+        margin-bottom: 10px; /* Espaçamento entre os "cartões" de linha */
+        padding: 10px;
+    }
+    .styled-table td {
+        border: none; /* Remove bordas de célula */
+        position: relative;
+        padding-left: 50%; /* Espaço para a label "virtual" */
+        text-align: right; /* Alinha o valor à direita */
+        display: block; /* Faz a célula ocupar a largura total */
+        font-size: 0.9rem;
+        word-wrap: break-word; /* Quebra palavras longas */
+    }
+    .styled-table td:last-child {
+        border-bottom: none; /* Última célula não tem borda inferior */
+    }
+    .styled-table td:before {
+        /* Adiciona o cabeçalho como uma label antes do conteúdo da célula */
+        position: absolute;
+        top: 6px;
+        left: 6px;
+        width: 45%;
+        padding-right: 10px;
+        white-space: nowrap;
+        text-align: left;
+        font-weight: bold;
+        color: #555;
+        content: attr(data-label); /* Usa o atributo data-label */
+    }
+
+    .table-actions {
+        justify-content: flex-end; /* Alinhar botões à direita no mobile */
+    }
+
+    /* Ajustes específicos para a seção de filtros nas páginas de lista */
+    .table-container > .form-container {
+        padding: 10px;
+    }
+    .table-container > .form-container > div { /* Para o grid de filtros */
+        grid-template-columns: 1fr !important;
+        gap: 10px !important;
+    }
+}
+
+/* Adicione em index.css, fora das media queries */
+.loading-spinner-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 40px;
+    min-height: 300px; /* Garante que o spinner tenha espaço */
+}
+
+.loading-spinner {
+    border: 5px solid #f3f3f3; /* Cinza claro */
+    border-top: 5px solid #3498db; /* Azul */
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 20px auto; /* Centraliza o spinner */
+}
+
+.loading-spinner-message {
+    margin-top: 15px;
+    color: #555;
+    font-weight: bold;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }

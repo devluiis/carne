@@ -1,24 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { reports } from '../api';
 import { useAuth } from '../components/AuthProvider.jsx';
-import { useGlobalAlert } from '../App.jsx'; // Importar useGlobalAlert
+import { useGlobalAlert } from '../App.jsx'; 
+import LoadingSpinner from '../components/LoadingSpinner.jsx';
 
 function ReceiptsReportPage() {
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
     const [reportData, setReportData] = useState(null);
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(''); // Manter erro local para carregamento
+    const [error, setError] = useState(''); 
     const { user } = useAuth();
-    const { setGlobalAlert } = useGlobalAlert(); // Usar o contexto do alerta global
+    const { setGlobalAlert } = useGlobalAlert();
 
 
-    // Opcional: Definir datas padrão para o mês atual ao carregar a página
     useEffect(() => {
         const today = new Date();
         const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
         
-        // Formata as datas para YYYY-MM-DD
         const format = (date) => date.toISOString().split('T')[0];
 
         setStartDate(format(firstDayOfMonth));
@@ -28,7 +27,7 @@ function ReceiptsReportPage() {
     const handleGenerateReport = async (e) => {
         e.preventDefault();
         setError('');
-        setReportData(null); // Limpa dados de relatórios anteriores
+        setReportData(null); 
         setLoading(true);
 
         if (!startDate || !endDate) {
@@ -61,74 +60,74 @@ function ReceiptsReportPage() {
         }
     };
 
-    if (!user) return <p style={errorStyle}>Faça login para acessar esta página.</p>;
+    if (!user) return <p className="text-center" style={{color: 'red', padding: '20px'}}>Faça login para acessar esta página.</p>;
 
     return (
-        <div style={containerStyle}>
-            <h2 style={headerStyle}>Relatório de Recebimentos por Período</h2>
+        <div className="form-container" style={{maxWidth: '1000px'}}> 
+            <h2 className="text-center">Relatório de Recebimentos por Período</h2>
 
-            <form onSubmit={handleGenerateReport} style={formStyle}>
-                <div style={formGroupStyle}>
-                    <label style={labelStyle}>Data de Início:</label>
+            <form onSubmit={handleGenerateReport} className="form-grid-2-col" style={{gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', alignItems: 'flex-end', borderBottom: '1px solid #eee', paddingBottom: '20px', marginBottom: '20px' }}> {/* Usando form-grid-2-col */}
+                <div className="form-group">
+                    <label>Data de Início:</label>
                     <input
                         type="date"
                         value={startDate}
                         onChange={(e) => setStartDate(e.target.value)}
                         required
-                        style={inputStyle}
+                        className="form-input"
                     />
                 </div>
-                <div style={formGroupStyle}>
-                    <label style={labelStyle}>Data de Fim:</label>
+                <div className="form-group">
+                    <label>Data de Fim:</label>
                     <input
                         type="date"
                         value={endDate}
                         onChange={(e) => setEndDate(e.target.value)}
                         required
-                        style={inputStyle}
+                        className="form-input"
                     />
                 </div>
-                <button type="submit" disabled={loading} style={submitButtonStyle}>
+                <button type="submit" className="btn btn-primary" disabled={loading} style={{width: 'auto'}}>
                     {loading ? 'Gerando...' : 'Gerar Relatório'}
                 </button>
             </form>
 
-            {error && <p style={{ ...errorStyle, marginTop: '20px' }}>{error}</p>}
+            {error && <p className="text-center" style={{ ...errorStyle, marginTop: '20px' }}>{error}</p>}
 
             {reportData && (
-                <div style={reportResultsStyle}>
-                    <h3 style={reportHeaderStyle}>Resultados para o Período: {new Date(reportData.start_date).toLocaleDateString()} - {new Date(reportData.end_date).toLocaleDateString()}</h3>
-                    <p style={totalStyle}>Total Recebido: <strong>R$ {reportData.total_recebido_periodo.toFixed(2)}</strong></p>
+                <div style={{marginTop: '20px'}}>
+                    <h3 style={{marginBottom: '10px'}}>Resultados para o Período: {new Date(reportData.start_date).toLocaleDateString()} - {new Date(reportData.end_date).toLocaleDateString()}</h3>
+                    <p style={{fontSize: '1.1em', marginBottom: '15px'}}>Total Recebido: <strong style={{color: '#28a745'}}>R$ {Number(reportData.total_recebido_periodo).toFixed(2)}</strong></p>
 
                     {reportData.pagamentos.length === 0 ? (
-                        <p style={noDataStyle}>Nenhum pagamento encontrado para o período selecionado.</p>
+                        <p className="text-center" style={{padding: '20px', backgroundColor: '#f8f9fa', borderRadius: '5px'}}>Nenhum pagamento encontrado para o período selecionado.</p>
                     ) : (
-                        <table style={tableStyle}>
+                        <table className="styled-table">
                             <thead>
                                 <tr>
-                                    <th style={tableHeaderStyle}>ID Pagamento</th>
-                                    <th style={tableHeaderStyle}>Data</th>
-                                    <th style={tableHeaderStyle}>Valor</th>
-                                    <th style={tableHeaderStyle}>Forma</th>
-                                    <th style={tableHeaderStyle}>Cliente</th>
-                                    <th style={tableHeaderStyle}>Carnê</th>
-                                    <th style={tableHeaderStyle}>Parcela</th>
-                                    <th style={tableHeaderStyle}>Vencimento Original</th>
-                                    <th style={tableHeaderStyle}>Observações</th>
+                                    <th>ID Pagamento</th>
+                                    <th>Data</th>
+                                    <th>Valor</th>
+                                    <th>Forma</th>
+                                    <th>Cliente</th>
+                                    <th>Carnê</th>
+                                    <th>Parcela</th>
+                                    <th>Vencimento Original</th>
+                                    <th>Observações</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {reportData.pagamentos.map((pagamento) => (
                                     <tr key={pagamento.id_pagamento}>
-                                        <td style={tableCellStyle}>{pagamento.id_pagamento}</td>
-                                        <td style={tableCellStyle}>{new Date(pagamento.data_pagamento).toLocaleDateString()}</td>
-                                        <td style={tableCellStyle}>R$ {pagamento.valor_pago.toFixed(2)}</td>
-                                        <td style={tableCellStyle}>{pagamento.forma_pagamento}</td>
-                                        <td style={tableCellStyle}>{pagamento.cliente_nome}</td>
-                                        <td style={tableCellStyle}>{pagamento.carnes_descricao || 'N/A'}</td>
-                                        <td style={tableCellStyle}>{pagamento.parcela_numero}</td>
-                                        <td style={tableCellStyle}>{new Date(pagamento.parcela_data_vencimento).toLocaleDateString()}</td>
-                                        <td style={tableCellStyle}>{pagamento.observacoes || 'N/A'}</td>
+                                        <td data-label="ID Pagamento">{pagamento.id_pagamento}</td>
+                                        <td data-label="Data">{new Date(pagamento.data_pagamento).toLocaleDateString()}</td>
+                                        <td data-label="Valor">R$ {pagamento.valor_pago.toFixed(2)}</td>
+                                        <td data-label="Forma">{pagamento.forma_pagamento}</td>
+                                        <td data-label="Cliente">{pagamento.cliente_nome}</td>
+                                        <td data-label="Carnê">{pagamento.carnes_descricao || 'N/A'}</td>
+                                        <td data-label="Parcela">{pagamento.parcela_numero}</td>
+                                        <td data-label="Vencimento Original">{new Date(pagamento.parcela_data_vencimento).toLocaleDateString()}</td>
+                                        <td data-label="Observações">{pagamento.observacoes || 'N/A'}</td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -140,24 +139,6 @@ function ReceiptsReportPage() {
     );
 }
 
-// Estilos
-const containerStyle = { maxWidth: '1000px', margin: '20px auto', padding: '20px', border: '1px solid #eee', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', backgroundColor: 'white' };
-const headerStyle = { textAlign: 'center', marginBottom: '30px', color: '#333' };
-const formStyle = { display: 'flex', gap: '15px', marginBottom: '30px', padding: '15px', border: '1px solid #ddd', borderRadius: '8px', backgroundColor: '#f9f9f9', alignItems: 'flex-end' };
-const formGroupStyle = { flex: '1', minWidth: '150px' };
-const labelStyle = { display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#555' };
-const inputStyle = { width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box' };
-const submitButtonStyle = { padding: '10px 20px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', minWidth: '120px' };
-
-const reportResultsStyle = { marginTop: '30px', borderTop: '1px solid #eee', paddingTop: '20px' };
-const reportHeaderStyle = { fontSize: '1.5em', marginBottom: '15px', color: '#333' };
-const totalStyle = { fontSize: '1.2em', marginBottom: '20px', color: '#28a745' };
-const tableStyle = { width: '100%', borderCollapse: 'collapse', marginTop: '10px' };
-const tableHeaderStyle = { borderBottom: '1px solid #ddd', padding: '12px', textAlign: 'left', backgroundColor: '#f2f2f2' };
-const tableCellStyle = { borderBottom: '1px solid #eee', padding: '10px', fontSize: '0.9em' };
-
-const loadingStyle = { textAlign: 'center', fontSize: '1.2em', color: '#555' };
 const errorStyle = { textAlign: 'center', fontSize: '1.2em', color: 'red' };
-const noDataStyle = { textAlign: 'center', fontSize: '1.1em', color: '#777', padding: '20px', backgroundColor: '#f2f2f2', borderRadius: '8px' };
 
 export default ReceiptsReportPage;

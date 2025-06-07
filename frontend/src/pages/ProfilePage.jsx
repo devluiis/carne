@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../components/AuthProvider.jsx';
-import { auth as apiAuth } from '../api.js'; // Renomeado para evitar conflito com useAuth
+import { auth as apiAuth } from '../api.js'; 
 import { useGlobalAlert } from '../App.jsx';
 import LoadingSpinner from '../components/LoadingSpinner.jsx';
 
 function ProfilePage() {
-    const { user, loading: authLoading, updateUser } = useAuth(); // Usar updateUser do AuthProvider
+    const { user, loading: authLoading, updateUser } = useAuth(); 
     const [nome, setNome] = useState('');
     const [email, setEmail] = useState('');
     const [submitLoading, setSubmitLoading] = useState(false);
@@ -24,8 +24,8 @@ function ProfilePage() {
         try {
             const updatedUserData = await apiAuth.updateProfile({ nome, email });
             setGlobalAlert({ message: 'Perfil atualizado com sucesso!', type: 'success' });
-            if (updateUser) { // Verifica se updateUser existe
-                updateUser(updatedUserData.data); // Atualiza o usuário no contexto global
+            if (updateUser) { 
+                updateUser(updatedUserData.data); 
             }
         } catch (err) {
             const errorMessage = `Falha ao atualizar perfil: ${err.response?.data?.detail || err.message}`;
