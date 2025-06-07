@@ -131,7 +131,7 @@ function Header() {
         <header>
             <h1>
                 <Link to={user ? "/dashboard" : "/"} className="app-title-link">
-                    Bios Store - Celulares e Acessórios
+                    Bios Store
                 </Link>
             </h1>
             {user && (
@@ -162,7 +162,8 @@ function Header() {
                             )}
                             <li><Link to="/profile" className={isLinkActive('/profile') ? "nav-link active" : "nav-link"} onClick={closeMenu}>Meu Perfil</Link></li>
                         </ul>
-                        <div className="user-info mobile-user-info"> {/* Adicionada classe mobile-user-info */}
+                        {/* Esta div user-info é a que deve aparecer no menu mobile */}
+                        <div className="user-info mobile-user-info-section"> 
                             <span>Olá, {user.nome}! ({user.perfil})</span>
                             <button onClick={() => { logout(); closeMenu(); }} className="btn btn-danger btn-sm logout-btn">Sair</button>
                         </div>

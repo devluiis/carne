@@ -49,27 +49,28 @@ header h1 {
     padding: 5px 10px;
 }
 
-/* Regra para esconder a info do usuário no desktop, que será substituída no mobile */
+/* Estilo para a barra de navegação no desktop */
+.main-nav {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 15px;
+    flex-grow: 1;
+    justify-content: flex-end;
+}
+
+/* Oculta a seção de informações do usuário no desktop, que será exibida no mobile */
+.mobile-user-info-section { 
+    display: none;
+}
+
+/* Estilo para a seção de informações do usuário no desktop */
 .user-info {
     display: flex;
     align-items: center;
     gap: 10px;
     white-space: nowrap;
     color: white;
-}
-
-/* Oculta a versão mobile da info do usuário no desktop */
-.mobile-only-user-info { 
-    display: none;
-}
-
-.main-nav {
-    display: flex; /* Flexbox para desktop */
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 15px;
-    flex-grow: 1;
-    justify-content: flex-end;
 }
 
 .nav-list {
@@ -662,7 +663,7 @@ main {
     
     /* Oculta os itens do menu de desktop */
     .main-nav .nav-list,
-    .user-info:not(.mobile-only-user-info) { /* Esconde a info do usuário normal no desktop */
+    .user-info:not(.mobile-user-info-section) { /* Oculta a info do usuário normal no desktop */
         display: none;
     }
 
@@ -673,8 +674,9 @@ main {
     .main-nav {
         position: fixed;
         top: 0;
-        right: -250px; /* Ajuste a largura do menu aqui (ex: 250px) */
-        width: 250px; /* Largura do menu quando aberto */
+        right: -70vw; /* Largura do menu baseada na viewport, ex: 70% da tela */
+        width: 70vw; /* Largura do menu quando aberto */
+        max-width: 300px; /* Largura máxima para não ficar muito grande em tablets */
         height: 100%;
         background-color: #444;
         box-shadow: -2px 0 5px rgba(0,0,0,0.5);
@@ -689,7 +691,7 @@ main {
 
     .main-nav.menu-open {
         right: 0;
-        display: flex;
+        display: flex; /* Garante que o menu seja flex quando aberto */
     }
 
     .main-nav .nav-list {
@@ -698,7 +700,8 @@ main {
         width: 100%;
         gap: 10px;
         padding: 20px;
-        flex-grow: 1;
+        flex-grow: 1; /* Permite que a lista ocupe o espaço restante */
+        overflow-y: auto; /* Adiciona scroll se a lista for muito longa */
     }
 
     .main-nav .nav-link {
@@ -712,8 +715,8 @@ main {
     }
 
     /* Exibe e estiliza a informação do usuário e botão de sair para mobile */
-    .mobile-only-user-info { /* Agora esta classe é exibida no mobile */
-        display: flex;
+    .mobile-user-info-section { /* Esta classe é exibida no mobile */
+        display: flex !important; /* Força a exibição */
         flex-direction: column;
         align-items: flex-start;
         width: 100%;
@@ -721,12 +724,12 @@ main {
         border-top: 1px solid #555; /* Separador */
         margin-top: auto; /* Empurra para o final do menu */
     }
-    .mobile-only-user-info span { /* Ajustado para usar mobile-only-user-info */
+    .mobile-user-info-section span {
         margin-bottom: 10px;
         font-weight: bold;
         color: white;
     }
-    .mobile-only-user-info .logout-btn { /* Ajustado para usar mobile-only-user-info */
+    .mobile-user-info-section .logout-btn {
         width: 100%;
     }
 
