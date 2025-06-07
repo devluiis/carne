@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { produtos } from '../api'; 
+import { produtos } from '../api';
 import { useGlobalAlert } from '../App.jsx';
 import LoadingSpinner from '../components/LoadingSpinner.jsx';
 
 function ProdutoFormPage() {
     const navigate = useNavigate();
-    const { id: produtoId } = useParams(); 
+    const { id: produtoId } = useParams();
     const { setGlobalAlert } = useGlobalAlert();
 
     const [nome, setNome] = useState('');
@@ -22,7 +22,7 @@ function ProdutoFormPage() {
 
     const [loadingInitial, setLoadingInitial] = useState(false);
     const [submitLoading, setSubmitLoading] = useState(false);
-    const [formError, setFormError] = useState(''); 
+    const [formError, setFormError] = useState('');
 
     const isEditing = Boolean(produtoId);
 
@@ -45,7 +45,7 @@ function ProdutoFormPage() {
             } catch (error) {
                 console.error("Erro ao carregar produto para edição:", error);
                 setGlobalAlert({ message: `Erro ao carregar produto: ${error.response?.data?.detail || error.message}`, type: 'error' });
-                navigate('/produtos'); 
+                navigate('/produtos');
             } finally {
                 setLoadingInitial(false);
             }
@@ -89,11 +89,11 @@ function ProdutoFormPage() {
                 await produtos.create(produtoData);
                 setGlobalAlert({ message: 'Produto cadastrado com sucesso!', type: 'success' });
             }
-            navigate('/produtos'); 
+            navigate('/produtos');
         } catch (error) {
             console.error("Erro ao salvar produto:", error);
             const errorMsg = error.response?.data?.detail || error.message || "Ocorreu um erro desconhecido.";
-            setFormError(errorMsg); 
+            setFormError(errorMsg);
             setGlobalAlert({ message: `Erro ao salvar produto: ${errorMsg}`, type: 'error' });
         } finally {
             setSubmitLoading(false);
@@ -105,70 +105,70 @@ function ProdutoFormPage() {
     }
 
     return (
-        <div className="container form-container"> {/* container do Bootstrap */}
+        <div className="form-container">
             <h2>{isEditing ? 'Editar Produto' : 'Cadastrar Novo Produto'}</h2>
-            {formError && <p className="text-danger text-center mb-3">{formError}</p>} {/* Classes Bootstrap */}
+            {formError && <p className="text-center text-danger" style={{marginBottom: '15px'}}>{formError}</p>}
             
             <form onSubmit={handleSubmit}>
-                <div className="mb-3"> {/* mb-3 do Bootstrap */}
-                    <label htmlFor="nome" className="form-label">Nome do Produto: <span className="text-danger">*</span></label> {/* form-label text-danger do Bootstrap */}
-                    <input type="text" id="nome" value={nome} onChange={(e) => setNome(e.target.value)} required className="form-control" maxLength={255} /> {/* form-control do Bootstrap */}
+                <div className="form-group">
+                    <label htmlFor="nome">Nome do Produto: <span className="required-star">*</span></label>
+                    <input type="text" id="nome" value={nome} onChange={(e) => setNome(e.target.value)} required className="form-input" maxLength={255} />
                 </div>
 
-                <div className="mb-3">
-                    <label htmlFor="descricao" className="form-label">Descrição:</label>
-                    <textarea id="descricao" value={descricao} onChange={(e) => setDescricao(e.target.value)} className="form-control" rows="3"></textarea>
+                <div className="form-group">
+                    <label htmlFor="descricao">Descrição:</label>
+                    <textarea id="descricao" value={descricao} onChange={(e) => setDescricao(e.target.value)} className="form-textarea" rows="3"></textarea>
                 </div>
 
-                <div className="row g-3"> {/* row g-3 do Bootstrap */}
-                    <div className="col-md-6"> {/* col-md-6 do Bootstrap */}
-                        <label htmlFor="categoria" className="form-label">Categoria:</label>
-                        <input type="text" id="categoria" value={categoria} onChange={(e) => setCategoria(e.target.value)} className="form-control" maxLength={100} />
+                <div className="form-row"> {/* Nova classe para alinhar 2 colunas */}
+                    <div className="form-group">
+                        <label htmlFor="categoria">Categoria:</label>
+                        <input type="text" id="categoria" value={categoria} onChange={(e) => setCategoria(e.target.value)} className="form-input" maxLength={100} />
                     </div>
-                    <div className="col-md-6">
-                        <label htmlFor="marca" className="form-label">Marca:</label>
-                        <input type="text" id="marca" value={marca} onChange={(e) => setMarca(e.target.value)} className="form-control" maxLength={100} />
-                    </div>
-                </div>
-
-                <div className="row g-3">
-                    <div className="col-md-6">
-                        <label htmlFor="imei" className="form-label">IMEI (para celulares):</label>
-                        <input type="text" id="imei" value={imei} onChange={(e) => setImei(e.target.value)} className="form-control" maxLength={50} />
-                    </div>
-                    <div className="col-md-6">
-                        <label htmlFor="codigoSku" className="form-label">Código SKU:</label>
-                        <input type="text" id="codigoSku" value={codigoSku} onChange={(e) => setCodigoSku(e.target.value)} className="form-control" maxLength={50} />
+                    <div className="form-group">
+                        <label htmlFor="marca">Marca:</label>
+                        <input type="text" id="marca" value={marca} onChange={(e) => setMarca(e.target.value)} className="form-input" maxLength={100} />
                     </div>
                 </div>
 
-                <div className="row g-3">
-                    <div className="col-md-6">
-                        <label htmlFor="precoVenda" className="form-label">Preço de Venda (R$):</label>
-                        <input type="number" id="precoVenda" value={precoVenda} onChange={(e) => setPrecoVenda(e.target.value)} step="0.01" min="0" className="form-control" />
+                <div className="form-row">
+                    <div className="form-group">
+                        <label htmlFor="imei">IMEI (para celulares):</label>
+                        <input type="text" id="imei" value={imei} onChange={(e) => setImei(e.target.value)} className="form-input" maxLength={50} />
                     </div>
-                    <div className="col-md-6">
-                        <label htmlFor="precoCusto" className="form-label">Preço de Custo (R$):</label>
-                        <input type="number" id="precoCusto" value={precoCusto} onChange={(e) => setPrecoCusto(e.target.value)} step="0.01" min="0" className="form-control" />
-                    </div>
-                </div>
-
-                <div className="row g-3 mb-3"> {/* mb-3 adicionado */}
-                    <div className="col-md-6">
-                        <label htmlFor="estoqueAtual" className="form-label">Estoque Atual:</label>
-                        <input type="number" id="estoqueAtual" value={estoqueAtual} onChange={(e) => setEstoqueAtual(e.target.value)} step="1" min="0" className="form-control" />
-                    </div>
-                    <div className="col-md-6">
-                        <label htmlFor="unidadeMedida" className="form-label">Unidade de Medida:</label>
-                        <input type="text" id="unidadeMedida" value={unidadeMedida} onChange={(e) => setUnidadeMedida(e.target.value)} className="form-control" maxLength={20} placeholder="Ex: unidade, pç, kg" />
+                    <div className="form-group">
+                        <label htmlFor="codigoSku">Código SKU:</label>
+                        <input type="text" id="codigoSku" value={codigoSku} onChange={(e) => setCodigoSku(e.target.value)} className="form-input" maxLength={50} />
                     </div>
                 </div>
 
-                <div className="mt-3"> {/* mt-3 do Bootstrap */}
-                    <button type="submit" className="btn btn-primary w-100" disabled={submitLoading}>
+                <div className="form-row">
+                    <div className="form-group">
+                        <label htmlFor="precoVenda">Preço de Venda (R$):</label>
+                        <input type="number" id="precoVenda" value={precoVenda} onChange={(e) => setPrecoVenda(e.target.value)} step="0.01" min="0" className="form-input" />
+                    </div>
+                    <div className="form-group">
+                        <label htmlFor="precoCusto">Preço de Custo (R$):</label>
+                        <input type="number" id="precoCusto" value={precoCusto} onChange={(e) => setPrecoCusto(e.target.value)} step="0.01" min="0" className="form-input" />
+                    </div>
+                </div>
+
+                <div className="form-row">
+                    <div className="form-group">
+                        <label htmlFor="estoqueAtual">Estoque Atual:</label>
+                        <input type="number" id="estoqueAtual" value={estoqueAtual} onChange={(e) => setEstoqueAtual(e.target.value)} step="1" min="0" className="form-input" />
+                    </div>
+                    <div className="form-group">
+                        <label htmlFor="unidadeMedida">Unidade de Medida:</label>
+                        <input type="text" id="unidadeMedida" value={unidadeMedida} onChange={(e) => setUnidadeMedida(e.target.value)} className="form-input" maxLength={20} placeholder="Ex: unidade, pç, kg" />
+                    </div>
+                </div>
+
+                <div className="form-actions mt-3"> {/* Nova classe para os botões do formulário */}
+                    <button type="submit" className="btn btn-primary" disabled={submitLoading}>
                         {submitLoading ? 'Salvando...' : (isEditing ? 'Atualizar Produto' : 'Cadastrar Produto')}
                     </button>
-                    <button type="button" onClick={() => navigate('/produtos')} className="btn btn-secondary w-100 mt-2">
+                    <button type="button" onClick={() => navigate('/produtos')} className="btn btn-secondary mt-2">
                         Cancelar
                     </button>
                 </div>

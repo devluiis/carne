@@ -1,8 +1,7 @@
-import React, { useState, createContext, useContext, useEffect } from 'react'; // Adicionado useEffect
+import React, { useState, createContext, useContext } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './components/AuthProvider.jsx';
 
-// Importações das páginas
 import LoginPage from './pages/LoginPage.jsx';
 import DashboardPage from './pages/DashboardPage.jsx';
 import ClientsPage from './pages/ClientsPage.jsx';
@@ -19,21 +18,15 @@ import RegisterUserPage from './pages/RegisterUserPage.jsx';
 import RegisterAdminPage from './pages/RegisterAdminPage.jsx';
 import RegisterUserByAdminPage from './pages/RegisterUserByAdminPage.jsx';
 
-// <<<< NOVAS IMPORTAÇÕES PARA PRODUTOS >>>>
 import ProdutosPage from './pages/ProdutosPage.jsx';
 import ProdutoFormPage from './pages/ProdutoFormPage.jsx';
 
-
-// Seu GlobalAlert e Contexto
 import GlobalAlert from './components/GlobalAlert.jsx';
+import LoadingSpinner from './components/LoadingSpinner.jsx'; // Importar LoadingSpinner
+
 const GlobalAlertContext = createContext(null);
 export const useGlobalAlert = () => useContext(GlobalAlertContext);
 
-// Componente de Spinner
-import LoadingSpinner from './components/LoadingSpinner.jsx';
-
-
-// Componentes de Rota Protegida
 const PrivateRoute = ({ children }) => {
     const { user, loading } = useAuth();
     if (loading) {
@@ -63,7 +56,6 @@ const AdminRoute = ({ children }) => {
 function App() {
     const [globalAlert, setGlobalAlert] = useState(null);
     const clearGlobalAlert = () => setGlobalAlert(null);
-    // REMOVIDO: const { isMenuOpen } = useAuth().isMenuOpen; // Esta linha causava o erro!
 
     return (
         <Router>
@@ -82,7 +74,6 @@ function App() {
                             <Route path="/" element={<LoginPage />} />
                             <Route path="/register-user" element={<RegisterUserPage />} />
 
-                            {/* Rotas Privadas */}
                             <Route path="/dashboard" element={<PrivateRoute><DashboardPage /></PrivateRoute>} />
                             <Route path="/nova-venda" element={<PrivateRoute><NovaVendaPage /></PrivateRoute>} />
 
@@ -97,17 +88,15 @@ function App() {
                             <Route path="/carnes/edit/:id" element={<PrivateRoute><CarneForm /></PrivateRoute>} />
                             <Route path="/carnes/details/:id" element={<PrivateRoute><CarneDetailsPage /></PrivateRoute>} />
                             
-                            {/* <<<< NOVAS ROTAS PARA PRODUTOS >>>> */}
                             <Route path="/produtos" element={<PrivateRoute><ProdutosPage /></PrivateRoute>} />
-                            <Route path="/produtos/novo" element={<AdminRoute><ProdutoFormPage /></AdminRoute>} /> 
-                            <Route path="/produtos/editar/:id" element={<AdminRoute><ProdutoFormPage /></AdminRoute>} /> 
+                            <Route path="/produtos/novo" element={<AdminRoute><ProdutoFormPage /></AdminRoute>} />
+                            <Route path="/produtos/editar/:id" element={<AdminRoute><ProdutoFormPage /></AdminRoute>} />
                             
                             <Route path="/reports/receipts" element={<PrivateRoute><ReceiptsReportPage /></PrivateRoute>} />
                             <Route path="/reports/pending-debts-by-client/:client_id?" element={<PrivateRoute><PendingDebtsReportPage /></PrivateRoute>} />
                             
                             <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
 
-                            {/* Rotas de Admin */}
                             <Route path="/register-admin" element={<AdminRoute><RegisterAdminPage /></AdminRoute>} />
                             <Route path="/register-atendente" element={<AdminRoute><RegisterUserByAdminPage /></AdminRoute>} />
                         </Routes>
@@ -121,83 +110,48 @@ function App() {
 function Header() {
     const { user, logout } = useAuth();
     const location = useLocation();
-    const [isMenuOpen, setIsMenuOpen] = useState(false); // Estado para controlar o menu hamburger
-
-    // Adiciona/remove classe 'menu-open' do body quando o menu estiver aberto
-    useEffect(() => {
-        if (isMenuOpen) {
-            document.body.classList.add('menu-open');
-        } else {
-            document.body.classList.remove('menu-open');
-        }
-    }, [isMenuOpen]);
-
-
-    const toggleMenu = () => {
-        setIsMenuOpen(!isMenuOpen);
-    };
 
     const isLinkActive = (path) => {
+        // Ajustado para ser mais robusto com rotas dinâmicas
         if (path === '/') return location.pathname === path;
         return location.pathname === path || 
                location.pathname.startsWith(path + '/') || 
                (path.includes(':') && location.pathname.startsWith(path.substring(0, path.indexOf(':'))));
     };
 
-    const activeLinkClass = "active-link"; 
-    const inactiveLinkClass = ""; 
-
     return (
-        <header className="main-header"> 
-            {user && ( 
-                <button className={`hamburger-menu ${isMenuOpen ? 'open' : ''}`} onClick={toggleMenu} aria-label="Abrir Menu">
-                    <span className="hamburger-icon"></span>
-                    <span className="hamburger-icon"></span>
-                    <span className="hamburger-icon"></span>
-                </button>
-            )}
-            <h1 className="app-title"> 
-                <Link to={user ? "/dashboard" : "/"} className="text-white text-decoration-none">
+        <header>
+            <h1>
+                <Link to={user ? "/dashboard" : "/"} className="app-title-link">
                     Gestor de Carnês
                 </Link>
             </h1>
-            
             {user && (
-                <div className="user-info-section-mobile"> 
-                    <span className="user-name-mobile">Olá, {user.nome}! ({user.perfil})</span>
-                    <button onClick={logout} className="btn btn-danger btn-sm">Sair</button>
-                </div>
-            )}
-
-            {user && (
-                <nav className={`main-nav ${isMenuOpen ? 'open' : ''}`}> 
-                    <ul className="navbar-nav"> 
-                        <li className="nav-item"><Link to="/dashboard" className={`nav-link ${isLinkActive('/dashboard') ? activeLinkClass : inactiveLinkClass}`} onClick={toggleMenu}>Dashboard</Link></li>
-                        <li className="nav-item"><Link to="/nova-venda" className={`nav-link ${isLinkActive('/nova-venda') ? activeLinkClass : inactiveLinkClass}`} onClick={toggleMenu}>Nova Venda</Link></li>
-                        <li className="nav-item"><Link to="/clients" className={`nav-link ${isLinkActive('/clients') ? activeLinkClass : inactiveLinkClass}`} onClick={toggleMenu}>Clientes</Link></li>
-                        <li className="nav-item"><Link to="/carnes" className={`nav-link ${isLinkActive('/carnes') ? activeLinkClass : inactiveLinkClass}`} onClick={toggleMenu}>Carnês</Link></li>
+                <nav className="main-nav"> {/* Nova classe para a navegação principal */}
+                    <ul className="nav-list"> {/* Nova classe para a lista de navegação */}
+                        <li><Link to="/dashboard" className={isLinkActive('/dashboard') ? "nav-link active" : "nav-link"}>Dashboard</Link></li>
+                        <li><Link to="/nova-venda" className={isLinkActive('/nova-venda') ? "nav-link active" : "nav-link"}>Nova Venda</Link></li>
+                        <li><Link to="/clients" className={isLinkActive('/clients') ? "nav-link active" : "nav-link"}>Clientes</Link></li>
+                        <li><Link to="/carnes" className={isLinkActive('/carnes') ? "nav-link active" : "nav-link"}>Carnês</Link></li>
                         
-                        <li className="nav-item"><Link to="/produtos" className={`nav-link ${isLinkActive('/produtos') ? activeLinkClass : inactiveLinkClass}`} onClick={toggleMenu}>Produtos</Link></li>
+                        <li><Link to="/produtos" className={isLinkActive('/produtos') ? "nav-link active" : "nav-link"}>Produtos</Link></li>
                         
-                        <li className="nav-item"><Link to="/reports/receipts" className={`nav-link ${isLinkActive('/reports/receipts') ? activeLinkClass : inactiveLinkClass}`} onClick={toggleMenu}>Rel. Receb.</Link></li>
-                        <li className="nav-item"><Link to="/reports/pending-debts-by-client" className={`nav-link ${isLinkActive('/reports/pending-debts-by-client') ? activeLinkClass : inactiveLinkClass}`} onClick={toggleMenu}>Rel. Dívidas</Link></li>
+                        <li><Link to="/reports/receipts" className={isLinkActive('/reports/receipts') ? "nav-link active" : "nav-link"}>Rel. Receb.</Link></li>
+                        <li><Link to="/reports/pending-debts-by-client" className={isLinkActive('/reports/pending-debts-by-client') ? "nav-link active" : "nav-link"}>Rel. Dívidas</Link></li>
                         
                         {user.perfil === 'admin' && ( 
                             <>
-                                <li className="nav-item"><Link to="/register-admin" className={`nav-link ${isLinkActive('/register-admin') ? activeLinkClass : inactiveLinkClass}`} onClick={toggleMenu}>Reg. Admin</Link></li>
-                                <li className="nav-item"><Link to="/register-atendente" className={`nav-link ${isLinkActive('/register-atendente') ? activeLinkClass : inactiveLinkClass}`} onClick={toggleMenu}>Reg. Atendente</Link></li>
+                                <li><Link to="/register-admin" className={isLinkActive('/register-admin') ? "nav-link active" : "nav-link"}>Reg. Admin</Link></li>
+                                <li><Link to="/register-atendente" className={isLinkActive('/register-atendente') ? "nav-link active" : "nav-link"}>Reg. Atendente</Link></li>
                             </>
                         )}
-                        <li className="nav-item"><Link to="/profile" className={`nav-link ${isLinkActive('/profile') ? activeLinkClass : inactiveLinkClass}`} onClick={toggleMenu}>Meu Perfil</Link></li>
+                        <li><Link to="/profile" className={isLinkActive('/profile') ? "nav-link active" : "nav-link"}>Meu Perfil</Link></li>
                     </ul>
+                    <div className="user-info"> {/* Nova classe para informações do usuário */}
+                         <span>Olá, {user.nome}! ({user.perfil})</span>
+                        <button onClick={logout} className="btn btn-danger btn-sm logout-btn">Sair</button>
+                    </div>
                 </nav>
-            )}
-
-            {user && (
-                <div className="user-info-section"> 
-                    <span>Olá, {user.nome}! ({user.perfil})</span>
-                    <button onClick={logout} className="btn btn-danger btn-sm">Sair</button>
-                </div>
             )}
         </header>
     );

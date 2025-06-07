@@ -7,7 +7,7 @@ import LoadingSpinner from '../components/LoadingSpinner.jsx';
 function DashboardPage() {
     const [summaryData, setSummaryData] = useState(null);
     const [loading, setLoading] = useState(true);
-    const { user } = useAuth(); 
+    const { user, loading: authLoading } = useAuth();
     const { setGlobalAlert } = useGlobalAlert();
 
     const fetchDashboardSummary = useCallback(async () => {
@@ -19,30 +19,30 @@ function DashboardPage() {
             console.error('Erro ao carregar dados do dashboard:', err);
             const errorMessage = `Falha ao carregar dashboard: ${err.response?.data?.detail || err.message}`;
             setGlobalAlert({ message: errorMessage, type: 'error' });
-            setSummaryData(null); 
+            setSummaryData(null);
         } finally {
             setLoading(false);
         }
     }, [setGlobalAlert]);
 
     useEffect(() => {
-        if (user) { 
+        if (!authLoading && user) {
             fetchDashboardSummary();
-        } else if (!user && !useAuth().loading) { 
-            setLoading(false); 
+        } else if (!authLoading && !user) {
+            setLoading(false);
         }
-    }, [user, fetchDashboardSummary, useAuth().loading]); 
+    }, [user, fetchDashboardSummary, authLoading]);
 
-    if (loading) { 
+    if (loading) {
         return <LoadingSpinner message="Carregando Dashboard..." />;
     }
 
-    if (!summaryData) { 
+    if (!summaryData) {
         return (
-            <div className="container form-container text-center"> 
-                <h2 className="mb-4">Dashboard</h2> 
+            <div className="form-container text-center">
+                <h2>Dashboard</h2>
                 <p>Não foi possível carregar os dados do dashboard ou não há dados disponíveis.</p>
-                <button onClick={fetchDashboardSummary} className="btn btn-primary mt-3"> 
+                <button onClick={fetchDashboardSummary} className="btn btn-primary" style={{width: 'auto'}}>
                     Tentar Novamente
                 </button>
             </div>
@@ -50,68 +50,48 @@ function DashboardPage() {
     }
 
     return (
-        <div className="container form-container"> 
-            <h2 className="text-center mb-4">Painel de Controle</h2> 
-            <div className="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3"> 
-                <div className="col">
-                    <div className="card text-center p-3 shadow-sm"> 
-                        <h3 className="fs-6">Total de Clientes</h3> 
-                        <p className="fs-4 fw-bold text-dark">{summaryData.total_clientes}</p> 
-                    </div>
+        <div className="form-container large-container"> {/* Usando large-container */}
+            <h2 className="text-center section-title">Painel de Controle</h2>
+            <div className="dashboard-grid"> {/* Nova classe para o grid do dashboard */}
+                <div className="card-dashboard">
+                    <h3>Total de Clientes</h3>
+                    <p className="card-value">{summaryData.total_clientes}</p>
                 </div>
-                <div className="col">
-                    <div className="card text-center p-3 shadow-sm">
-                        <h3 className="fs-6">Total de Carnês</h3>
-                        <p className="fs-4 fw-bold text-dark">{summaryData.total_carnes}</p>
-                    </div>
+                <div className="card-dashboard">
+                    <h3>Total de Carnês</h3>
+                    <p className="card-value">{summaryData.total_carnes}</p>
                 </div>
-                <div className="col">
-                    <div className="card text-center p-3 shadow-sm">
-                        <h3 className="fs-6">Carnês Ativos</h3>
-                        <p className="fs-4 fw-bold text-primary">{summaryData.total_carnes_ativos}</p> 
-                    </div>
+                <div className="card-dashboard">
+                    <h3>Carnês Ativos</h3>
+                    <p className="card-value card-value-green">{summaryData.total_carnes_ativos}</p>
                 </div>
-                <div className="col">
-                    <div className="card text-center p-3 shadow-sm">
-                        <h3 className="fs-6">Carnês Quitados</h3>
-                        <p className="fs-4 fw-bold text-success">{summaryData.total_carnes_quitados}</p> 
-                    </div>
+                <div className="card-dashboard">
+                    <h3>Carnês Quitados</h3>
+                    <p className="card-value card-value-blue">{summaryData.total_carnes_quitados}</p>
                 </div>
-                <div className="col">
-                    <div className="card text-center p-3 shadow-sm">
-                        <h3 className="fs-6">Carnês em Atraso</h3>
-                        <p className="fs-4 fw-bold text-danger">{summaryData.total_carnes_atrasados}</p> 
-                    </div>
+                <div className="card-dashboard">
+                    <h3>Carnês em Atraso</h3>
+                    <p className="card-value card-value-red">{summaryData.total_carnes_atrasados}</p>
                 </div>
-                <div className="col">
-                    <div className="card text-center p-3 shadow-sm">
-                        <h3 className="fs-6">Dívida Aberta (Total)</h3>
-                        <p className="fs-4 fw-bold text-danger">R$ {Number(summaryData.total_divida_geral_aberta).toFixed(2)}</p>
-                    </div>
+                <div className="card-dashboard">
+                    <h3>Dívida Aberta (Total)</h3>
+                    <p className="card-value card-value-red">R$ {Number(summaryData.total_divida_geral_aberta).toFixed(2)}</p>
                 </div>
-                <div className="col">
-                    <div className="card text-center p-3 shadow-sm">
-                        <h3 className="fs-6">Recebido Hoje</h3>
-                        <p className="fs-4 fw-bold text-success">R$ {Number(summaryData.total_recebido_hoje).toFixed(2)}</p>
-                    </div>
+                <div className="card-dashboard">
+                    <h3>Recebido Hoje</h3>
+                    <p className="card-value card-value-green">R$ {Number(summaryData.total_recebido_hoje).toFixed(2)}</p>
                 </div>
-                <div className="col">
-                    <div className="card text-center p-3 shadow-sm">
-                        <h3 className="fs-6">Recebido no Mês</h3>
-                        <p className="fs-4 fw-bold text-success">R$ {Number(summaryData.total_recebido_mes).toFixed(2)}</p>
-                    </div>
+                <div className="card-dashboard">
+                    <h3>Recebido no Mês</h3>
+                    <p className="card-value card-value-green">R$ {Number(summaryData.total_recebido_mes).toFixed(2)}</p>
                 </div>
-                <div className="col">
-                    <div className="card text-center p-3 shadow-sm">
-                        <h3 className="fs-6">Parcelas a Vencer (7d)</h3>
-                        <p className="fs-4 fw-bold text-primary">{summaryData.parcelas_a_vencer_7dias}</p>
-                    </div>
+                <div className="card-dashboard">
+                    <h3>Parcelas a Vencer (7d)</h3>
+                    <p className="card-value card-value-blue">{summaryData.parcelas_a_vencer_7dias}</p>
                 </div>
-                <div className="col">
-                    <div className="card text-center p-3 shadow-sm">
-                        <h3 className="fs-6">Parcelas Atrasadas</h3>
-                        <p className="fs-4 fw-bold text-danger">{summaryData.parcelas_atrasadas}</p>
-                    </div>
+                <div className="card-dashboard">
+                    <h3>Parcelas Atrasadas</h3>
+                    <p className="card-value card-value-red">{summaryData.parcelas_atrasadas}</p>
                 </div>
             </div>
         </div>

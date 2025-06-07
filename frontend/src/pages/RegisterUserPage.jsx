@@ -21,6 +21,8 @@ function RegisterUserPage() {
             setNome('');
             setEmail('');
             setSenha('');
+            // Opcional: redirecionar para o login
+            // navigate('/');
         } catch (err) {
             setGlobalAlert({ message: `Erro ao registrar: ${err.response?.data?.detail || err.message}`, type: 'error' });
         } finally {
@@ -29,49 +31,49 @@ function RegisterUserPage() {
     };
 
     return (
-        <div className="container form-container" style={{maxWidth: '450px'}}> {/* Mantido maxWidth para este formulário específico */}
-            <h2 className="text-center mb-4">Registrar Novo Usuário (Atendente)</h2> {/* mb-4 do Bootstrap */}
+        <div className="form-container login-form-container"> {/* Mantive a classe para max-width */}
+            <h2>Registrar Novo Usuário (Atendente)</h2>
             <form onSubmit={handleSubmit}>
-                <div className="mb-3">
-                    <label htmlFor="nome" className="form-label">Nome:</label>
+                <div className="form-group">
+                    <label htmlFor="userName">Nome:</label>
                     <input
                         type="text"
-                        id="nome"
+                        id="userName"
                         value={nome}
                         onChange={(e) => setNome(e.target.value)}
                         required
-                        className="form-control"
+                        className="form-input"
                     />
                 </div>
-                <div className="mb-3">
-                    <label htmlFor="email" className="form-label">Email:</label>
+                <div className="form-group">
+                    <label htmlFor="userEmail">Email:</label>
                     <input
                         type="email"
-                        id="email"
+                        id="userEmail"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         required
-                        className="form-control"
+                        className="form-input"
                     />
                 </div>
-                <div className="mb-3">
-                    <label htmlFor="senha" className="form-label">Senha (mínimo 6 caracteres):</label>
+                <div className="form-group">
+                    <label htmlFor="userPassword">Senha (mínimo 6 caracteres):</label>
                     <input
                         type="password"
-                        id="senha"
+                        id="userPassword"
                         value={senha}
                         onChange={(e) => setSenha(e.target.value)}
                         required
                         minLength="6"
-                        className="form-control"
+                        className="form-input"
                     />
                 </div>
-                <button type="submit" className="btn btn-primary w-100" disabled={loading}>
+                <button type="submit" className="btn btn-primary" disabled={loading}>
                     {loading ? 'Registrando...' : 'Registrar'}
                 </button>
             </form>
-            <p className="text-center mt-3 mb-0"> {/* mt-3 mb-0 do Bootstrap */}
-                Já tem uma conta? <Link to="/">Faça o login</Link>
+            <p className="text-center mt-2">
+                Já tem uma conta? <Link to="/" className="link-text">Faça o login</Link>
             </p>
         </div>
     );

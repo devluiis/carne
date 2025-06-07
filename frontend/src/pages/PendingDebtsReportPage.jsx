@@ -5,18 +5,18 @@ import { useAuth } from '../components/AuthProvider.jsx';
 import { useGlobalAlert } from '../App.jsx';
 import LoadingSpinner from '../components/LoadingSpinner.jsx';
 
-const getStatusBadgeClass = (status) => {
+const getStatusStyle = (status) => {
     switch (status) {
         case 'Paga':
         case 'Paga com Atraso':
-            return 'success';
+            return { color: '#28a745', fontWeight: 'bold' };
         case 'Atrasada':
-            return 'danger';
+            return { color: '#dc3545', fontWeight: 'bold' };
         case 'Parcialmente Paga':
-            return 'warning';
+            return { color: '#fd7e14', fontWeight: 'bold' };
         case 'Pendente':
         default:
-            return 'primary';
+            return { color: '#007bff', fontWeight: 'bold' };
     }
 };
 
@@ -77,7 +77,7 @@ function PendingDebtsReportPage() {
             setGlobalAlert({ message: errorMsg, type: 'error' });
             setReportData(null);
         } finally {
-                setLoadingReport(false);
+            setLoadingReport(false);
         }
     }, [setGlobalAlert]);
 
@@ -96,7 +96,7 @@ function PendingDebtsReportPage() {
             setInitialMessage('ID de cliente inválido na URL. Selecione um cliente da lista.');
             navigate('/reports/pending-debts-by-client', { replace: true }); 
         } else if (!clientIdFromUrl) {
-            setSelectedClientId(''); 
+            setSelectedClientId('');
             setReportData(null);
             setInitialMessage('Selecione um cliente e clique em "Gerar Relatório".');
         }
@@ -124,18 +124,18 @@ function PendingDebtsReportPage() {
         }
     };
 
-    if (!user) return <p className="text-center text-danger p-3">Faça login para acessar esta página.</p>;
+    if (!user) return <p className="text-center text-danger">Faça login para acessar esta página.</p>;
     if (loadingClients && clientOptions.length === 0) return <LoadingSpinner message="Carregando lista de clientes..." />;
 
     return (
-        <div className="container form-container" style={{maxWidth: '1000px'}}> 
-            <h2 className="text-center mb-4">Relatório de Dívidas Pendentes por Cliente</h2>
+        <div className="form-container large-container"> {/* Usando large-container */}
+            <h2 className="text-center">Relatório de Dívidas Pendentes por Cliente</h2>
 
-            <form onSubmit={handleSubmit} className="row g-3 align-items-end mb-4 border-bottom pb-3"> 
-                <div className="col-md-8"> 
-                    <label htmlFor="client-select" className="form-label">Cliente:</label>
+            <form onSubmit={handleSubmit} className="filter-form-row"> {/* Nova classe para o formulário de filtro */}
+                <div className="form-group flex-grow"> {/* flex-grow para o select */}
+                    <label htmlFor="clientReportSelect">Cliente:</label>
                     <select
-                        id="client-select"
+                        id="clientReportSelect"
                         value={selectedClientId}
                         onChange={handleClientSelectionChange}
                         className="form-select"
@@ -148,61 +148,57 @@ function PendingDebtsReportPage() {
                         ))}
                     </select>
                 </div>
-                <div className="col-md-4"> 
-                    <button type="submit" className="btn btn-primary w-100" disabled={loadingReport || !selectedClientId || selectedClientId === "0"}>
-                        {loadingReport ? 'Gerando...' : 'Gerar Relatório'}
-                    </button>
-                </div>
+                <button type="submit" className="btn btn-primary" disabled={loadingReport || !selectedClientId || selectedClientId === "0"}>
+                    {loadingReport ? 'Gerando...' : 'Gerar Relatório'}
+                </button>
             </form>
 
             {loadingReport && <LoadingSpinner message="Gerando relatório..." />}
 
             {!loadingReport && !reportData && (
-                 <p className="text-center p-3 bg-light rounded">{initialMessage}</p>
+                 <p className="text-center no-data-message">{initialMessage}</p>
             )}
 
             {reportData && (
-                <div className="mt-4"> 
-                    <h3 className="mb-3">Dívidas Pendentes para: {reportData.cliente_nome} ({reportData.cliente_cpf_cnpj})</h3>
-                    <p className="fs-5 mb-3">Total da Dívida Pendente: <strong className="text-danger">R$ {Number(reportData.total_divida_pendente).toFixed(2)}</strong></p>
+                <div className="report-results-section"> {/* Nova classe para a seção de resultados */}
+                    <h3 className="section-title">Dívidas Pendentes para: {reportData.cliente_nome} ({reportData.cliente_cpf_cnpj})</h3>
+                    <p className="total-debt-summary">Total da Dívida Pendente: <strong className="text-danger">R$ {Number(reportData.total_divida_pendente).toFixed(2)}</strong></p>
 
                     {reportData.parcelas_pendentes.length === 0 ? (
-                        <p className="text-center p-3 bg-light rounded">Nenhuma parcela pendente encontrada para este cliente.</p>
+                        <p className="text-center no-data-message">Nenhuma parcela pendente encontrada para este cliente.</p>
                     ) : (
-                        <div className="table-responsive"> 
-                            <table className="table table-striped table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Carnê (Descrição)</th>
-                                        <th>Parcela Nº</th>
-                                        <th>Vencimento</th>
-                                        <th>Valor Devido</th>
-                                        <th>Juros/Multa</th>
-                                        <th>Valor Pago</th>
-                                        <th>Saldo Devedor</th>
-                                        <th>Status Parcela</th>
+                        <table className="styled-table">
+                            <thead>
+                                <tr>
+                                    <th>Carnê (Descrição)</th>
+                                    <th>Parcela Nº</th>
+                                    <th>Vencimento</th>
+                                    <th>Valor Devido</th>
+                                    <th>Juros/Multa</th>
+                                    <th>Valor Pago</th>
+                                    <th>Saldo Devedor</th>
+                                    <th>Status Parcela</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {reportData.parcelas_pendentes.map((parcela) => (
+                                    <tr key={parcela.id_parcela}>
+                                        <td>{parcela.carnes_descricao || `ID ${parcela.id_carne}`}</td>
+                                        <td>{parcela.numero_parcela}</td>
+                                        <td>{new Date(parcela.data_vencimento + 'T00:00:00').toLocaleDateString()}</td>
+                                        <td>R$ {Number(parcela.valor_devido).toFixed(2)}</td>
+                                        <td>R$ {Number(parcela.juros_multa).toFixed(2)}</td>
+                                        <td>R$ {Number(parcela.valor_pago).toFixed(2)}</td>
+                                        <td>R$ {Number(parcela.saldo_devedor).toFixed(2)}</td>
+                                        <td>
+                                            <span style={getStatusStyle(parcela.status_parcela)}>
+                                                {parcela.status_parcela}
+                                            </span>
+                                        </td>
                                     </tr>
-                                </thead>
-                                <tbody>
-                                    {reportData.parcelas_pendentes.map((parcela) => (
-                                        <tr key={parcela.id_parcela}>
-                                            <td data-label="Carnê">{parcela.carnes_descricao || `ID ${parcela.id_carne}`}</td>
-                                            <td data-label="Parcela Nº">{parcela.numero_parcela}</td>
-                                            <td data-label="Vencimento">{new Date(parcela.data_vencimento + 'T00:00:00').toLocaleDateString()}</td>
-                                            <td data-label="Valor Devido">R$ {Number(parcela.valor_devido).toFixed(2)}</td>
-                                            <td data-label="Juros/Multa">R$ {Number(parcela.juros_multa).toFixed(2)}</td>
-                                            <td data-label="Valor Pago">R$ {Number(parcela.valor_pago).toFixed(2)}</td>
-                                            <td data-label="Saldo Devedor">R$ {Number(parcela.saldo_devedor).toFixed(2)}</td>
-                                            <td data-label="Status Parcela">
-                                                <span className={`badge bg-${getStatusBadgeClass(parcela.status_parcela)}`}>
-                                                    {parcela.status_parcela}
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+                                ))}
+                            </tbody>
+                        </table>
                     )}
                 </div>
             )}

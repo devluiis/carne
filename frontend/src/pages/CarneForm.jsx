@@ -133,7 +133,7 @@ function CarneForm() {
 
         const carneData = {
             id_cliente: parseInt(idCliente),
-            data_venda: dataVenda, 
+            data_venda: dataVenda,
             descricao,
             valor_total_original: vTotal,
             numero_parcelas: nParcelas,
@@ -174,43 +174,89 @@ function CarneForm() {
     }
 
     return (
-        <div className="container form-container"> {/* container do Bootstrap */}
-            <h2 className="text-center mb-4">{id ? 'Editar Carnê' : 'Cadastrar Novo Carnê'}</h2> {/* mb-4 do Bootstrap */}
-            {editWarningMessage && <p className="text-warning text-center mb-3 fw-bold">{editWarningMessage}</p>} {/* Classes Bootstrap */}
+        <div className="form-container">
+            <h2>{id ? 'Editar Carnê' : 'Cadastrar Novo Carnê'}</h2>
+            {editWarningMessage && <p className="text-center text-warning" style={{fontWeight: 'bold', marginBottom: '15px'}}>{editWarningMessage}</p>}
             
             <form onSubmit={handleSubmit}>
-                <div className="mb-3"> {/* mb-3 do Bootstrap */}
-                    <label htmlFor="clienteSelect" className="form-label">Cliente:</label> {/* form-label do Bootstrap */}
-                    <select id="clienteSelect" value={idCliente} onChange={(e) => setIdCliente(e.target.value)} required className="form-select" disabled={!!id || !!clientIdFromUrl || (id && hasPayments) }> {/* form-select do Bootstrap */}
+                <div className="form-group">
+                    <label htmlFor="idCliente">Cliente:</label>
+                    <select 
+                        id="idCliente"
+                        value={idCliente} 
+                        onChange={(e) => setIdCliente(e.target.value)} 
+                        required 
+                        className="form-select" 
+                        disabled={!!id || !!clientIdFromUrl || (id && hasPayments)}
+                    >
                         <option value="">Selecione um Cliente</option>
                         {clientOptions.map(client => (<option key={client.id_cliente} value={client.id_cliente}>{client.nome} ({client.cpf_cnpj})</option>))}
                     </select>
                 </div>
 
-                <div className="mb-3">
-                    <label htmlFor="dataVenda" className="form-label">Data da Venda/Emissão do Carnê:</label>
-                    <input type="date" id="dataVenda" value={dataVenda} onChange={(e) => setDataVenda(e.target.value)} required className="form-control" disabled={id && hasPayments}/> {/* form-control do Bootstrap */}
+                <div className="form-group">
+                    <label htmlFor="dataVenda">Data da Venda/Emissão do Carnê:</label>
+                    <input 
+                        type="date" 
+                        id="dataVenda"
+                        value={dataVenda} 
+                        onChange={(e) => setDataVenda(e.target.value)} 
+                        required 
+                        className="form-input" 
+                        disabled={id && hasPayments}
+                    />
                 </div>
 
-                <div className="mb-3">
-                    <label htmlFor="descricao" className="form-label">Descrição (Opcional):</label>
-                    <input type="text" id="descricao" value={descricao} onChange={(e) => setDescricao(e.target.value)} className="form-control"/>
+                <div className="form-group">
+                    <label htmlFor="descricaoCarne">Descrição (Opcional):</label>
+                    <input 
+                        type="text" 
+                        id="descricaoCarne"
+                        value={descricao} 
+                        onChange={(e) => setDescricao(e.target.value)} 
+                        className="form-input"
+                    />
                 </div>
 
-                <div className="mb-3">
-                    <label htmlFor="valorTotalOriginal" className="form-label">Valor Total Original da Dívida:</label>
-                    <input type="number" id="valorTotalOriginal" step="0.01" value={valorTotalOriginal} onChange={(e) => setValorTotalOriginal(e.target.value)} required className="form-control" disabled={id && hasPayments} />
+                <div className="form-group">
+                    <label htmlFor="valorTotalOriginal">Valor Total Original da Dívida:</label>
+                    <input 
+                        type="number" 
+                        id="valorTotalOriginal"
+                        step="0.01" 
+                        value={valorTotalOriginal} 
+                        onChange={(e) => setValorTotalOriginal(e.target.value)} 
+                        required 
+                        className="form-input" 
+                        disabled={id && hasPayments} 
+                    />
                 </div>
 
-                <div className="mb-3">
-                    <label htmlFor="valorEntrada" className="form-label">Valor de Entrada (Opcional):</label>
-                    <input type="number" id="valorEntrada" step="0.01" value={valorEntrada} onChange={(e) => setValorEntrada(e.target.value)} className="form-control" min="0" disabled={id && hasPayments} />
+                <div className="form-group">
+                    <label htmlFor="valorEntrada">Valor de Entrada (Opcional):</label>
+                    <input 
+                        type="number" 
+                        id="valorEntrada"
+                        step="0.01" 
+                        value={valorEntrada} 
+                        onChange={(e) => setValorEntrada(e.target.value)} 
+                        className="form-input" 
+                        min="0" 
+                        disabled={id && hasPayments} 
+                    />
                 </div>
 
                 {parseFloat(valorEntrada) > 0 && (
-                    <div className="mb-3">
-                        <label htmlFor="formaPagamentoEntrada" className="form-label">Forma de Pagamento da Entrada:</label>
-                        <select id="formaPagamentoEntrada" value={formaPagamentoEntrada} onChange={(e) => setFormaPagamentoEntrada(e.target.value)} required={parseFloat(valorEntrada) > 0} className="form-select" disabled={id && hasPayments}>
+                    <div className="form-group">
+                        <label htmlFor="formaPagamentoEntrada">Forma de Pagamento da Entrada:</label>
+                        <select 
+                            id="formaPagamentoEntrada"
+                            value={formaPagamentoEntrada} 
+                            onChange={(e) => setFormaPagamentoEntrada(e.target.value)} 
+                            required={parseFloat(valorEntrada) > 0} 
+                            className="form-select" 
+                            disabled={id && hasPayments}
+                        >
                             <option value="">Selecione...</option>
                             <option value="Dinheiro">Dinheiro</option>
                             <option value="PIX">PIX</option>
@@ -220,42 +266,78 @@ function CarneForm() {
                     </div>
                 )}
 
-                <div className="mb-3">
-                    <label htmlFor="numeroParcelas" className="form-label">Número de Parcelas:</label>
-                    <input type="number" id="numeroParcelas" value={numeroParcelas} onChange={(e) => setNumeroParcelas(e.target.value)} required className="form-control" disabled={id && hasPayments} min="1"/>
+                <div className="form-group">
+                    <label htmlFor="numeroParcelas">Número de Parcelas:</label>
+                    <input 
+                        type="number" 
+                        id="numeroParcelas"
+                        value={numeroParcelas} 
+                        onChange={(e) => setNumeroParcelas(e.target.value)} 
+                        required 
+                        className="form-input" 
+                        disabled={id && hasPayments} 
+                        min="1"
+                    />
                 </div>
 
-                <div className="mb-3">
-                    <label htmlFor="dataPrimeiroVencimento" className="form-label">Data do Primeiro Vencimento:</label>
-                    <input type="date" id="dataPrimeiroVencimento" value={dataPrimeiroVencimento} onChange={(e) => setDataPrimeiroVencimento(e.target.value)} required className="form-control" disabled={id && hasPayments} />
+                <div className="form-group">
+                    <label htmlFor="dataPrimeiroVencimento">Data do Primeiro Vencimento:</label>
+                    <input 
+                        type="date" 
+                        id="dataPrimeiroVencimento"
+                        value={dataPrimeiroVencimento} 
+                        onChange={(e) => setDataPrimeiroVencimento(e.target.value)} 
+                        required 
+                        className="form-input" 
+                        disabled={id && hasPayments} 
+                    />
                 </div>
 
-                <div className="mb-3">
-                    <label htmlFor="frequenciaPagamento" className="form-label">Frequência de Pagamento:</label>
-                    <select id="frequenciaPagamento" value={frequenciaPagamento} onChange={(e) => setFrequenciaPagamento(e.target.value)} required className="form-select" disabled={id && hasPayments}>
+                <div className="form-group">
+                    <label htmlFor="frequenciaPagamento">Frequência de Pagamento:</label>
+                    <select 
+                        id="frequenciaPagamento"
+                        value={frequenciaPagamento} 
+                        onChange={(e) => setFrequenciaPagamento(e.target.value)} 
+                        required 
+                        className="form-select" 
+                        disabled={id && hasPayments}
+                    >
                         <option value="mensal">Mensal</option>
                         <option value="quinzenal">Quinzenal</option>
                         <option value="trimestral">Trimestral</option>
                     </select>
                 </div>
 
-                <div className="mb-3">
-                    <label htmlFor="statusCarne" className="form-label">Status do Carnê:</label>
-                    <select id="statusCarne" value={statusCarne} onChange={(e) => setStatusCarne(e.target.value)} required className="form-select">
+                <div className="form-group">
+                    <label htmlFor="statusCarne">Status do Carnê:</label>
+                    <select 
+                        id="statusCarne"
+                        value={statusCarne} 
+                        onChange={(e) => setStatusCarne(e.target.value)} 
+                        required 
+                        className="form-select"
+                    >
                         <option value="Ativo">Ativo</option>
                         <option value="Cancelado">Cancelado</option>
                     </select>
                 </div>
 
-                <div className="mb-3">
-                    <label htmlFor="observacoes" className="form-label">Observações (Opcional):</label>
-                    <textarea id="observacoes" value={observacoes} onChange={(e) => setObservacoes(e.target.value)} rows="3" className="form-control"></textarea>
+                <div className="form-group">
+                    <label htmlFor="observacoesCarne">Observações (Opcional):</label>
+                    <textarea 
+                        id="observacoesCarne"
+                        value={observacoes} 
+                        onChange={(e) => setObservacoes(e.target.value)} 
+                        rows="3" 
+                        className="form-textarea"
+                    ></textarea>
                 </div>
 
-                <button type="submit" className="btn btn-primary w-100" disabled={submitLoading}>
+                <button type="submit" className="btn btn-primary" disabled={submitLoading}>
                     {submitLoading ? 'Salvando...' : (id ? 'Atualizar Carnê' : 'Cadastrar Carnê')}
                 </button>
-                <button type="button" onClick={() => navigate('/carnes')} className="btn btn-secondary w-100 mt-2">
+                <button type="button" onClick={() => navigate('/carnes')} className="btn btn-secondary mt-2">
                     Cancelar
                 </button>
             </form>

@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../components/AuthProvider.jsx';
-import { auth as apiAuth } from '../api.js'; 
+import { auth as apiAuth } from '../api.js';
 import { useGlobalAlert } from '../App.jsx';
 import LoadingSpinner from '../components/LoadingSpinner.jsx';
 
 function ProfilePage() {
-    const { user, loading: authLoading, updateUser } = useAuth(); 
+    const { user, loading: authLoading, updateUser } = useAuth();
     const [nome, setNome] = useState('');
     const [email, setEmail] = useState('');
     const [submitLoading, setSubmitLoading] = useState(false);
@@ -24,8 +24,8 @@ function ProfilePage() {
         try {
             const updatedUserData = await apiAuth.updateProfile({ nome, email });
             setGlobalAlert({ message: 'Perfil atualizado com sucesso!', type: 'success' });
-            if (updateUser) { 
-                updateUser(updatedUserData.data); 
+            if (updateUser) {
+                updateUser(updatedUserData.data);
             }
         } catch (err) {
             const errorMessage = `Falha ao atualizar perfil: ${err.response?.data?.detail || err.message}`;
@@ -44,9 +44,10 @@ function ProfilePage() {
             <h2>Meu Perfil</h2>
             <form onSubmit={handleSubmit}>
                 <div className="form-group">
-                    <label>Nome:</label>
+                    <label htmlFor="profileName">Nome:</label>
                     <input
                         type="text"
+                        id="profileName"
                         value={nome}
                         onChange={(e) => setNome(e.target.value)}
                         required
@@ -54,9 +55,10 @@ function ProfilePage() {
                     />
                 </div>
                 <div className="form-group">
-                    <label>Email:</label>
+                    <label htmlFor="profileEmail">Email:</label>
                     <input
                         type="email"
+                        id="profileEmail"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         required
@@ -64,18 +66,20 @@ function ProfilePage() {
                     />
                 </div>
                 <div className="form-group">
-                    <label>Perfil:</label>
+                    <label htmlFor="profilePerfil">Perfil:</label>
                     <input
                         type="text"
+                        id="profilePerfil"
                         value={user.perfil}
                         disabled
                         className="form-input"
                     />
                 </div>
                  <div className="form-group">
-                    <label>Data de Cadastro:</label>
+                    <label htmlFor="profileDataCadastro">Data de Cadastro:</label>
                     <input
                         type="text"
+                        id="profileDataCadastro"
                         value={new Date(user.data_cadastro).toLocaleDateString()}
                         disabled
                         className="form-input"

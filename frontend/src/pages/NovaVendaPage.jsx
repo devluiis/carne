@@ -15,7 +15,7 @@ function NovaVendaPage() {
     const fetchClientOptions = useCallback(async () => {
         try {
             setLoadingClients(true);
-            const response = await clients.getAll(''); 
+            const response = await clients.getAll('');
             setClientOptions(response.data || []);
         } catch (err) {
             console.error('Erro ao carregar opções de clientes:', err);
@@ -42,17 +42,17 @@ function NovaVendaPage() {
     }
 
     return (
-        <div className="container form-container" style={{maxWidth: '700px'}}> {/* container do Bootstrap */}
-            <h2 className="text-center mb-4">Registrar Nova Venda / Carnê</h2>
-            <p className="text-center mb-4">Selecione o cliente para o qual deseja registrar uma nova venda e gerar um carnê.</p>
+        <div className="form-container large-container"> {/* Mantive large-container para ajuste de max-width */}
+            <h2 className="text-center">Registrar Nova Venda / Carnê</h2>
+            <p className="text-center" style={{marginBottom: '30px'}}>Selecione o cliente para o qual deseja registrar uma nova venda e gerar um carnê.</p>
             
-            <div className="mb-3"> {/* mb-3 do Bootstrap */}
-                <label htmlFor="client-select" className="form-label">Cliente:</label>
+            <div className="form-group">
+                <label htmlFor="client-select">Cliente:</label>
                 <select
                     id="client-select"
                     value={selectedClientId}
                     onChange={(e) => setSelectedClientId(e.target.value)}
-                    className="form-select" /* form-select do Bootstrap */
+                    className="form-select"
                 >
                     <option value="">-- Selecione um Cliente --</option>
                     {clientOptions.length > 0 ? (
@@ -69,25 +69,28 @@ function NovaVendaPage() {
 
             <button
                 onClick={handleProceedToCarne}
-                className="btn btn-primary w-100 mb-2" /* w-100 mb-2 do Bootstrap */
+                className="btn btn-primary"
                 disabled={!selectedClientId || loadingClients}
+                style={{marginTop: '20px'}}
             >
                 Prosseguir para Criação do Carnê
             </button>
-            <button
-                type="button"
-                onClick={() => navigate('/clients/new')} 
-                className="btn btn-success w-100 mb-2" 
-            >
-                + Cadastrar Novo Cliente
-            </button>
-            <button
-                type="button"
-                onClick={() => navigate('/carnes')}
-                className="btn btn-secondary w-100" 
-            >
-                Cancelar / Ver Carnês
-            </button>
+            <div className="button-group-mt-2"> {/* Nova classe para agrupar botões com margem */}
+                <button
+                    type="button"
+                    onClick={() => navigate('/clients/new')}
+                    className="btn btn-success"
+                >
+                    + Cadastrar Novo Cliente
+                </button>
+                <button
+                    type="button"
+                    onClick={() => navigate('/carnes')}
+                    className="btn btn-secondary"
+                >
+                    Cancelar / Ver Carnês
+                </button>
+            </div>
         </div>
     );
 }

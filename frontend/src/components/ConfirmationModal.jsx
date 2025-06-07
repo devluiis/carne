@@ -13,16 +13,19 @@ function ConfirmationModal({
         return null;
     }
 
+    // Estilos transferidos para index.css como .modal-overlay, .modal-content, etc.
+    // Usando as classes CSS agora.
+
     return (
-        <div className="modal-overlay"> {/* Nova classe */}
-            <div className="modal-content"> {/* Nova classe */}
-                {title && <h2 className="modal-title">{title}</h2>} {/* Nova classe */}
-                <p className="modal-message">{message}</p> {/* Nova classe */}
-                <div className="modal-actions"> {/* Nova classe */}
-                    <button onClick={onCancel} className="btn btn-secondary" style={{width: 'auto'}}>
+        <div className="modal-overlay" onClick={onCancel}>
+            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                {title && <h2 className="modal-title">{title}</h2>}
+                <p className="modal-message">{message}</p>
+                <div className="modal-actions">
+                    <button onClick={onCancel} className="btn btn-secondary modal-btn">
                         {cancelText}
                     </button>
-                    <button onClick={onConfirm} className="btn btn-danger" style={{width: 'auto'}}>
+                    <button onClick={onConfirm} className="btn btn-danger modal-btn">
                         {confirmText}
                     </button>
                 </div>

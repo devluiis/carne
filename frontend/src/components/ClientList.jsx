@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { clients } from '../api';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../components/AuthProvider.jsx';
+import { useAuth } from './AuthProvider.jsx';
 import { useGlobalAlert } from '../App.jsx';
-import LoadingSpinner from '../components/LoadingSpinner.jsx';
-import ConfirmationModal from '../components/ConfirmationModal.jsx';
+import LoadingSpinner from './LoadingSpinner.jsx';
 
-function ClientList() { // Renomeie para ClientsPage se este for seu arquivo principal
+function ClientList() {
     const [clientList, setClientList] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
@@ -14,156 +13,126 @@ function ClientList() { // Renomeie para ClientsPage se este for seu arquivo pri
     const { user } = useAuth();
     const { setGlobalAlert } = useGlobalAlert();
 
-    const [showDeleteClientModal, setShowDeleteClientModal] = useState(false);
-    const [clientToDeleteId, setClientToDeleteId] = useState(null);
-
     const fetchClients = useCallback(async (query = '') => {
         try {
             setLoading(true);
             const response = await clients.getAll(query);
-            setClientList(response.data || []);
+            setClientList(response.data);
+            // Removido setError, useGlobalAlert é o suficiente
         } catch (err) {
             console.error('Erro ao buscar clientes:', err);
-            setGlobalAlert({ message: 'Falha ao carregar clientes.', type: 'error' });
+            setGlobalAlert({ message: 'Falha ao carregar clientes. Faça login novamente.', type: 'error' });
         } finally {
             setLoading(false);
         }
     }, [setGlobalAlert]);
 
     useEffect(() => {
-        if (user) {
-            fetchClients(searchQuery);
-        } else {
-            setLoading(false);
-            setGlobalAlert({ message: 'Faça login para ver os clientes.', type: 'error' });
-        }
-    }, [user, fetchClients, searchQuery]);
-
-
-    const handleSearch = () => {
         fetchClients(searchQuery);
-    };
+    }, [fetchClients, searchQuery]); // Re-fetch quando searchQuery muda
 
     const handleClearSearch = () => {
         setSearchQuery('');
     };
 
-    const handleOpenDeleteClientModal = (id) => {
-        setClientToDeleteId(id);
-        setShowDeleteClientModal(true);
-    };
-
-    const handleCancelDeleteClient = () => {
-        setShowDeleteClientModal(false);
-        setClientToDeleteId(null);
-    };
-
-    const performDeleteClient = async () => {
-        if (!clientToDeleteId) return;
-        try {
-            await clients.delete(clientToDeleteId);
-            setGlobalAlert({ message: 'Cliente excluído com sucesso!', type: 'success' });
-            fetchClients(searchQuery);
-        } catch (err) {
-            const errorMessage = `Falha ao excluir cliente: ${err.response?.data?.detail || err.message}`;
-            setGlobalAlert({ message: errorMessage, type: 'error' });
-        } finally {
-            setShowDeleteClientModal(false);
-            setClientToDeleteId(null);
+    const handleDelete = async (id) => {
+        if (window.confirm('Tem certeza que deseja excluir este cliente? Isso removerá todos os carnês e pagamentos associados. Esta ação é irreversível.')) {
+            try {
+                await clients.delete(id);
+                setGlobalAlert({ message: 'Cliente excluído com sucesso!', type: 'success' });
+                fetchClients(searchQuery);
+            } catch (err) {
+                console.error('Erro ao excluir cliente:', err);
+                setGlobalAlert({ message: `Falha ao excluir cliente: ${err.response?.data?.detail || err.message || 'Erro desconhecido.'}`, type: 'error' });
+            }
         }
     };
 
-
-    if (loading) {
-        return <LoadingSpinner message="Carregando clientes..." />;
-    }
+    if (loading) return <LoadingSpinner message="Carregando clientes..." />;
 
     return (
-        <>
-            <div className="container table-container"> {/* container do Bootstrap */}
-                <h2 className="text-center mb-4">Lista de Clientes</h2> {/* mb-4 do Bootstrap */}
-                
-                <div className="input-group mb-3"> {/* input-group do Bootstrap para busca */}
-                    <input
-                        type="text"
-                        placeholder="Buscar por nome ou CPF/CNPJ..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="form-control" /* form-control do Bootstrap */
-                    />
-                    <button
-                        onClick={handleSearch}
-                        className="btn btn-primary"
-                        style={{ width: 'auto' }}
-                    >
-                        Buscar
-                    </button>
-                    <button
-                        onClick={handleClearSearch}
-                        className="btn btn-secondary"
-                        style={{ width: 'auto' }}
-                    >
-                        Limpar
-                    </button>
-                </div>
-
-                <button onClick={() => navigate('/clients/new')} className="btn btn-success mb-3"> {/* mb-3 do Bootstrap */}
-                    Adicionar Novo Cliente
+        <div className="table-container">
+            <h2 className="text-center">Lista de Clientes</h2>
+            
+            <div className="search-filter-container"> {/* Nova classe para os elementos de busca */}
+                <input
+                    type="text"
+                    placeholder="Buscar por nome ou CPF/CNPJ..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="form-input search-input"
+                />
+                <button
+                    onClick={handleClearSearch}
+                    className="btn btn-secondary btn-sm"
+                >
+                    Limpar
                 </button>
-                
-                {clientList.length === 0 && !searchQuery ? (
-                    <p className="text-center p-3 bg-light rounded"> {/* p-3 bg-light rounded do Bootstrap */}
-                        Nenhum cliente cadastrado.
-                    </p>
-                ) : clientList.length === 0 && searchQuery ? (
-                    <p className="text-center p-3 bg-light rounded">
-                        Nenhum cliente encontrado para a busca "{searchQuery}".
-                    </p>
-                ) : (
-                    <div className="table-responsive"> {/* table-responsive do Bootstrap */}
-                        <table className="table table-striped table-hover"> {/* table-striped table-hover do Bootstrap */}
-                            <thead>
-                                <tr>
-                                    <th>Nome</th>
-                                    <th>CPF/CNPJ</th>
-                                    <th>Telefone</th>
-                                    <th>Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {clientList.map((client) => (
-                                    <tr key={client.id_cliente}>
-                                        <td data-label="Nome">{client.nome}</td>
-                                        <td data-label="CPF/CNPJ">{client.cpf_cnpj}</td>
-                                        <td data-label="Telefone">{client.telefone || 'N/A'}</td>
-                                        <td data-label="Ações">
-                                            <div className="d-flex flex-wrap gap-2"> {/* d-flex flex-wrap gap-2 do Bootstrap */}
-                                                <button onClick={() => navigate(`/clients/edit/${client.id_cliente}`)} className="btn btn-warning btn-sm">Editar</button>
-                                                {user && user.perfil === 'admin' && (
-                                                    <button onClick={() => handleOpenDeleteClientModal(client.id_cliente)} className="btn btn-danger btn-sm">Excluir</button>
-                                                )}
-                                                <button onClick={() => navigate(`/clients/${client.id_cliente}/carnes`)} className="btn btn-secondary btn-sm">Ver Carnês</button>
-                                                <button onClick={() => navigate(`/clients/details/${client.id_cliente}`)} className="btn btn-info btn-sm">Resumo</button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
             </div>
 
-            <ConfirmationModal
-                isOpen={showDeleteClientModal}
-                title="Confirmar Exclusão de Cliente"
-                message="Tem certeza que deseja excluir este cliente? Todos os carnês e pagamentos associados a ele também serão removidos. Esta ação não pode ser desfeita."
-                onConfirm={performDeleteClient}
-                onCancel={handleCancelDeleteClient}
-                confirmText="Sim, Excluir Cliente"
-                cancelText="Cancelar"
-            />
-        </>
+            <button
+                onClick={() => navigate('/clients/new')}
+                className="btn btn-success" style={{width: 'auto', marginBottom: '20px'}}
+            >
+                Adicionar Novo Cliente
+            </button>
+            
+            {clientList.length === 0 && !searchQuery ? (
+                <p className="text-center">Nenhum cliente cadastrado.</p>
+            ) : clientList.length === 0 && searchQuery ? (
+                <p className="text-center">Nenhum cliente encontrado para a busca "{searchQuery}".</p>
+            ) : (
+                <table className="styled-table">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>CPF/CNPJ</th>
+                            <th>Telefone</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {clientList.map((client) => (
+                            <tr key={client.id_cliente}>
+                                <td>{client.nome}</td>
+                                <td>{client.cpf_cnpj}</td>
+                                <td>{client.telefone || 'N/A'}</td>
+                                <td>
+                                    <div className="table-actions">
+                                        <button
+                                            onClick={() => navigate(`/clients/edit/${client.id_cliente}`)}
+                                            className="btn btn-warning btn-sm"
+                                        >
+                                            Editar
+                                        </button>
+                                        {user && user.perfil === 'admin' && (
+                                            <button
+                                                onClick={() => handleDelete(client.id_cliente)}
+                                                className="btn btn-danger btn-sm"
+                                            >
+                                                Excluir
+                                            </button>
+                                        )}
+                                        <button
+                                            onClick={() => navigate(`/clients/${client.id_cliente}/carnes`)}
+                                            className="btn btn-secondary btn-sm"
+                                        >
+                                            Ver Carnês
+                                        </button>
+                                        <button
+                                            onClick={() => navigate(`/clients/details/${client.id_cliente}`)}
+                                            className="btn btn-info btn-sm"
+                                        >
+                                            Resumo
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            )}
+        </div>
     );
 }
 

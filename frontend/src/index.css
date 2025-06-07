@@ -16,71 +16,79 @@ body {
   min-height: 100vh;
 }
 
-/* --- ESTILOS DO CABEÇALHO (HEADER) --- */
-/* Este é o padrão para DESKTOP */
 header {
     background: #333;
     color: white;
     padding: 10px 20px;
     display: flex;
+    flex-wrap: wrap; /* Permite que os itens do header quebrem linha */
     justify-content: space-between;
     align-items: center;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    gap: 15px; /* Espaçamento entre os elementos do header */
 }
 
-header h1.app-title {
+header h1 {
     margin: 0;
     font-size: 1.5rem;
+    flex-shrink: 0; /* Impede que o título encolha */
 }
 
-/* Menu de navegação principal (desktop) */
-header nav.main-nav {
-    display: flex; /* Visível em desktop */
-    align-items: center;
-    flex-grow: 1; /* Permite que ocupe o espaço entre o título e as info do usuário */
-    justify-content: center; /* Centraliza a lista de links */
+.app-title-link {
+    color: white;
+    text-decoration: none;
 }
-header nav.main-nav ul.nav-list {
+
+.main-nav {
+    display: flex;
+    flex-wrap: wrap; /* Permite que os itens de navegação quebrem linha */
+    align-items: center;
+    gap: 15px; /* Espaçamento entre a lista de links e as informações do usuário */
+    flex-grow: 1; /* Permite que a navegação ocupe espaço disponível */
+    justify-content: flex-end; /* Alinha a navegação à direita */
+}
+
+.nav-list {
     list-style: none;
     margin: 0;
     padding: 0;
-    display: flex; /* Links em linha */
-    flex-wrap: nowrap; /* Não quebra linha em desktop */
+    display: flex;
+    flex-wrap: wrap; /* Permite que os links quebrem linha */
     align-items: center;
+    gap: 5px; /* Espaçamento menor entre os links individuais */
 }
-header nav ul.nav-list li.nav-item {
-    margin-right: 10px; /* Mais espaço entre itens em desktop */
-}
-header nav ul.nav-list li.nav-item:last-child {
-    margin-right: 0; /* Remove margem do último item */
-}
-header nav ul.nav-list li.nav-item a.nav-link {
+
+.nav-link {
     padding: 10px 15px;
     color: white;
     text-decoration: none;
-    transition: background-color 0.2s ease;
+    transition: background-color 0.2s ease, border-radius 0.2s ease;
     display: inline-block;
+    white-space: nowrap; /* Evita quebra de texto nos links */
 }
-header nav ul.nav-list li.nav-item a.active-link {
+
+.nav-link:hover {
     background-color: #555;
     border-radius: 5px;
 }
-.user-info-section { /* Seção "Olá, usuário! Sair" para desktop */
-    margin-left: 20px;
-    display: flex; /* Visível em desktop */
-    align-items: center;
-    white-space: nowrap; /* Impede quebra de linha */
-}
-.user-info-section span {
-    margin-right: 10px;
+
+.nav-link.active {
+    background-color: #007bff; /* Cor para o link ativo */
+    border-radius: 5px;
+    font-weight: bold;
 }
 
-/* Elementos mobile (hambúrguer e info de usuário mobile) ESCONDIDOS em DESKTOP */
-.hamburger-menu {
-    display: none; 
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    white-space: nowrap; /* Evita quebra de texto em "Olá, Fulano! (perfil)" */
+    color: white;
 }
-.user-info-section-mobile {
-    display: none;
+
+.logout-btn {
+    padding: 8px 12px;
+    font-size: 0.875rem;
 }
 
 
@@ -91,13 +99,23 @@ main {
 
 /* --- ESTILOS DE FORMULÁRIO --- */
 .form-container {
-    max-width: 600px; /* Padrão para telas maiores */
+    max-width: 600px;
     margin: 40px auto;
     padding: 30px;
     background-color: white;
     border: 1px solid #e0e0e0;
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* Ajuste para o formulário de login para ser um pouco menor se desejar */
+.login-form-container {
+    max-width: 450px;
+}
+
+/* Para contêineres maiores (usado em CarneDetailsPage, DashboardPage, etc.) */
+.large-container {
+    max-width: 1100px;
 }
 
 .form-container h2 {
@@ -133,22 +151,53 @@ main {
     box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.2);
 }
 
-.form-input[disabled] {
+.form-input[disabled], .form-select[disabled], .form-textarea[disabled] {
     background-color: #e9ecef;
     cursor: not-allowed;
 }
 
-/* Para grids de 2 colunas em formulários */
-.form-grid-2-col {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 15px;
+/* Estilo para campos obrigatórios */
+.required-star {
+    color: red;
+    margin-left: 3px;
 }
+
+/* Alinhamento de formulários com 2 colunas */
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr; /* Padrão para mobile */
+    gap: 15px;
+    margin-bottom: 20px; /* Para manter o espaçamento entre grupos */
+}
+@media (min-width: 768px) {
+    .form-row {
+        grid-template-columns: 1fr 1fr; /* 2 colunas em telas maiores */
+    }
+}
+
+/* Estilo para os botões dentro do formulário */
+.form-actions {
+    display: flex;
+    flex-direction: column; /* Botões empilhados por padrão */
+    gap: 10px;
+    margin-top: 30px;
+}
+@media (min-width: 576px) {
+    .form-actions {
+        flex-direction: row; /* Botões em linha em telas maiores */
+        justify-content: flex-end; /* Alinha à direita */
+    }
+    .form-actions .btn {
+        width: auto; /* Permite que o botão tenha largura natural */
+        flex-grow: 0;
+    }
+}
+
 
 /* --- ESTILOS DE BOTÕES --- */
 .btn {
     display: inline-block;
-    width: 100%; /* Ajustado para flexibilidade, será sobrescrito por width: auto onde necessário */
+    width: 100%; /* Padrão para ocupar a largura total do container */
     padding: 12px 15px;
     border: none;
     border-radius: 5px;
@@ -185,13 +234,33 @@ main {
 .btn-sm {
     padding: 6px 12px;
     font-size: 0.875rem;
-    width: auto; /* Para botões em linha */
+    width: auto; /* Garante que botões .btn-sm não ocupem 100% da largura */
 }
 
-/* Margem utilitária */
+/* Agrupar botões que precisam de margem superior (ex: depois de um formulário principal) */
 .mt-2 {
     margin-top: 20px;
 }
+
+/* Estilo para agrupar botões em linha com margem entre eles */
+.button-group-mt-2 {
+    margin-top: 20px;
+    display: flex;
+    flex-wrap: wrap; /* Permite quebra de linha em telas pequenas */
+    gap: 10px; /* Espaçamento entre os botões */
+    justify-content: flex-end; /* Alinha à direita, se houver espaço */
+}
+.button-group-mt-2 .btn {
+    flex-grow: 1; /* Permite que os botões cresçam para preencher o espaço */
+    max-width: 100%; /* Garante que não excedam em telas pequenas */
+}
+@media (min-width: 576px) {
+    .button-group-mt-2 .btn {
+        flex-grow: 0; /* Remove o crescimento em telas maiores */
+        width: auto;
+    }
+}
+
 
 /* --- ESTILOS DE TABELA --- */
 .table-container {
@@ -207,6 +276,7 @@ main {
 .styled-table {
     width: 100%;
     border-collapse: collapse;
+    margin-top: 20px; /* Espaçamento padrão acima da tabela */
 }
 
 .styled-table thead tr {
@@ -230,11 +300,61 @@ main {
 
 .table-actions {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: wrap; /* Permite quebra de linha em telas pequenas */
     gap: 8px;
 }
 
-/* --- ESTILOS DE DASHBOARD --- */
+/* Sub-tabelas (ex: pagamentos dentro de parcelas) */
+.styled-table.sub-table {
+    margin-top: 10px;
+    font-size: 0.9em; /* Menor fonte para sub-tabelas */
+}
+.styled-table.sub-table th, .styled-table.sub-table td {
+    padding: 8px 10px;
+}
+.styled-table.sub-table thead tr {
+    background-color: #e9ecef; /* Fundo mais claro para cabeçalho da sub-tabela */
+    color: #333;
+}
+.payments-sub-table-container {
+    margin: 15px 0;
+    padding: 10px;
+    border: 1px solid #e0e0e0;
+    border-radius: 5px;
+    background-color: #fafafa;
+}
+.payments-sub-table-title {
+    font-size: 0.9em;
+    margin-bottom: 10px;
+    color: #555;
+}
+.sub-table-cell { /* Estilo para a TD que contém a sub-tabela */
+    padding: 0 !important; /* Remove padding padrão da célula */
+    border-top: none !important;
+    border-bottom: 1px solid #ddd !important;
+}
+
+
+/* --- CLASSES DE LAYOUT E UTILITÁRIAS --- */
+.text-center {
+    text-align: center;
+}
+.text-danger { /* Usado para mensagens de erro inline */
+    color: #dc3545;
+}
+.text-warning { /* Usado para mensagens de aviso inline */
+    color: #ffc107;
+}
+
+.no-data-message {
+    padding: 20px;
+    background-color: #f8f9fa;
+    border-radius: 5px;
+    color: #777;
+    font-style: italic;
+}
+
+/* Estilos de Card para Dashboard */
 .dashboard-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -276,246 +396,175 @@ main {
     color: #007bff;
 }
 
-/* --- ESTILOS DE ALERTA GLOBAL --- */
+/* Layout para filtros em linha */
+.filter-section {
+    padding: 20px;
+    background-color: #f9f9f9;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+.filter-section h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: #333;
+}
+.filter-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    align-items: flex-end;
+}
+.filter-buttons {
+    display: flex;
+    gap: 10px;
+}
+.filter-buttons .btn {
+    width: 100%;
+}
+@media (min-width: 768px) {
+    .filter-buttons .btn {
+        width: auto;
+        flex-grow: 1;
+    }
+}
+
+/* Estilo para a barra de busca em ClientsPage e outros */
+.search-filter-container {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    align-items: center;
+    flex-wrap: wrap; /* Permite quebra de linha em telas menores */
+}
+.search-filter-container .search-input {
+    flex-grow: 1;
+}
+.search-filter-container .btn-sm {
+    flex-shrink: 0; /* Impede o botão de encolher */
+    width: auto;
+}
+
+/* Estilos específicos para CarneDetailsPage */
+.header-with-button {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 10px; /* Espaçamento entre o H2 e o botão */
+}
+.header-with-button h2 {
+    margin: 0;
+    flex-grow: 1; /* Permite que o título ocupe espaço */
+}
+.header-with-button .btn {
+    flex-shrink: 0; /* Impede o botão de encolher */
+    width: auto;
+}
+
+.carne-info-box {
+    border: 1px solid #eee;
+    padding: 15px;
+    border-radius: 5px;
+    background-color: #f9f9f9;
+    margin-bottom: 30px;
+}
+.section-title {
+    margin-top: 30px;
+    margin-bottom: 15px;
+    color: #333;
+}
+.payment-form-section {
+    margin-top: 30px;
+    border: 1px solid #ccc;
+    background-color: #fff;
+    padding: 20px; /* Adicionado padding */
+}
+
+/* Estilos para relatórios */
+.filter-form-row {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 30px;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+    align-items: flex-end;
+    flex-wrap: wrap; /* Permite quebra de linha */
+}
+.filter-form-row .form-group.flex-grow {
+    flex-grow: 1;
+    min-width: 150px; /* Garante que os campos não fiquem muito pequenos */
+}
+.filter-form-row .btn {
+    flex-shrink: 0;
+    width: auto;
+}
+
+.report-results-section {
+    margin-top: 30px;
+    border-top: 1px solid #eee;
+    padding-top: 20px;
+}
+.total-receipts-summary, .total-debt-summary {
+    font-size: 1.2em;
+    margin-bottom: 20px;
+}
+
+
+/* Estilos para GlobalAlert */
 .global-alert {
     position: fixed;
-    top: 10px;
+    top: 20px; /* Ajustado para um pouco mais abaixo do header */
     left: 50%;
     transform: translateX(-50%);
     padding: 12px 25px;
     border-radius: 8px;
     color: white;
     font-weight: bold;
-    z-index: 1000;
+    z-index: 1050; /* Z-index maior que o modal */
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     display: flex;
     align-items: center;
     justify-content: space-between;
     min-width: 300px;
     max-width: 90%;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
 }
 
-.global-alert .close-button {
+.global-alert.visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+.global-alert-success { background-color: #28a745; }
+.global-alert-error { background-color: #dc3545; }
+.global-alert-warning { background-color: #ffc107; color: #333; } /* Cor do texto ajustada para warning */
+.global-alert-info { background-color: #17a2b8; }
+
+.global-alert-close-btn {
     background: none;
     border: none;
     color: white;
     font-size: 1.2em;
     cursor: pointer;
     margin-left: 15px;
+    opacity: 0.8;
+    transition: opacity 0.2s ease;
+}
+.global-alert-warning .global-alert-close-btn {
+    color: #333; /* Botão de fechar preto para warning */
 }
 
-/* -- Media Queries -- */
-/* Para telas menores (celulares) */
-@media (max-width: 768px) {
-    body {
-        font-size: 0.85rem; 
-    }
-    #root {
-        padding: 0.5rem; 
-    }
-    header.main-header {
-        flex-direction: row; 
-        justify-content: space-between; 
-        align-items: center;
-        padding: 10px;
-        position: fixed; /* Fixa o cabeçalho no topo */
-        width: 100%;
-        top: 0;
-        left: 0;
-        z-index: 1000; /* Garante que fique acima de tudo */
-        box-sizing: border-box; /* Inclui padding na largura */
-    }
-    header h1.app-title {
-        flex-grow: 1; 
-        text-align: center; 
-        margin: 0;
-    }
-
-    /* Hambúrguer (Visível no Mobile) */
-    .hamburger-menu {
-        display: block; 
-        background: none;
-        border: none;
-        cursor: pointer;
-        padding: 5px;
-        z-index: 1010; 
-        position: relative; 
-    }
-    .hamburger-icon {
-        display: block;
-        width: 25px;
-        height: 3px;
-        background-color: white;
-        margin: 5px 0;
-        transition: all 0.3s ease;
-        border-radius: 2px;
-    }
-    /* Animação do X para o hambúrguer */
-    .hamburger-menu.open .hamburger-icon:nth-child(1) { transform: translateY(8px) rotate(45deg); }
-    .hamburger-menu.open .hamburger-icon:nth-child(2) { opacity: 0; }
-    .hamburger-menu.open .hamburger-icon:nth-child(3) { transform: translateY(-8px) rotate(-45deg); }
-
-
-    /* Seção de Informações do Usuário Mobile (Visível no Mobile) */
-    .user-info-section-mobile {
-        display: flex; 
-        align-items: center;
-        font-size: 0.85rem;
-        justify-content: flex-end; 
-        flex-grow: 0; 
-        gap: 5px; 
-        color: white; 
-    }
-    .user-info-section-mobile span.user-name-mobile {
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        max-width: 80px; 
-        margin-right: 5px;
-    }
-
-    /* Esconder a seção de informações do usuário padrão em mobile */
-    .user-info-section {
-        display: none;
-    }
-
-    /* Menu de Navegação em Mobile (Desliza para fora da tela) */
-    .main-nav { 
-        position: fixed; /* Fixo na tela */
-        top: 0; /* Alinha com o topo da tela */
-        left: -250px; /* Escondido à esquerda */
-        width: 250px; /* Largura do menu */
-        height: 100%; /* Altura total da tela */
-        background-color: #444; /* Cor de fundo do menu lateral */
-        padding-top: 80px; /* Espaço para não cobrir o cabeçalho superior */
-        transition: left 0.3s ease; /* Animação de deslizamento */
-        z-index: 999; /* Fica abaixo do botão hambúrguer */
-        flex-direction: column; /* Itens do menu empilhados */
-        align-items: flex-start;
-    }
-
-    .main-nav.open { 
-        left: 0; 
-    }
-
-    .main-nav ul.nav-list { /* A lista de links dentro do menu lateral */
-        flex-direction: column; 
-        width: 100%;
-        padding: 0 15px; 
-    }
-    .main-nav ul.nav-list li.nav-item {
-        width: 100%;
-        margin-bottom: 5px;
-        margin-right: 0;
-    }
-    .main-nav ul.nav-list li.nav-item a {
-        padding: 10px 15px;
-        font-size: 1rem;
-        width: calc(100% - 30px); 
-        text-align: left;
-        border-radius: 5px;
-    }
-    .main-nav ul.nav-list li.nav-item a.active-link {
-        background-color: #666;
-    }
-
-    /* --- Estilos do main content (para não ficar por baixo do menu aberto) --- */
-    main {
-        transition: transform 0.3s ease;
-        margin-top: 60px; /* Espaço para o cabeçalho fixo */
-    }
-    body.menu-open main { /* Quando o menu está aberto, empurra o conteúdo principal */
-        transform: translateX(250px); /* Move o main content para a direita */
-    }
-
-    /* Adaptação dos grids para uma coluna em mobile */
-    .form-grid-2-col,
-    .dashboard-grid,
-    .table-container > .form-container > div {
-        grid-template-columns: 1fr !important;
-        gap: 10px !important;
-    }
-
-    /* Adaptação de containers e padding para mobile */
-    .form-container, .table-container {
-        margin: 15px auto;
-        padding: 10px;
-        max-width: 98%;
-    }
-    .form-container h2 {
-        font-size: 1.3rem;
-        margin-bottom: 15px;
-    }
-    .form-group label {
-        font-size: 0.85rem;
-    }
-    .form-input, .form-select, .form-textarea {
-        padding: 8px;
-        font-size: 0.85rem;
-    }
-    .btn {
-        padding: 10px 10px;
-        font-size: 0.9rem;
-    }
-    .btn-sm {
-        padding: 4px 8px;
-        font-size: 0.8rem;
-    }
-
-    /* Tabelas Responsivas: Modo "cartão" */
-    .styled-table {
-        width: 100%;
-        display: block; /* Essencial para quebrar layout */
-        overflow-x: auto; /* Fallback para tabelas muito largas */
-    }
-    .styled-table thead { /* Esconder cabeçalho original em mobile */
-        display: none;
-    }
-    .styled-table tbody {
-        display: block; /* Fazer o corpo da tabela se comportar como um bloco */
-        width: 100%;
-    }
-    .styled-table tr {
-        border: 1px solid #ccc;
-        margin-bottom: 10px;
-        display: block; /* Cada linha vira um "cartão" */
-        padding: 10px;
-    }
-    .styled-table td {
-        border: none;
-        border-bottom: 1px solid #eee; /* Linha divisória entre os campos do cartão */
-        position: relative;
-        padding-left: 50%; /* Espaço para o pseudo-elemento ::before (label) */
-        text-align: right; /* Alinha o valor à direita */
-        display: block;
-        word-wrap: break-word; /* Quebra palavras longas */
-        font-size: 0.9rem;
-    }
-    .styled-table td:last-child {
-        border-bottom: none; /* Último campo do cartão não tem borda inferior */
-    }
-    .styled-table td:before {
-        content: attr(data-label); /* Usa o atributo data-label do HTML */
-        position: absolute;
-        top: 6px;
-        left: 6px;
-        width: 45%; /* Largura da label */
-        padding-right: 10px;
-        white-space: nowrap;
-        text-align: left;
-        font-weight: bold;
-        color: #555;
-        box-sizing: border-box; /* Incluir padding na largura */
-    }
-
-    .table-actions {
-        justify-content: flex-end; /* Alinhar botões à direita em mobile */
-        flex-wrap: wrap;
-        gap: 5px; /* Espaço menor entre botões */
-        margin-top: 10px; /* Espaço acima dos botões no cartão */
-    }
+.global-alert-close-btn:hover {
+    opacity: 1;
 }
 
+/* Estilos para ConfirmationModal */
 .modal-overlay {
     position: fixed;
     top: 0;
@@ -557,4 +606,112 @@ main {
     display: flex;
     justify-content: flex-end;
     gap: 10px;
+}
+.modal-btn { /* Estilo para os botões dentro do modal */
+    width: auto;
+    padding: 10px 20px;
+}
+
+/* Estilos para LoadingSpinner */
+.loading-spinner-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 40px;
+    min-height: 300px;
+}
+
+.spinner {
+    border: 5px solid #f3f3f3; /* Cinza claro */
+    border-top: 5px solid #3498db; /* Azul */
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 20px auto;
+}
+
+.spinner-message {
+    margin-top: 15px;
+    color: #555;
+    font-weight: bold;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Link padrão (para o "Não tem uma conta?" etc.) */
+.link-text {
+    color: #007bff;
+    text-decoration: none;
+    font-weight: bold;
+}
+.link-text:hover {
+    text-decoration: underline;
+}
+
+/* Responsividade básica para formulários e tabelas */
+@media (max-width: 768px) {
+    .form-container, .table-container {
+        margin: 20px auto;
+        padding: 15px;
+    }
+
+    header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    .main-nav {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+        width: 100%;
+    }
+    .nav-list {
+        flex-direction: column;
+        align-items: flex-start;
+        width: 100%;
+    }
+    .nav-link {
+        width: 100%;
+        text-align: left;
+    }
+    .user-info {
+        margin-left: 0;
+        width: 100%;
+        justify-content: flex-start;
+    }
+    .logout-btn {
+        width: auto;
+    }
+
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .filter-grid {
+        grid-template-columns: 1fr;
+    }
+    .filter-buttons {
+        flex-direction: column;
+    }
+
+    .header-with-button {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .header-with-button .btn {
+        width: 100%;
+    }
+
+    .search-filter-container {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .search-filter-container .search-input,
+    .search-filter-container .btn-sm {
+        width: 100%;
+    }
 }

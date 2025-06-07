@@ -83,7 +83,7 @@ export const reports = {
 
 const PRODUTOS_API_PREFIX = "/api"; 
 
-export const produtos = { 
+export const produtos = {
     getAll: (skip = 0, limit = 100, searchQuery = null, categoria = null, marca = null) => {
         const params = { skip, limit };
         if (searchQuery) params.search_query = searchQuery;

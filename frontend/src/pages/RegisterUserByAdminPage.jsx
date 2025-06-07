@@ -3,7 +3,7 @@ import { useAuth } from '../components/AuthProvider.jsx';
 import { useNavigate } from 'react-router-dom';
 import { useGlobalAlert } from '../App.jsx';
 
-function RegisterUserByAdminForm() {
+function RegisterUserByAdminPage() {
     const [email, setEmail] = useState('');
     const [nome, setNome] = useState('');
     const [senha, setSenha] = useState('');
@@ -31,46 +31,46 @@ function RegisterUserByAdminForm() {
     };
 
     return (
-        <div className="container form-container" style={{maxWidth: '450px'}}> {/* Mantido maxWidth para este formulário específico */}
-            <h2 className="text-center mb-4">Registrar Novo Atendente</h2> {/* mb-4 do Bootstrap */}
+        <div className="form-container">
+            <h2>Registrar Novo Atendente</h2>
             <form onSubmit={handleSubmit}>
-                <div className="mb-3">
-                    <label htmlFor="email" className="form-label">Email:</label>
+                <div className="form-group">
+                    <label htmlFor="atendenteEmail">Email:</label>
                     <input
                         type="email"
-                        id="email"
+                        id="atendenteEmail"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         required
-                        className="form-control"
+                        className="form-input"
                     />
                 </div>
-                <div className="mb-3">
-                    <label htmlFor="nome" className="form-label">Nome:</label>
+                <div className="form-group">
+                    <label htmlFor="atendenteNome">Nome:</label>
                     <input
                         type="text"
-                        id="nome"
+                        id="atendenteNome"
                         value={nome}
                         onChange={(e) => setNome(e.target.value)}
                         required
-                        className="form-control"
+                        className="form-input"
                     />
                 </div>
-                <div className="mb-3">
-                    <label htmlFor="senha" className="form-label">Senha:</label>
+                <div className="form-group">
+                    <label htmlFor="atendenteSenha">Senha:</label>
                     <input
                         type="password"
-                        id="senha"
+                        id="atendenteSenha"
                         value={senha}
                         onChange={(e) => setSenha(e.target.value)}
                         required
-                        className="form-control"
+                        className="form-input"
                     />
                 </div>
-                <button type="submit" className="btn btn-success w-100" disabled={loading}>
+                <button type="submit" disabled={loading} className="btn btn-success">
                     {loading ? 'Registrando...' : 'Registrar Atendente'}
                 </button>
-                <button type="button" onClick={() => navigate('/clients')} className="btn btn-secondary w-100 mt-2">
+                <button type="button" onClick={() => navigate('/clients')} className="btn btn-secondary mt-2">
                     Cancelar
                 </button>
             </form>
@@ -78,4 +78,4 @@ function RegisterUserByAdminForm() {
     );
 }
 
-export default RegisterUserByAdminForm;
+export default RegisterUserByAdminPage;

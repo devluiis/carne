@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { clients } from '../api';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useGlobalAlert } from '../App.jsx';
-import LoadingSpinner from './LoadingSpinner.jsx'; 
+import LoadingSpinner from './LoadingSpinner.jsx';
 
 function ClientForm() {
     const [nome, setNome] = useState('');
@@ -10,17 +10,15 @@ function ClientForm() {
     const [endereco, setEndereco] = useState('');
     const [telefone, setTelefone] = useState('');
     const [email, setEmail] = useState('');
-    const [formError, setFormError] = useState(''); 
-    const [loadingInitial, setLoadingInitial] = useState(false); 
-    const [submitLoading, setSubmitLoading] = useState(false); 
+    const [error, setError] = useState('');
+    const [loadingInitial, setLoadingInitial] = useState(false);
+    const [submitLoading, setSubmitLoading] = useState(false);
     const navigate = useNavigate();
     const { id } = useParams();
     const { setGlobalAlert } = useGlobalAlert();
 
-    const isEditing = Boolean(id);
-
     useEffect(() => {
-        if (isEditing) {
+        if (id) {
             setLoadingInitial(true);
             clients.getById(id)
                 .then(response => {
@@ -38,16 +36,16 @@ function ClientForm() {
                 })
                 .finally(() => setLoadingInitial(false));
         }
-    }, [id, isEditing, navigate, setGlobalAlert]);
+    }, [id, navigate, setGlobalAlert]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setFormError(''); 
+        setError('');
         setSubmitLoading(true);
         const clientData = { nome, cpf_cnpj: cpfCnpj, endereco, telefone, email };
 
         try {
-            if (isEditing) {
+            if (id) {
                 await clients.update(id, clientData);
                 setGlobalAlert({ message: 'Cliente atualizado com sucesso!', type: 'success' });
             } else {
@@ -57,7 +55,7 @@ function ClientForm() {
             navigate('/clients');
         } catch (err) {
             const errorMessage = `Erro ao salvar cliente: ${err.response?.data?.detail || err.message}`;
-            setFormError(errorMessage); 
+            setError(errorMessage);
             setGlobalAlert({ message: errorMessage, type: 'error' });
         } finally {
             setSubmitLoading(false);
@@ -65,73 +63,73 @@ function ClientForm() {
     };
 
     if (loadingInitial) {
-        return <LoadingSpinner message={isEditing ? "Carregando dados do cliente..." : "Preparando formulário..."} />;
+        return <LoadingSpinner message="Carregando dados do cliente..." />;
     }
 
     return (
-        <div className="container form-container"> {/* Usando container do Bootstrap */}
-            <h2 className="text-center mb-4">{isEditing ? 'Editar Cliente' : 'Cadastrar Novo Cliente'}</h2> {/* mb-4 do Bootstrap */}
-            {formError && <p className="text-danger text-center mb-3 fw-bold">{formError}</p>} {/* Classes Bootstrap para erro */}
+        <div className="form-container">
+            <h2>{id ? 'Editar Cliente' : 'Cadastrar Novo Cliente'}</h2>
+            {error && <p className="text-center" style={{ color: 'red', marginBottom: '15px' }}>{error}</p>}
             <form onSubmit={handleSubmit}>
-                <div className="mb-3"> {/* mb-3 do Bootstrap */}
-                    <label htmlFor="nome" className="form-label">Nome Completo / Razão Social:</label> {/* form-label do Bootstrap */}
+                <div className="form-group">
+                    <label htmlFor="nome">Nome Completo / Razão Social:</label>
                     <input
                         type="text"
                         id="nome"
                         value={nome}
                         onChange={(e) => setNome(e.target.value)}
                         required
-                        className="form-control" /* form-control do Bootstrap */
+                        className="form-input"
                     />
                 </div>
-                <div className="mb-3">
-                    <label htmlFor="cpfCnpj" className="form-label">CPF / CNPJ:</label>
+                <div className="form-group">
+                    <label htmlFor="cpfCnpj">CPF / CNPJ:</label>
                     <input
                         type="text"
                         id="cpfCnpj"
                         value={cpfCnpj}
                         onChange={(e) => setCpfCnpj(e.target.value)}
                         required
-                        className="form-control"
+                        className="form-input"
                     />
                 </div>
-                <div className="mb-3">
-                    <label htmlFor="endereco" className="form-label">Endereço:</label>
+                <div className="form-group">
+                    <label htmlFor="endereco">Endereço:</label>
                     <input
                         type="text"
                         id="endereco"
                         value={endereco}
                         onChange={(e) => setEndereco(e.target.value)}
-                        className="form-control"
+                        className="form-input"
                     />
                 </div>
-                <div className="mb-3">
-                    <label htmlFor="telefone" className="form-label">Telefone:</label>
+                <div className="form-group">
+                    <label htmlFor="telefone">Telefone:</label>
                     <input
                         type="text"
                         id="telefone"
                         value={telefone}
                         onChange={(e) => setTelefone(e.target.value)}
-                        className="form-control"
+                        className="form-input"
                     />
                 </div>
-                <div className="mb-3">
-                    <label htmlFor="email" className="form-label">Email:</label>
+                <div className="form-group">
+                    <label htmlFor="email">Email:</label>
                     <input
                         type="email"
                         id="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className="form-control"
+                        className="form-input"
                     />
                 </div>
-                <button type="submit" className="btn btn-primary w-100" disabled={submitLoading}>
-                    {submitLoading ? 'Salvando...' : (isEditing ? 'Atualizar Cliente' : 'Cadastrar Cliente')}
+                <button type="submit" className="btn btn-primary" disabled={submitLoading}>
+                    {submitLoading ? 'Salvando...' : (id ? 'Atualizar Cliente' : 'Cadastrar Cliente')}
                 </button>
                 <button
                     type="button"
                     onClick={() => navigate('/clients')}
-                    className="btn btn-secondary w-100 mt-2" 
+                    className="btn btn-secondary mt-2"
                 >
                     Cancelar
                 </button>

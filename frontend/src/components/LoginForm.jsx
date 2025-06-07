@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useAuth } from '../components/AuthProvider'; // Corrigido o caminho de importação
+import { useAuth } from '../components/AuthProvider';
 import { useNavigate, Link } from 'react-router-dom';
 import { useGlobalAlert } from '../App.jsx';
 
@@ -27,13 +27,14 @@ function LoginForm() {
     };
 
     return (
-        <div className="form-container" style={{maxWidth: '450px'}}>
+        <div className="form-container login-form-container"> {/* Adicionei login-form-container para ajuste de max-width */}
             <h2>Login</h2>
             <form onSubmit={handleSubmit}>
                 <div className="form-group">
-                    <label>Email:</label>
+                    <label htmlFor="email">Email:</label>
                     <input
                         type="email"
+                        id="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         required
@@ -41,9 +42,10 @@ function LoginForm() {
                     />
                 </div>
                 <div className="form-group">
-                    <label>Senha:</label>
+                    <label htmlFor="password">Senha:</label>
                     <input
                         type="password"
+                        id="password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required
@@ -56,7 +58,7 @@ function LoginForm() {
             </form>
             <p className="text-center mt-2">
                 Não tem uma conta?{' '}
-                <Link to="/register-user">Registre-se</Link>
+                <Link to="/register-user" className="link-text">Registre-se</Link> {/* Usei uma classe para o link */}
             </p>
         </div>
     );

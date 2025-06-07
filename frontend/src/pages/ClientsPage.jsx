@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../components/AuthProvider.jsx';
 import { useGlobalAlert } from '../App.jsx';
 import LoadingSpinner from '../components/LoadingSpinner.jsx';
-import ConfirmationModal from '../components/ConfirmationModal.jsx'; // <<<< IMPORTAR O MODAL
+import ConfirmationModal from '../components/ConfirmationModal.jsx';
 
 function ClientsPage() {
     const [clientList, setClientList] = useState([]);
@@ -14,7 +14,6 @@ function ClientsPage() {
     const { user } = useAuth();
     const { setGlobalAlert } = useGlobalAlert();
 
-    // NOVO: Estados para o modal de confirmação de exclusão de cliente
     const [showDeleteClientModal, setShowDeleteClientModal] = useState(false);
     const [clientToDeleteId, setClientToDeleteId] = useState(null);
 
@@ -32,22 +31,13 @@ function ClientsPage() {
     }, [setGlobalAlert]);
 
     useEffect(() => {
-        fetchClients(searchQuery); // Busca inicial e quando searchQuery muda
+        fetchClients(searchQuery);
     }, [fetchClients, searchQuery]);
-
-
-    const handleSearch = () => {
-        // fetchClients já é chamado pelo useEffect quando searchQuery muda
-        // Mas se quiser forçar uma nova busca com o mesmo termo, pode chamar aqui.
-        // Por ora, o useEffect é suficiente.
-    };
 
     const handleClearSearch = () => {
         setSearchQuery('');
-        // fetchClients será chamado automaticamente pelo useEffect devido à mudança em searchQuery
     };
 
-    // NOVAS FUNÇÕES PARA O MODAL DE EXCLUSÃO DE CLIENTE
     const handleOpenDeleteClientModal = (id) => {
         setClientToDeleteId(id);
         setShowDeleteClientModal(true);
@@ -63,7 +53,7 @@ function ClientsPage() {
         try {
             await clients.delete(clientToDeleteId);
             setGlobalAlert({ message: 'Cliente excluído com sucesso!', type: 'success' });
-            fetchClients(searchQuery); // Atualiza a lista
+            fetchClients(searchQuery);
         } catch (err) {
             const errorMessage = `Falha ao excluir cliente: ${err.response?.data?.detail || err.message}`;
             setGlobalAlert({ message: errorMessage, type: 'error' });
@@ -73,27 +63,23 @@ function ClientsPage() {
         }
     };
 
-
     if (loading) {
         return <LoadingSpinner message="Carregando clientes..." />;
     }
 
     return (
-        <> {/* Fragmento para incluir o modal */}
+        <>
             <div className="table-container">
                 <h2 className="text-center">Gerenciamento de Clientes</h2>
-                <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', alignItems: 'center' }}>
+                <div className="search-filter-container" style={{marginBottom: '20px'}}>
                     <input
                         type="text"
                         placeholder="Buscar por nome ou CPF/CNPJ..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="form-input"
-                        style={{ flexGrow: 1 }}
+                        className="form-input search-input"
                     />
-                    {/* O botão de buscar não é estritamente necessário se a busca é reativa */}
-                    {/* <button onClick={handleSearch} className="btn btn-primary" style={{width: 'auto'}}>Buscar</button> */}
-                    <button onClick={handleClearSearch} className="btn btn-secondary" style={{width: 'auto'}}>Limpar Busca</button>
+                    <button onClick={handleClearSearch} className="btn btn-secondary btn-sm">Limpar Busca</button>
                 </div>
                 <button onClick={() => navigate('/clients/new')} className="btn btn-success" style={{width: 'auto', marginBottom: '20px'}}>
                     + Novo Cliente
@@ -120,7 +106,7 @@ function ClientsPage() {
                                         <button onClick={() => navigate(`/clients/edit/${client.id_cliente}`)} className="btn btn-warning btn-sm">Editar</button>
                                         {user?.perfil === 'admin' && (
                                             <button 
-                                                onClick={() => handleOpenDeleteClientModal(client.id_cliente)} // <<<< MODIFICADO
+                                                onClick={() => handleOpenDeleteClientModal(client.id_cliente)}
                                                 className="btn btn-danger btn-sm"
                                             >
                                                 Excluir
@@ -132,7 +118,7 @@ function ClientsPage() {
                             </tr>
                         )) : (
                             <tr>
-                                <td colSpan="4" className="text-center" style={{padding: '20px'}}>
+                                <td colSpan="4" className="text-center no-data-message">
                                     {searchQuery ? `Nenhum cliente encontrado para "${searchQuery}".` : "Nenhum cliente cadastrado."}
                                 </td>
                             </tr>
@@ -141,7 +127,6 @@ function ClientsPage() {
                 </table>
             </div>
 
-            {/* NOVO: Renderizar o Modal de Confirmação para Clientes */}
             <ConfirmationModal
                 isOpen={showDeleteClientModal}
                 title="Confirmar Exclusão de Cliente"
