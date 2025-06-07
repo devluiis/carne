@@ -110,13 +110,13 @@ function App() {
 function Header() {
     const { user, logout } = useAuth();
     const location = useLocation();
-    const [isMenuOpen, setIsMenuOpen] = useState(false); // Estado para controlar o menu móvel
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     const toggleMenu = () => {
         setIsMenuOpen(!isMenuOpen);
     };
 
-    const closeMenu = () => { // Função para fechar o menu ao clicar em um link
+    const closeMenu = () => {
         setIsMenuOpen(false);
     };
 
@@ -131,17 +131,17 @@ function Header() {
         <header>
             <h1>
                 <Link to={user ? "/dashboard" : "/"} className="app-title-link">
-                    Bios Store
+                    Bios Store - Celulares e Acessórios
                 </Link>
             </h1>
             {user && (
                 <>
                     <button className="menu-toggle" onClick={toggleMenu} aria-label="Abrir Menu">
-                        ☰ {/* Ícone de hamburger */}
+                        ☰
                     </button>
                     <nav className={`main-nav ${isMenuOpen ? 'menu-open' : ''}`}>
                         <button className="close-menu-button" onClick={closeMenu} aria-label="Fechar Menu">
-                            &times; {/* Botão de fechar para o menu móvel */}
+                            &times;
                         </button>
                         <ul className="nav-list">
                             <li><Link to="/dashboard" className={isLinkActive('/dashboard') ? "nav-link active" : "nav-link"} onClick={closeMenu}>Dashboard</Link></li>
@@ -162,7 +162,7 @@ function Header() {
                             )}
                             <li><Link to="/profile" className={isLinkActive('/profile') ? "nav-link active" : "nav-link"} onClick={closeMenu}>Meu Perfil</Link></li>
                         </ul>
-                        <div className="user-info">
+                        <div className="user-info mobile-user-info"> {/* Adicionada classe mobile-user-info */}
                             <span>Olá, {user.nome}! ({user.perfil})</span>
                             <button onClick={() => { logout(); closeMenu(); }} className="btn btn-danger btn-sm logout-btn">Sair</button>
                         </div>
