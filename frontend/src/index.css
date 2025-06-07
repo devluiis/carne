@@ -24,8 +24,8 @@ header {
     justify-content: space-between;
     align-items: center;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    position: relative; /* Necessário para posicionar o menu móvel */
-    z-index: 900; /* Garante que o header fique acima de outros conteúdos */
+    position: relative;
+    z-index: 900;
 }
 
 header h1 {
@@ -39,9 +39,8 @@ header h1 {
     text-decoration: none;
 }
 
-/* Botão de menu Hamburger (mobile) */
 .menu-toggle {
-    display: none; /* Oculto por padrão em desktop */
+    display: none;
     background: none;
     border: none;
     color: white;
@@ -96,6 +95,11 @@ header h1 {
     white-space: nowrap;
     color: white;
 }
+/* Oculta mobile-user-info por padrão no desktop */
+.user-info.mobile-user-info { 
+    display: none;
+}
+
 
 .logout-btn {
     padding: 8px 12px;
@@ -649,70 +653,84 @@ main {
 
 /* --- Responsividade (Media Queries) --- */
 
-/* Esconde o menu de navegação e mostra o botão hamburger em telas pequenas */
 @media (max-width: 900px) { /* Ajuste o breakpoint conforme necessário */
     header {
-        flex-wrap: nowrap; /* Não permite quebra no header em telas pequenas */
+        flex-wrap: nowrap;
         justify-content: space-between;
     }
     
+    /* Oculta os itens do menu de desktop e mostra o toggle */
+    .main-nav .nav-list,
+    .main-nav .user-info { /* Esconde a info do usuário normal */
+        display: none;
+    }
+
     .menu-toggle {
         display: block; /* Mostra o botão hamburger */
     }
 
     .main-nav {
-        /* Esconde o menu por padrão */
-        display: none; 
-        flex-direction: column;
+        /* Posição inicial do menu fora da tela */
         position: fixed;
         top: 0;
-        right: -100%; /* Inicia fora da tela */
-        width: 250px; /* Largura do menu quando aberto */
+        right: -300px; /* Ajuste a largura do menu aqui, ex: 300px */
+        width: 300px; /* Largura do menu quando aberto */
         height: 100%;
-        background-color: #444; /* Cor de fundo do menu lateral */
+        background-color: #444;
         box-shadow: -2px 0 5px rgba(0,0,0,0.5);
         transition: right 0.3s ease-in-out;
         padding-top: 60px; /* Espaço para o botão de fechar */
-        z-index: 950; /* Acima do header */
+        z-index: 950;
+        display: flex; /* Ajustado para flexbox para alinhar conteúdo */
+        flex-direction: column;
+        justify-content: flex-start; /* Alinha o conteúdo ao topo */
+        align-items: stretch; /* Estica os itens para preencher a largura */
     }
 
     .main-nav.menu-open {
-        display: flex; /* Mostra o menu quando aberto */
         right: 0; /* Desliza para dentro da tela */
+        display: flex; /* Garante que o menu seja flex quando aberto */
     }
 
     .main-nav .nav-list {
+        display: flex; /* Volta a exibir a lista no menu móvel */
         flex-direction: column;
         width: 100%;
-        gap: 10px; /* Mais espaço entre os itens do menu lateral */
+        gap: 10px;
         padding: 20px;
+        flex-grow: 1; /* Permite que a lista ocupe o espaço restante */
     }
 
     .main-nav .nav-link {
         width: 100%;
         text-align: left;
-        padding: 12px 15px; /* Maior padding para botões de menu */
-        border-radius: 5px; /* Bordas arredondadas */
+        padding: 12px 15px;
+        border-radius: 5px;
     }
     .main-nav .nav-link.active {
         background-color: #007bff;
     }
 
-    .main-nav .user-info {
+    /* Exibe e estiliza a informação do usuário e botão de sair para mobile */
+    .user-info.mobile-user-info {
+        display: flex;
         flex-direction: column;
         align-items: flex-start;
         width: 100%;
         padding: 20px;
         border-top: 1px solid #555; /* Separador */
+        margin-top: auto; /* Empurra para o final do menu */
     }
-    .main-nav .user-info span {
+    .user-info.mobile-user-info span {
         margin-bottom: 10px;
+        font-weight: bold;
+        color: white; /* Garante que o texto seja branco */
     }
-    .main-nav .logout-btn {
-        width: 100%; /* Botão de sair ocupa largura total */
+    .user-info.mobile-user-info .logout-btn {
+        width: 100%;
     }
 
-    /* Botão de fechar o menu (no canto superior direito do menu móvel) */
+    /* Botão de fechar o menu */
     .close-menu-button {
         display: block;
         position: absolute;
@@ -724,7 +742,7 @@ main {
         font-size: 2rem;
         cursor: pointer;
         padding: 5px 10px;
-        z-index: 960; /* Acima do conteúdo do menu */
+        z-index: 960;
     }
 
     /* Outras responsividades gerais para mobile */
