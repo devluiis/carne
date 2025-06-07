@@ -138,6 +138,7 @@ function App() {
     );
 }
 
+
 function Header() {
     const { user, logout } = useAuth();
     const location = useLocation();
@@ -150,7 +151,7 @@ function Header() {
     };
 
     const activeLinkClass = "active-link"; // Definir a classe ativa
-    const inactiveLinkClass = ""; // Definir a classe inativa para padronização
+    const inactiveLinkClass = ""; // <-- ADICIONE ESTA LINHA para que não seja undefined
 
     return (
         <header>
@@ -160,14 +161,13 @@ function Header() {
                 </Link>
             </h1>
             {user && (
-                <nav className="main-nav"> {/* Usar a classe */}
-                    <ul> {/* Usar a classe */}
+                <nav className="main-nav">
+                    <ul>
                         <li className="nav-item"><Link to="/dashboard" className={isLinkActive('/dashboard') ? activeLinkClass : inactiveLinkClass}>Dashboard</Link></li>
                         <li className="nav-item"><Link to="/nova-venda" className={isLinkActive('/nova-venda') ? activeLinkClass : inactiveLinkClass}>Nova Venda</Link></li>
                         <li className="nav-item"><Link to="/clients" className={isLinkActive('/clients') ? activeLinkClass : inactiveLinkClass}>Clientes</Link></li>
                         <li className="nav-item"><Link to="/carnes" className={isLinkActive('/carnes') ? activeLinkClass : inactiveLinkClass}>Carnês</Link></li>
                         
-                        {/* <<<< NOVO LINK PARA PRODUTOS >>>> */}
                         <li className="nav-item"><Link to="/produtos" className={isLinkActive('/produtos') ? activeLinkClass : inactiveLinkClass}>Produtos</Link></li>
                         
                         <li className="nav-item"><Link to="/reports/receipts" className={isLinkActive('/reports/receipts') ? activeLinkClass : inactiveLinkClass}>Rel. Receb.</Link></li>
@@ -176,12 +176,12 @@ function Header() {
                         {user.perfil === 'admin' && ( 
                             <>
                                 <li className="nav-item"><Link to="/register-admin" className={isLinkActive('/register-admin') ? activeLinkClass : inactiveLinkClass}>Reg. Admin</Link></li>
-                                <li className="nav-item"><Link to="/register-atendente" className={isLinkActive('/register-atendente') ? activeLinkClass : inactiveLinkStyle}>Reg. Atendente</Link></li>
+                                <li className="nav-item"><Link to="/register-atendente" className={isLinkActive('/register-atendente') ? activeLinkClass : inactiveLinkClass}>Reg. Atendente</Link></li> {/* Correção aqui também */}
                             </>
                         )}
                         <li className="nav-item"><Link to="/profile" className={isLinkActive('/profile') ? activeLinkClass : inactiveLinkClass}>Meu Perfil</Link></li>
                     </ul>
-                    <div className="user-info-section"> {/* Usar a classe */}
+                    <div className="user-info-section">
                          <span>Olá, {user.nome}! ({user.perfil})</span>
                         <button onClick={logout} className="btn btn-danger btn-sm">Sair</button>
                     </div>
