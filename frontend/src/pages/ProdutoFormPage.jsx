@@ -120,7 +120,7 @@ function ProdutoFormPage() {
                     <textarea id="descricao" value={descricao} onChange={(e) => setDescricao(e.target.value)} className="form-textarea" rows="3"></textarea>
                 </div>
 
-                <div className="form-grid-2-col"> {/* Usando classe CSS */}
+                <div className="form-grid-2-col"> 
                     <div className="form-group">
                         <label htmlFor="categoria">Categoria:</label>
                         <input type="text" id="categoria" value={categoria} onChange={(e) => setCategoria(e.target.value)} className="form-input" maxLength={100} />
@@ -131,7 +131,7 @@ function ProdutoFormPage() {
                     </div>
                 </div>
 
-                <div className="form-grid-2-col"> {/* Usando classe CSS */}
+                <div className="form-grid-2-col"> 
                     <div className="form-group">
                         <label htmlFor="imei">IMEI (para celulares):</label>
                         <input type="text" id="imei" value={imei} onChange={(e) => setImei(e.target.value)} className="form-input" maxLength={50} />
@@ -142,7 +142,7 @@ function ProdutoFormPage() {
                     </div>
                 </div>
 
-                <div className="form-grid-2-col"> {/* Usando classe CSS */}
+                <div className="form-grid-2-col"> 
                     <div className="form-group">
                         <label htmlFor="precoVenda">Preço de Venda (R$):</label>
                         <input type="number" id="precoVenda" value={precoVenda} onChange={(e) => setPrecoVenda(e.target.value)} step="0.01" min="0" className="form-input" />
@@ -153,7 +153,7 @@ function ProdutoFormPage() {
                     </div>
                 </div>
 
-                <div className="form-grid-2-col"> {/* Usando classe CSS */}
+                <div className="form-grid-2-col"> 
                     <div className="form-group">
                         <label htmlFor="estoqueAtual">Estoque Atual:</label>
                         <input type="number" id="estoqueAtual" value={estoqueAtual} onChange={(e) => setEstoqueAtual(e.target.value)} step="1" min="0" className="form-input" />

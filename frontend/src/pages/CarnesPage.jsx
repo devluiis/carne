@@ -6,7 +6,6 @@ import { useGlobalAlert } from '../App.jsx';
 import LoadingSpinner from '../components/LoadingSpinner.jsx';
 import ConfirmationModal from '../components/ConfirmationModal.jsx';
 
-// Função getStatusStyle (mantenha ou importe de um utils)
 const getStatusStyle = (status) => {
     switch (status) {
         case 'Quitado': return { color: '#28a745', fontWeight: 'bold' };
@@ -103,7 +102,7 @@ function CarnesPage() {
                 
                 <div className="form-container" style={{maxWidth: 'none', margin: '0 0 20px 0', padding: '20px'}}>
                     <h3>Filtrar Carnês:</h3>
-                    <div className="form-grid-2-col" style={{gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', alignItems: 'flex-end'}}> {/* Usando form-grid-2-col */}
+                    <div className="form-grid-2-col" style={{gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', alignItems: 'flex-end'}}>
                         <div className="form-group">
                             <label>Status:</label>
                             <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="form-select">
@@ -157,14 +156,14 @@ function CarnesPage() {
                     <table className="styled-table">
                         <thead>
                             <tr>
-                                <th >Cliente</th>
-                                <th >Descrição</th>
-                                <th >Data Venda</th>
-                                <th >Valor Total</th>
-                                <th >Entrada</th>
-                                <th >Nº Parc.</th>
-                                <th >Status</th>
-                                <th >Ações</th>
+                                <th>Cliente</th>
+                                <th>Descrição</th>
+                                <th>Data Venda</th>
+                                <th>Valor Total</th>
+                                <th>Entrada</th>
+                                <th>Nº Parc.</th>
+                                <th>Status</th>
+                                <th>Ações</th>
                             </tr>
                         </thead>
                         <tbody>

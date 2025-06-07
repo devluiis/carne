@@ -1,24 +1,24 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { carnes, clients } from '../api'; // Importado 'clients'
+import { carnes, clients } from '../api';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../components/AuthProvider.jsx';
 import { useGlobalAlert } from '../App.jsx';
-import LoadingSpinner from '../components/LoadingSpinner.jsx'; // Importado LoadingSpinner
+import LoadingSpinner from '../components/LoadingSpinner.jsx';
 
-function ClientDetailsPage() { // Renomeado de CarneDetailsPage para ClientDetailsPage
+function ClientDetailsPage() { 
     const { id } = useParams();
     const navigate = useNavigate();
-    const [clientSummary, setClientSummary] = useState(null); // Usar para o resumo do cliente
+    const [clientSummary, setClientSummary] = useState(null); 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     
     const { user } = useAuth();
     const { setGlobalAlert } = useGlobalAlert();
 
-    const fetchClientDetails = useCallback(async () => { // Função para buscar detalhes do cliente e resumo
+    const fetchClientDetails = useCallback(async () => { 
         try {
             setLoading(true);
-            const response = await clients.getSummary(id); // Assumindo que você tem getSummary em clients no api.js
+            const response = await clients.getSummary(id); 
             setClientSummary(response.data);
             setError('');
         } catch (err) {
@@ -36,7 +36,7 @@ function ClientDetailsPage() { // Renomeado de CarneDetailsPage para ClientDetai
 
 
     if (loading) return <LoadingSpinner message="Carregando resumo do cliente..." />;
-    if (error && !clientSummary) return <p style={{ color: 'red', textAlign: 'center', padding: '20px' }}>{error}</p>;
+    if (error && !clientSummary) return <p className="text-center" style={{ color: 'red', padding: '20px' }}>{error}</p>;
     if (!clientSummary) return <p className="text-center">Resumo do cliente não encontrado.</p>;
 
     return (
@@ -53,7 +53,7 @@ function ClientDetailsPage() { // Renomeado de CarneDetailsPage para ClientDetai
             </div>
 
             <h3 style={{marginBottom: '15px'}}>Estatísticas de Carnês:</h3>
-            <div className="dashboard-grid" style={{gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))'}}> {/* Reutiliza estilo de grid do dashboard */}
+            <div className="dashboard-grid"> {/* Reutiliza estilo de grid do dashboard */}
                 <div className="card-dashboard">
                     <h3>Dívida Total Aberta</h3>
                     <p className="card-value card-value-red">R$ {Number(clientSummary.total_divida_aberta).toFixed(2)}</p>
@@ -127,7 +127,6 @@ function ClientDetailsPage() { // Renomeado de CarneDetailsPage para ClientDetai
     );
 }
 
-// Reutilizar getStatusStyle de CarnesPage.jsx
 const getStatusStyle = (status) => {
     switch (status) {
         case 'Quitado': return { color: '#28a745', fontWeight: 'bold' };

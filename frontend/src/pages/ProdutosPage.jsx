@@ -6,7 +6,6 @@ import { useGlobalAlert } from '../App.jsx';
 import LoadingSpinner from '../components/LoadingSpinner.jsx';
 import ConfirmationModal from '../components/ConfirmationModal.jsx';
 
-// Função para formatar moeda (pode ser movida para um arquivo utils)
 const formatCurrency = (value) => {
     const num = Number(value);
     if (isNaN(num)) {
@@ -22,12 +21,10 @@ function ProdutosPage() {
     const { user } = useAuth(); 
     const { setGlobalAlert } = useGlobalAlert();
 
-    // Estados para filtros e busca
     const [searchQuery, setSearchQuery] = useState('');
     const [filterCategoria, setFilterCategoria] = useState('');
     const [filterMarca, setFilterMarca] = useState('');
 
-    // Estados para o modal de confirmação de exclusão
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [produtoToDeleteId, setProdutoToDeleteId] = useState(null);
 
@@ -111,7 +108,7 @@ function ProdutosPage() {
                 {/* Seção de Filtros */}
                 <div className="form-container" style={{maxWidth: 'none', margin: '0 0 20px 0', padding: '20px'}}>
                     <h3>Filtrar Produtos:</h3>
-                    <div className="form-grid-2-col" style={{gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', alignItems: 'flex-end'}}> {/* Usando form-grid-2-col */}
+                    <div className="form-grid-2-col" style={{gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', alignItems: 'flex-end'}}> 
                         <div className="form-group">
                             <label htmlFor="searchNome">Nome do Produto:</label>
                             <input
@@ -146,7 +143,6 @@ function ProdutosPage() {
                             />
                         </div>
                         <div className="form-group" style={{display: 'flex', gap: '10px'}}>
-                            {/* Opcional: Botão Aplicar Filtros se não quiser re-fetch automático no onChange */}
                             <button onClick={handleClearFilters} className="btn btn-secondary" style={{width: 'auto'}}>Limpar Filtros</button>
                         </div>
                     </div>

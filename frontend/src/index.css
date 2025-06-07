@@ -16,6 +16,7 @@ body {
   min-height: 100vh;
 }
 
+/* --- ESTILOS DO CABEÇALHO (HEADER) --- */
 header {
     background: #333;
     color: white;
@@ -53,11 +54,11 @@ header nav ul li a {
     transition: background-color 0.2s ease;
     display: inline-block;
 }
-header nav ul li a.active-link { /* Nova classe para links ativos */
+header nav ul li a.active-link { /* Classe para links ativos */
     background-color: #555;
     border-radius: 5px;
 }
-.user-info-section {
+.user-info-section { /* Seção "Olá, usuário! Sair" para desktop */
     margin-left: 20px;
     display: flex;
     align-items: center;
@@ -65,6 +66,14 @@ header nav ul li a.active-link { /* Nova classe para links ativos */
 }
 .user-info-section span {
     margin-right: 10px;
+}
+
+/* Esconder o hambúrguer e a seção de informações do usuário mobile por padrão (desktop) */
+.hamburger-menu {
+    display: none;
+}
+.user-info-section-mobile {
+    display: none;
 }
 
 
@@ -298,68 +307,114 @@ main {
         padding: 0.5rem; /* Reduzir padding do root */
     }
     header {
-        flex-direction: column; /* Empilhar itens no header */
-        align-items: flex-start;
+        flex-direction: row; /* Voltar a ser linha em mobile top-bar */
+        justify-content: space-between; /* Espaço entre hambúrguer, título e info */
+        align-items: center;
         padding: 10px;
+        position: relative; /* Para posicionar o menu absoluto */
     }
-    header h1 {
-        font-size: 1.3rem; /* Menor em mobile */
-        width: 100%; /* Ocupa a largura total */
+    header h1.app-title { /* O título do app */
+        flex-grow: 1; /* Ocupa o espaço central */
         text-align: center; /* Centraliza o título */
-        margin-bottom: 10px; /* Espaço abaixo do título */
-    }
-    header nav {
-        width: 100%; /* Navegação ocupa a largura toda */
-        margin-top: 5px; /* Reduzir margem superior */
-    }
-    header nav ul {
-        flex-direction: column; /* Links da navegação em coluna */
-        align-items: flex-start;
-        width: 100%;
-        margin-top: 5px;
-        padding: 0; /* Garante que não há padding extra aqui */
-    }
-    header nav ul li {
-        margin-right: 0;
-        margin-bottom: 3px; /* Espaço entre links empilhados */
-        width: 100%; /* Ocupa a largura toda */
-        text-align: left; /* Alinhar o texto do item de lista */
-    }
-    header nav ul li a {
-        padding: 6px 8px; /* Reduzir padding dos links */
-        font-size: 0.85rem;
-        width: calc(100% - 16px); /* Ajuste para padding horizontal (10px de cada lado) */
-        box-sizing: border-box; /* Incluir padding na largura */
-        text-align: left;
-    }
-    header nav ul li a.active-link {
-        border-radius: 3px; /* Ajustar borda para menor */
+        margin: 0; /* Remover margens extras */
     }
 
-    .user-info-section { /* Para 'Olá, usuário! Sair' */
-        margin-left: 0; /* Remover margem extra */
-        margin-top: 10px;
+    /* Mostrar o hambúrguer em mobile */
+    .hamburger-menu {
+        display: block;
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 5px;
+        z-index: 1010; /* Para ficar acima do menu quando aberto */
+        position: relative; /* Para animacao do icon */
+    }
+
+    .hamburger-icon {
+        display: block;
+        width: 25px;
+        height: 3px;
+        background-color: white;
+        margin: 5px 0;
+        transition: all 0.3s ease;
+        border-radius: 2px;
+    }
+    /* Animação do ícone hambúrguer (opcional) */
+    .hamburger-menu.open .hamburger-icon:nth-child(1) {
+        transform: translateY(8px) rotate(45deg);
+    }
+    .hamburger-menu.open .hamburger-icon:nth-child(2) {
+        opacity: 0;
+    }
+    .hamburger-menu.open .hamburger-icon:nth-child(3) {
+        transform: translateY(-8px) rotate(-45deg);
+    }
+
+
+    /* Ocultar a navegação em desktop por padrão */
+    .main-nav {
+        position: fixed; /* Menu fixo para deslizar */
+        top: 0;
+        left: -250px; /* Escondido à esquerda */
+        width: 250px; /* Largura do menu */
+        height: 100%;
+        background-color: #444; /* Cor de fundo do menu */
+        padding-top: 60px; /* Espaço para o cabeçalho fixo */
+        transition: left 0.3s ease; /* Animação de deslizamento */
+        z-index: 1000; /* Para ficar sobre o conteúdo */
+        flex-direction: column; /* Conteúdo do menu em coluna */
+        align-items: flex-start;
+    }
+
+    .main-nav.open {
+        left: 0; /* Visível quando 'open' */
+    }
+
+    .main-nav ul {
+        flex-direction: column; /* Links empilhados */
         width: 100%;
-        display: flex; /* Garante que os itens fiquem lado a lado */
-        justify-content: center; /* Centraliza no container */
-        align-items: center;
-        flex-wrap: wrap; /* Permitir quebra se a tela for muito estreita */
-        font-size: 0.85rem;
-        padding: 5px 0; /* Um pouco de padding */
-        background-color: #444; /* Fundo para destacar */
+        padding: 0 15px; /* Padding interno do menu */
+    }
+    .main-nav ul li {
+        width: 100%;
+        margin-bottom: 5px;
+        margin-right: 0;
+    }
+    .main-nav ul li a {
+        font-size: 1rem;
+        padding: 10px 15px;
+        width: calc(100% - 30px); /* Ajusta largura para padding */
+        text-align: left;
         border-radius: 5px;
     }
-    .user-info-section span {
-        margin-right: 5px;
-        white-space: normal; /* Permitir que o texto quebre linha */
-        text-align: center;
-    }
-    .user-info-section .btn-sm {
-        padding: 6px 10px;
-        font-size: 0.8rem;
-        margin-left: 5px; /* Espaço entre o nome e o botão */
+    .main-nav ul li a.active-link {
+        background-color: #666;
     }
 
+    /* Mostrar a seção de informações do usuário no topo em mobile */
+    .user-info-section-mobile {
+        display: flex;
+        align-items: center;
+        font-size: 0.85rem;
+        /* Remover white-space: nowrap; daqui */
+        /* Ajustes para centralizar ou alinhar à direita */
+        justify-content: flex-end; /* Alinha à direita no header */
+        flex-grow: 0; /* Não cresce para ocupar espaço */
+        gap: 5px; /* Espaço entre span e botão */
+    }
+    .user-info-section-mobile span {
+        white-space: nowrap; /* Tenta manter nome na linha */
+        overflow: hidden;
+        text-overflow: ellipsis; /* Cortar com reticências */
+        max-width: 80px; /* Largura máxima para o nome do usuário */
+    }
+
+    /* Esconder a seção de informações do usuário padrão em mobile */
+    .user-info-section {
+        display: none;
+    }
+
+    /* Restante do CSS de media query para forms, tables, dashboard */
     .form-container, .table-container {
         margin: 15px auto; /* Reduzir margem vertical */
         padding: 10px; /* Reduzir padding */

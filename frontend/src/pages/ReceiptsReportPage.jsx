@@ -66,7 +66,7 @@ function ReceiptsReportPage() {
         <div className="form-container" style={{maxWidth: '1000px'}}> 
             <h2 className="text-center">Relatório de Recebimentos por Período</h2>
 
-            <form onSubmit={handleGenerateReport} className="form-grid-2-col" style={{gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', alignItems: 'flex-end', borderBottom: '1px solid #eee', paddingBottom: '20px', marginBottom: '20px' }}> {/* Usando form-grid-2-col */}
+            <form onSubmit={handleGenerateReport} className="form-grid-2-col" style={{gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', alignItems: 'flex-end', borderBottom: '1px solid #eee', paddingBottom: '20px', marginBottom: '20px' }}> 
                 <div className="form-group">
                     <label>Data de Início:</label>
                     <input

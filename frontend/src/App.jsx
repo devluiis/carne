@@ -37,7 +37,6 @@ import LoadingSpinner from './components/LoadingSpinner.jsx';
 const PrivateRoute = ({ children }) => {
     const { user, loading } = useAuth();
     if (loading) {
-        // Agora usa o componente LoadingSpinner importado
         return <LoadingSpinner message="Verificando autenticação..." />;
     }
     return user ? children : <Navigate to="/" />;
@@ -48,7 +47,6 @@ const AdminRoute = ({ children }) => {
     const alertContext = useContext(GlobalAlertContext); 
 
     if (loading) {
-        // Agora usa o componente LoadingSpinner importado
         return <LoadingSpinner message="Verificando permissões..." />;
     }
     if (!user) {
@@ -122,6 +120,11 @@ function App() {
 function Header() {
     const { user, logout } = useAuth();
     const location = useLocation();
+    const [isMenuOpen, setIsMenuOpen] = useState(false); // NOVO ESTADO AQUI
+
+    const toggleMenu = () => { // NOVA FUNÇÃO PARA ALTERNAR O MENU
+        setIsMenuOpen(!isMenuOpen);
+    };
 
     const isLinkActive = (path) => {
         if (path === '/') return location.pathname === path;
@@ -131,18 +134,33 @@ function Header() {
     };
 
     const activeLinkClass = "active-link"; 
-    const inactiveLinkClass = ""; // Definido
+    const inactiveLinkClass = ""; 
 
     return (
-        <header>
-            <h1>
+        <header className="main-header"> 
+            {user && ( // O hambúrguer só aparece se o usuário estiver logado
+                <button className={`hamburger-menu ${isMenuOpen ? 'open' : ''}`} onClick={toggleMenu}>
+                    <span className="hamburger-icon"></span>
+                    <span className="hamburger-icon"></span>
+                    <span className="hamburger-icon"></span>
+                </button>
+            )}
+            <h1 className="app-title"> 
                 <Link to={user ? "/dashboard" : "/"} style={{ color: 'white', textDecoration: 'none' }}>
                     Gestor de Carnês
                 </Link>
             </h1>
+            
             {user && (
-                <nav className="main-nav"> 
-                    <ul> 
+                <div className="user-info-section-mobile"> 
+                    <span className="user-name-mobile">Olá, {user.nome}! ({user.perfil})</span>
+                    <button onClick={logout} className="btn btn-danger btn-sm">Sair</button>
+                </div>
+            )}
+
+            {user && (
+                <nav className={`main-nav ${isMenuOpen ? 'open' : ''}`}> 
+                    <ul className="nav-list"> 
                         <li className="nav-item"><Link to="/dashboard" className={isLinkActive('/dashboard') ? activeLinkClass : inactiveLinkClass}>Dashboard</Link></li>
                         <li className="nav-item"><Link to="/nova-venda" className={isLinkActive('/nova-venda') ? activeLinkClass : inactiveLinkClass}>Nova Venda</Link></li>
                         <li className="nav-item"><Link to="/clients" className={isLinkActive('/clients') ? activeLinkClass : inactiveLinkClass}>Clientes</Link></li>
@@ -161,10 +179,6 @@ function Header() {
                         )}
                         <li className="nav-item"><Link to="/profile" className={isLinkActive('/profile') ? activeLinkClass : inactiveLinkClass}>Meu Perfil</Link></li>
                     </ul>
-                    <div className="user-info-section"> 
-                         <span>Olá, {user.nome}! ({user.perfil})</span>
-                        <button onClick={logout} className="btn btn-danger btn-sm">Sair</button>
-                    </div>
                 </nav>
             )}
         </header>

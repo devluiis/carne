@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { clients } from '../api';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../components/AuthProvider.jsx'; // Corrigido o caminho de importação para components/AuthProvider.jsx
+import { useAuth } from '../components/AuthProvider.jsx';
 import { useGlobalAlert } from '../App.jsx';
-import LoadingSpinner from '../components/LoadingSpinner.jsx'; // Importar LoadingSpinner
-import ConfirmationModal from '../components/ConfirmationModal.jsx'; // Importar ConfirmationModal
+import LoadingSpinner from '../components/LoadingSpinner.jsx';
+import ConfirmationModal from '../components/ConfirmationModal.jsx';
 
-function ClientList() {
+function ClientList() { // Renomeie para ClientsPage se este for seu arquivo principal
     const [clientList, setClientList] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
@@ -14,7 +14,6 @@ function ClientList() {
     const { user } = useAuth();
     const { setGlobalAlert } = useGlobalAlert();
 
-    // Estados para o modal de confirmação de exclusão de cliente
     const [showDeleteClientModal, setShowDeleteClientModal] = useState(false);
     const [clientToDeleteId, setClientToDeleteId] = useState(null);
 
@@ -49,7 +48,6 @@ function ClientList() {
         setSearchQuery('');
     };
 
-    // NOVAS FUNÇÕES PARA O MODAL DE EXCLUSÃO DE CLIENTE
     const handleOpenDeleteClientModal = (id) => {
         setClientToDeleteId(id);
         setShowDeleteClientModal(true);
@@ -85,7 +83,7 @@ function ClientList() {
             <div className="table-container">
                 <h2 className="text-center">Lista de Clientes</h2>
                 
-                <div className="form-group" style={{ display: 'flex', gap: '10px', marginBottom: '20px', alignItems: 'center', flexWrap: 'wrap' }}> {/* Adicionado flexWrap */}
+                <div className="form-group" style={{ display: 'flex', gap: '10px', marginBottom: '20px', alignItems: 'center', flexWrap: 'wrap' }}>
                     <input
                         type="text"
                         placeholder="Buscar por nome ou CPF/CNPJ..."
@@ -131,10 +129,10 @@ function ClientList() {
                         <tbody>
                             {clientList.map((client) => (
                                 <tr key={client.id_cliente}>
-                                    <td data-label="Nome">{client.nome}</td> {/* Adicionado data-label */}
-                                    <td data-label="CPF/CNPJ">{client.cpf_cnpj}</td> {/* Adicionado data-label */}
-                                    <td data-label="Telefone">{client.telefone || 'N/A'}</td> {/* Adicionado data-label */}
-                                    <td data-label="Ações"> {/* Adicionado data-label */}
+                                    <td data-label="Nome">{client.nome}</td>
+                                    <td data-label="CPF/CNPJ">{client.cpf_cnpj}</td>
+                                    <td data-label="Telefone">{client.telefone || 'N/A'}</td>
+                                    <td data-label="Ações">
                                         <div className="table-actions">
                                             <button onClick={() => navigate(`/clients/edit/${client.id_cliente}`)} className="btn btn-warning btn-sm">Editar</button>
                                             {user && user.perfil === 'admin' && (

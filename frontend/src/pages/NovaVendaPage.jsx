@@ -69,9 +69,9 @@ function NovaVendaPage() {
 
             <button
                 onClick={handleProceedToCarne}
-                className="btn btn-primary mt-2" /* Adicionado mt-2 */
+                className="btn btn-primary mt-2" 
                 disabled={!selectedClientId || loadingClients}
-                style={{width: '100%'}} /* Botão ocupando a largura total */
+                style={{width: '100%'}} 
             >
                 Prosseguir para Criação do Carnê
             </button>
@@ -79,15 +79,15 @@ function NovaVendaPage() {
                 type="button"
                 onClick={() => navigate('/clients/new')} 
                 className="btn btn-success mt-2" 
-                style={{width: '100%', marginBottom: '10px'}} /* Ocupa largura total */
+                style={{width: '100%', marginBottom: '10px'}} 
             >
                 + Cadastrar Novo Cliente
             </button>
             <button
                 type="button"
                 onClick={() => navigate('/carnes')}
-                className="btn btn-secondary" /* Removido mt-2 aqui para usar a margem do botão anterior */
-                style={{width: '100%'}} /* Ocupa largura total */
+                className="btn btn-secondary" 
+                style={{width: '100%'}} 
             >
                 Cancelar / Ver Carnês
             </button>

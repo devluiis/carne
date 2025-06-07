@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { reports } from '../api';
 import { useAuth } from '../components/AuthProvider.jsx';
 import { useGlobalAlert } from '../App.jsx';
-import LoadingSpinner from '../components/LoadingSpinner.jsx'; // Importar o spinner
+import LoadingSpinner from '../components/LoadingSpinner.jsx';
 
 function DashboardPage() {
     const [summaryData, setSummaryData] = useState(null);

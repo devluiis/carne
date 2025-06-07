@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { auth } from '../api'; // Certifique-se que api.js exporta 'auth'
+import { auth } from '../api'; 
 
 const AuthContext = createContext(null);
 
@@ -7,22 +7,22 @@ export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
-    const [loading, setLoading] = useState(true); // Inicia como true para o fetchUser inicial
-    const [token, setToken] = useState(localStorage.getItem('token')); // Inicializa token do localStorage
+    const [loading, setLoading] = useState(true); 
+    const [token, setToken] = useState(localStorage.getItem('token')); 
 
     const fetchUser = useCallback(async () => {
-        const currentToken = localStorage.getItem('token'); // Lê o token mais recente
+        const currentToken = localStorage.getItem('token'); 
         if (!currentToken) {
             setUser(null);
-            setToken(null); // Garante que o estado do token seja limpo
+            setToken(null); 
             setLoading(false);
             return;
         }
         
         try {
-            const response = await auth.getMe(); // auth.getMe() usará o token via interceptor
+            const response = await auth.getMe(); 
             setUser(response.data);
-            localStorage.setItem('user', JSON.stringify(response.data)); // Mantém user no localStorage
+            localStorage.setItem('user', JSON.stringify(response.data)); 
         } catch (error) {
             console.error('Erro ao buscar usuário (sessão pode ter expirado ou token inválido):', error);
             localStorage.removeItem('token');
@@ -30,9 +30,9 @@ export const AuthProvider = ({ children }) => {
             setToken(null);
             setUser(null);
         } finally {
-            setLoading(false); // Importante para liberar o PrivateRoute
+            setLoading(false); 
         }
-    }, []); // Removida a dependência 'token' daqui para evitar loops se setToken for chamado dentro
+    }, []); 
 
     useEffect(() => {
         const storedUser = localStorage.getItem('user');
@@ -43,12 +43,12 @@ export const AuthProvider = ({ children }) => {
                 localStorage.removeItem('user');
             }
         }
-        fetchUser(); // Valida a sessão e busca dados do usuário atual
+        fetchUser(); 
     }, [fetchUser]);
 
 
     const login = async (email, password) => {
-        setLoading(true); // Inicia o processo de login
+        setLoading(true); 
         try {
             const response = await auth.login(email, password);
             const newToken = response.data.access_token;
@@ -57,17 +57,17 @@ export const AuthProvider = ({ children }) => {
             localStorage.setItem('token', newToken);
             localStorage.setItem('user', JSON.stringify(userData));
             
-            setToken(newToken); // Atualiza o estado do token
-            setUser(userData);  // Atualiza o estado do usuário
-            setLoading(false);  // Finaliza o loading após sucesso
-            return true;        // Indica sucesso
+            setToken(newToken); 
+            setUser(userData);  
+            setLoading(false);  
+            return true;        
         } catch (error) {
             console.error('Erro no login:', error);
             localStorage.removeItem('token');
             localStorage.removeItem('user');
             setToken(null);
             setUser(null);
-            setLoading(false); // Finaliza o loading em caso de erro
+            setLoading(false); 
             throw error; 
         }
     };
@@ -100,7 +100,7 @@ export const AuthProvider = ({ children }) => {
 
     const registerAtendenteByAdmin = async (userData) => {
         try {
-            const response = await auth.registerAtendenteByAdmin(userData); // Usa a função correta do api.js
+            const response = await auth.registerAtendenteByAdmin(userData); 
             return response;
         } catch (error) {
             throw error;

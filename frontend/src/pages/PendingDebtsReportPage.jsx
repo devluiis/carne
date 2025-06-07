@@ -96,7 +96,7 @@ function PendingDebtsReportPage() {
             setInitialMessage('ID de cliente inválido na URL. Selecione um cliente da lista.');
             navigate('/reports/pending-debts-by-client', { replace: true }); 
         } else if (!clientIdFromUrl) {
-            setSelectedClientId(''); // Limpa seleção se não houver ID na URL
+            setSelectedClientId(''); 
             setReportData(null);
             setInitialMessage('Selecione um cliente e clique em "Gerar Relatório".');
         }
@@ -131,8 +131,8 @@ function PendingDebtsReportPage() {
         <div className="form-container" style={{maxWidth: '1000px'}}> 
             <h2 className="text-center">Relatório de Dívidas Pendentes por Cliente</h2>
 
-            <form onSubmit={handleSubmit} className="form-grid-2-col" style={{gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', alignItems: 'flex-end', borderBottom: '1px solid #eee', paddingBottom: '20px', marginBottom: '20px' }}> {/* Usando form-grid-2-col */}
-                <div className="form-group"> {/* Removido style={{flexGrow: 1}} */}
+            <form onSubmit={handleSubmit} className="form-grid-2-col" style={{gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', alignItems: 'flex-end', borderBottom: '1px solid #eee', paddingBottom: '20px', marginBottom: '20px' }}> 
+                <div className="form-group">
                     <label>Cliente:</label>
                     <select
                         value={selectedClientId}
