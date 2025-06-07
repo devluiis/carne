@@ -1,22 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { carnes, parcelas, pagamentos, api } from '../api';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../components/AuthProvider.jsx';
 import { useGlobalAlert } from '../App.jsx';
 import LoadingSpinner from '../components/LoadingSpinner.jsx';
 
-// Função auxiliar para estilos de status (mantida do seu código original)
-const getStatusStyle = (status) => {
+// Função auxiliar para estilos de status (adaptada para Bootstrap)
+const getStatusBadgeClass = (status) => {
     switch (status) {
         case 'Paga':
         case 'Paga com Atraso':
-            return { color: 'green', fontWeight: 'bold' };
+            return 'success';
         case 'Atrasada':
-            return { color: 'red', fontWeight: 'bold' };
+            return 'danger';
         case 'Parcialmente Paga':
-            return { color: 'orange', fontWeight: 'bold' };
+            return 'warning';
         default: // Pendente
-            return { color: 'blue', fontWeight: 'bold' };
+            return 'primary';
     }
 };
 
@@ -26,22 +26,21 @@ function CarneDetailsPage() {
     const [carne, setCarne] = useState(null);
     const [loading, setLoading] = useState(true);
     const [pdfLoading, setPdfLoading] = useState(false);
-    const [error, setError] = useState(''); // Erro de carregamento da página
+    const [error, setError] = useState('');
     
     const [showPaymentForm, setShowPaymentForm] = useState(false);
     const [selectedParcela, setSelectedParcela] = useState(null);
 
-    // Estados para o formulário de pagamento
     const [valorPago, setValorPago] = useState('');
     const [formaPagamento, setFormaPagamento] = useState('Dinheiro');
     const [observacoesPagamento, setObservacoesPagamento] = useState('');
-    const [paymentFormError, setPaymentFormError] = useState(''); // Erro específico do form de pagamento
+    const [paymentFormError, setPaymentFormError] = useState('');
     const [paymentLoading, setPaymentLoading] = useState(false);
     
     const { user } = useAuth();
     const { setGlobalAlert } = useGlobalAlert();
 
-    const fetchCarneDetails = async () => {
+    const fetchCarneDetails = useCallback(async () => {
         try {
             setLoading(true);
             const response = await carnes.getById(id);
@@ -54,11 +53,11 @@ function CarneDetailsPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [id, setGlobalAlert]);
     
     useEffect(() => {
         fetchCarneDetails();
-    }, [id]);
+    }, [fetchCarneDetails]);
 
     const handleRegisterPaymentClick = (parcela) => {
         setSelectedParcela(parcela);
@@ -113,15 +112,9 @@ function CarneDetailsPage() {
         setPdfLoading(true);
         setGlobalAlert({message: "Gerando PDF do carnê...", type: "info"});
 
-        // CORREÇÃO AQUI: Use a instância 'api' diretamente com o caminho relativo
-        // A linha original era: const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
-        // E a linha original era: const pdfUrl = `${apiUrl}/carnes/${carne.id_carne}/pdf`;
-        // Agora, usamos api.get() com o endpoint relativo para que o baseURL de api.js seja aplicado.
         const pdfEndpoint = `/carnes/${carne.id_carne}/pdf`; 
 
         try {
-            // A chamada deve ser feita usando a instância 'api' com o endpoint relativo.
-            // A baseURL (https://carne.onrender.com) de 'api' será automaticamente pré-adicionada.
             const response = await api.get(pdfEndpoint, { responseType: 'blob' });
             
             const file = new Blob([response.data], { type: 'application/pdf' });
@@ -150,27 +143,26 @@ function CarneDetailsPage() {
         return <LoadingSpinner message="Carregando detalhes do carnê..." />;
     }
     if (error && !carne) {
-        return <p style={{ color: 'red', textAlign: 'center' }}>{error}</p>;
+        return <p className="text-center text-danger p-3">{error}</p>;
     }
     if (!carne) {
         return <p className="text-center">Carnê não encontrado.</p>;
     }
 
     return (
-        <div className="form-container" style={{maxWidth: '1000px'}}> 
-            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px'}}>
-                <h2>Detalhes do Carnê: {carne.descricao || `ID ${carne.id_carne}`}</h2>
+        <div className="container form-container"> {/* container do Bootstrap */}
+            <div className="d-flex justify-content-between align-items-center mb-4"> {/* d-flex do Bootstrap */}
+                <h2 className="mb-0">Detalhes do Carnê: {carne.descricao || `ID ${carne.id_carne}`}</h2> {/* mb-0 do Bootstrap */}
                 <button 
                     onClick={handleGeneratePdf} 
                     className="btn btn-info" 
-                    style={{width: 'auto'}}
                     disabled={pdfLoading}
                 >
                     {pdfLoading ? 'Gerando PDF...' : '🖨️ Imprimir Carnê (PDF)'}
                 </button>
             </div>
 
-            <div className="form-group" style={{border: '1px solid #eee', padding: '15px', borderRadius: '5px', backgroundColor: '#f9f9f9'}}>
+            <div className="card mb-4 p-3 bg-light"> {/* card mb-4 p-3 bg-light do Bootstrap */}
                 <p><strong>Cliente:</strong> {carne.cliente ? `${carne.cliente.nome} (${carne.cliente.cpf_cnpj})` : carne.id_cliente}</p>
                 <p><strong>Valor Total Original:</strong> R$ {Number(carne.valor_total_original).toFixed(2)}</p>
                 <p><strong>Valor de Entrada:</strong> R$ {Number(carne.valor_entrada || 0).toFixed(2)}</p>
@@ -185,146 +177,179 @@ function CarneDetailsPage() {
                 <p><strong>Observações:</strong> {carne.observacoes || 'N/A'}</p>
             </div>
 
-            <h3 style={{marginTop: '30px', marginBottom: '15px'}}>Parcelas:</h3>
+            <h3 className="mb-3">Parcelas:</h3> {/* mb-3 do Bootstrap */}
             {carne.parcelas && carne.parcelas.length === 0 ? (
-                <p>Nenhuma parcela para este carnê.</p>
+                <p className="text-center">Nenhuma parcela para este carnê.</p>
             ) : (
-                <table className="styled-table">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Valor Devido</th>
-                            <th>Juros/Multa</th>
-                            <th>Valor Pago</th>
-                            <th>Saldo Devedor</th>
-                            <th>Vencimento</th>
-                            <th>Status</th>
-                            <th>Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {carne.parcelas.map((parcela) => (
-                            <React.Fragment key={parcela.id_parcela}>
-                                <tr>
-                                    <td>{parcela.numero_parcela}</td>
-                                    <td>R$ {Number(parcela.valor_devido).toFixed(2)}</td>
-                                    <td>R$ {Number(parcela.juros_multa).toFixed(2)}</td>
-                                    <td>R$ {Number(parcela.valor_pago).toFixed(2)}</td>
-                                    <td>R$ {Number(parcela.saldo_devedor).toFixed(2)}</td>
-                                    <td>{new Date(parcela.data_vencimento).toLocaleDateString()}</td>
-                                    <td>
-                                        <span style={getStatusStyle(parcela.status_parcela)}>
-                                            {parcela.status_parcela}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        {parcela.status_parcela !== 'Paga' && parcela.status_parcela !== 'Paga com Atraso' && Number(parcela.saldo_devedor) > 0.009 && (
-                                            <button
-                                                onClick={() => handleRegisterPaymentClick(parcela)}
-                                                className="btn btn-success btn-sm"
-                                            >
-                                                Registrar Pagamento
-                                            </button>
-                                        )}
-                                    </td>
-                                </tr>
-                                {/* Linhas para pagamentos da parcela */}
-                                {parcela.pagamentos && parcela.pagamentos.length > 0 && (
+                <div className="table-responsive"> {/* table-responsive do Bootstrap */}
+                    <table className="table table-striped table-hover"> {/* Classes de tabela do Bootstrap */}
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Valor Devido</th>
+                                <th>Juros/Multa</th>
+                                <th>Valor Pago</th>
+                                <th>Saldo Devedor</th>
+                                <th>Vencimento</th>
+                                <th>Status</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {carne.parcelas.map((parcela) => (
+                                <React.Fragment key={parcela.id_parcela}>
                                     <tr>
-                                        <td colSpan="8" style={{ padding: '0', borderTop: 'none', borderBottom: '1px solid #ddd'}}>
-                                            <div style={{ margin: '10px', padding: '10px', backgroundColor: '#f9f9f9', borderRadius: '5px' }}>
-                                                <h4 style={{ fontSize: '0.9em', marginBottom: '10px', color: '#555' }}>Pagamentos Registrados:</h4>
-                                                <table className="styled-table" style={{fontSize: '0.9em'}}>
-                                                    <thead>
-                                                        <tr>
-                                                            <th>ID</th>
-                                                            <th>Data</th>
-                                                            <th>Valor Pago</th>
-                                                            <th>Forma</th>
-                                                            <th>Obs.</th>
-                                                            {user?.perfil === 'admin' && <th>Ações</th>}
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {parcela.pagamentos.map((pgto) => (
-                                                            <tr key={pgto.id_pagamento}>
-                                                                <td>{pgto.id_pagamento}</td>
-                                                                <td>{new Date(pgto.data_pagamento).toLocaleDateString()}</td>
-                                                                <td>R$ {Number(pgto.valor_pago).toFixed(2)}</td>
-                                                                <td>{pgto.forma_pagamento}</td>
-                                                                <td>{pgto.observacoes || 'N/A'}</td>
-                                                                {user?.perfil === 'admin' && (
-                                                                    <td>
-                                                                        <button
-                                                                            onClick={() => handleEstornarPagamento(pgto.id_pagamento)}
-                                                                            className="btn btn-danger btn-sm"
-                                                                        >
-                                                                            Estornar
-                                                                        </button>
-                                                                    </td>
-                                                                )}
-                                                            </tr>
-                                                        ))}
-                                                    </tbody>
-                                                </table>
+                                        <td data-label="#">{parcela.numero_parcela}</td>
+                                        <td data-label="Valor Devido">R$ {Number(parcela.valor_devido).toFixed(2)}</td>
+                                        <td data-label="Juros/Multa">R$ {Number(parcela.juros_multa).toFixed(2)}</td>
+                                        <td data-label="Valor Pago">R$ {Number(parcela.valor_pago).toFixed(2)}</td>
+                                        <td data-label="Saldo Devedor">R$ {Number(parcela.saldo_devedor).toFixed(2)}</td>
+                                        <td data-label="Vencimento">{new Date(parcela.data_vencimento).toLocaleDateString()}</td>
+                                        <td data-label="Status">
+                                            <span className={`badge bg-${getStatusBadgeClass(parcela.status_parcela)}`}> {/* Classe para badge do Bootstrap */}
+                                                {parcela.status_parcela}
+                                            </span>
+                                        </td>
+                                        <td data-label="Ações">
+                                            <div className="d-flex flex-wrap gap-2"> {/* d-flex flex-wrap gap-2 do Bootstrap */}
+                                                {parcela.status_parcela !== 'Paga' && parcela.saldo_devedor > 0.01 && (
+                                                    <button
+                                                        onClick={() => handleRegisterPaymentClick(parcela)}
+                                                        className="btn btn-success btn-sm"
+                                                    >
+                                                        Registrar Pagamento
+                                                    </button>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>
-                                )}
-                            </React.Fragment>
-                        ))}
-                    </tbody>
-                </table>
+                                    {/* Linhas para pagamentos da parcela */}
+                                    {parcela.pagamentos && parcela.pagamentos.length > 0 && (
+                                        <tr>
+                                            <td colSpan="8" className="p-0 border-0"> {/* p-0 border-0 do Bootstrap */}
+                                                <div className="card my-2 p-3 bg-light"> {/* card my-2 p-3 bg-light do Bootstrap */}
+                                                    <h4 className="fs-6 mb-2 text-muted">Pagamentos Registrados:</h4> {/* fs-6 mb-2 text-muted do Bootstrap */}
+                                                    <div className="table-responsive"> {/* table-responsive para a sub-tabela */}
+                                                        <table className="table table-sm table-striped"> {/* table-sm table-striped do Bootstrap */}
+                                                            <thead>
+                                                                <tr>
+                                                                    <th>ID Pagamento</th>
+                                                                    <th>Data</th>
+                                                                    <th>Valor Pago</th>
+                                                                    <th>Forma</th>
+                                                                    <th>Obs.</th>
+                                                                    {user?.perfil === 'admin' && <th>Ações</th>}
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {parcela.pagamentos.map((pgto) => (
+                                                                    <tr key={pgto.id_pagamento}>
+                                                                        <td data-label="ID Pagamento">{pgto.id_pagamento}</td>
+                                                                        <td data-label="Data">{new Date(pgto.data_pagamento).toLocaleDateString()}</td>
+                                                                        <td data-label="Valor Pago">R$ {pgto.valor_pago.toFixed(2)}</td>
+                                                                        <td data-label="Forma">{pgto.forma_pagamento}</td>
+                                                                        <td data-label="Observações">{pgto.observacoes || 'N/A'}</td>
+                                                                        {user?.perfil === 'admin' && (
+                                                                            <td data-label="Ações">
+                                                                                <button
+                                                                                    onClick={() => handleEstornarPagamento(pgto.id_pagamento)}
+                                                                                    className="btn btn-danger btn-sm"
+                                                                                >
+                                                                                    Estornar
+                                                                                </button>
+                                                                            </td>
+                                                                        )}
+                                                                    </tr>
+                                                                ))}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    )}
+                                </React.Fragment>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
             )}
 
             {showPaymentForm && selectedParcela && (
-                <div className="form-container" style={{marginTop: '30px', border: '1px solid #ccc', backgroundColor: '#fff'}}>
-                    <h3>Registrar Pagamento para Parcela #{selectedParcela.numero_parcela}</h3>
-                    <p>Saldo Devedor Atual (incl. Juros/Multas): <strong style={{ color: 'red' }}>R$ {Number(selectedParcela.saldo_devedor).toFixed(2)}</strong></p>
-                    {paymentFormError && <p style={{ color: 'red' }}>{paymentFormError}</p>}
+                <div className="card p-4 mt-4"> {/* card p-4 mt-4 do Bootstrap */}
+                    <h3 className="mb-3">Registrar Pagamento para Parcela #{selectedParcela.numero_parcela}</h3>
+                    <p className="mb-3">Saldo Devedor Atual (incl. Juros/Multas): <strong className="text-danger">R$ {selectedParcela.saldo_devedor.toFixed(2)}</strong></p>
+                    {paymentFormError && <p className="text-danger mb-3">{paymentFormError}</p>}
                     <form onSubmit={handlePaymentSubmit}>
-                        <div className="form-group">
-                            <label>Valor Pago:</label>
+                        <div className="mb-3">
+                            <label htmlFor="valorPago" className="form-label">Valor Pago:</label>
                             <input
                                 type="number"
+                                id="valorPago"
                                 step="0.01"
                                 value={valorPago}
                                 onChange={(e) => setValorPago(e.target.value)}
                                 required
-                                className="form-input"
+                                className="form-control"
                                 min="0.01"
-                                max={Number(selectedParcela.saldo_devedor).toFixed(2)}
+                                max={selectedParcela.saldo_devedor.toFixed(2)}
                             />
                         </div>
-                        <div className="form-group">
-                            <label>Forma de Pagamento:</label>
-                            <select value={formaPagamento} onChange={(e) => setFormaPagamento(e.target.value)} required className="form-select">
+                        <div className="mb-3">
+                            <label htmlFor="formaPagamento" className="form-label">Forma de Pagamento:</label>
+                            <select
+                                id="formaPagamento"
+                                value={formaPagamento}
+                                onChange={(e) => setFormaPagamento(e.target.value)}
+                                required
+                                className="form-select"
+                            >
                                 <option value="Dinheiro">Dinheiro</option>
                                 <option value="PIX">PIX</option>
                                 <option value="Cartão de Crédito">Cartão de Crédito</option>
                                 <option value="Débito">Débito</option>
-                                {/* Adicione outras formas se necessário */}
                             </select>
                         </div>
-                        <div className="form-group">
-                            <label>Observações (Opcional):</label>
-                            <textarea value={observacoesPagamento} onChange={(e) => setObservacoesPagamento(e.target.value)} rows="2" className="form-textarea"></textarea>
+                        <div className="mb-3">
+                            <label htmlFor="observacoesPagamento" className="form-label">Observações (Opcional):</label>
+                            <textarea
+                                id="observacoesPagamento"
+                                value={observacoesPagamento}
+                                onChange={(e) => setObservacoesPagamento(e.target.value)}
+                                rows="2"
+                                className="form-control"
+                            ></textarea>
                         </div>
-                        <button type="submit" className="btn btn-primary" disabled={paymentLoading}>
+                        <button type="submit" className="btn btn-primary w-100" disabled={paymentLoading}>
                             {paymentLoading ? 'Registrando...' : 'Confirmar Pagamento'}
                         </button>
-                        <button type="button" onClick={() => setShowPaymentForm(false)} className="btn btn-secondary mt-2">
+                        <button type="button" onClick={() => setShowPaymentForm(false)} className="btn btn-secondary w-100 mt-2">
                             Cancelar
                         </button>
                     </form>
                 </div>
             )}
 
-            <button onClick={() => navigate('/carnes')} className="btn btn-secondary mt-2">
+            <button onClick={() => navigate('/carnes')} className="btn btn-secondary w-100 mt-4"> {/* w-100 mt-4 do Bootstrap */}
                 Voltar para Lista de Carnês
             </button>
         </div>
     );
 }
+
+// Função auxiliar para classes de badge do Bootstrap
+const getStatusBadgeClass = (status) => {
+    switch (status) {
+        case 'Paga':
+        case 'Paga com Atraso':
+            return 'success';
+        case 'Atrasada':
+            return 'danger';
+        case 'Parcialmente Paga':
+            return 'warning';
+        default: // Pendente
+            return 'primary';
+    }
+};
 
 export default CarneDetailsPage;

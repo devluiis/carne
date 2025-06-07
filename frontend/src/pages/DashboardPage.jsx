@@ -39,10 +39,10 @@ function DashboardPage() {
 
     if (!summaryData) { 
         return (
-            <div className="form-container text-center">
-                <h2>Dashboard</h2>
+            <div className="container form-container text-center"> {/* container do Bootstrap */}
+                <h2 className="mb-4">Dashboard</h2> {/* mb-4 do Bootstrap */}
                 <p>Não foi possível carregar os dados do dashboard ou não há dados disponíveis.</p>
-                <button onClick={fetchDashboardSummary} className="btn btn-primary" style={{width: 'auto'}}>
+                <button onClick={fetchDashboardSummary} className="btn btn-primary mt-3"> {/* mt-3 do Bootstrap */}
                     Tentar Novamente
                 </button>
             </div>
@@ -50,58 +50,68 @@ function DashboardPage() {
     }
 
     return (
-        <div className="form-container" style={{maxWidth: '1200px'}}> 
-            <h2 className="text-center" style={{marginBottom: '30px'}}>Painel de Controle</h2>
-            <div className="dashboard-grid"> {/* Usando a classe CSS */}
-                {/* Card Total de Clientes */}
-                <div className="card-dashboard">
-                    <h3>Total de Clientes</h3>
-                    <p className="card-value">{summaryData.total_clientes}</p>
+        <div className="container form-container"> {/* container do Bootstrap */}
+            <h2 className="text-center mb-4">Painel de Controle</h2> {/* mb-4 do Bootstrap */}
+            <div className="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3"> {/* Grid Bootstrap */}
+                <div className="col">
+                    <div className="card text-center p-3 shadow-sm"> {/* card text-center p-3 shadow-sm do Bootstrap */}
+                        <h3 className="fs-6">Total de Clientes</h3> {/* fs-6 para fonte menor */}
+                        <p className="fs-4 fw-bold text-dark">{summaryData.total_clientes}</p> {/* fs-4 fw-bold do Bootstrap */}
+                    </div>
                 </div>
-                {/* Card Total de Carnês */}
-                <div className="card-dashboard">
-                    <h3>Total de Carnês</h3>
-                    <p className="card-value">{summaryData.total_carnes}</p>
+                <div className="col">
+                    <div className="card text-center p-3 shadow-sm">
+                        <h3 className="fs-6">Total de Carnês</h3>
+                        <p className="fs-4 fw-bold text-dark">{summaryData.total_carnes}</p>
+                    </div>
                 </div>
-                {/* Card Carnês Ativos */}
-                <div className="card-dashboard">
-                    <h3>Carnês Ativos</h3>
-                    <p className="card-value card-value-green">{summaryData.total_carnes_ativos}</p>
+                <div className="col">
+                    <div className="card text-center p-3 shadow-sm">
+                        <h3 className="fs-6">Carnês Ativos</h3>
+                        <p className="fs-4 fw-bold text-primary">{summaryData.total_carnes_ativos}</p> {/* text-primary do Bootstrap */}
+                    </div>
                 </div>
-                {/* Card Carnês Quitados */}
-                <div className="card-dashboard">
-                    <h3>Carnês Quitados</h3>
-                    <p className="card-value card-value-blue">{summaryData.total_carnes_quitados}</p>
+                <div className="col">
+                    <div className="card text-center p-3 shadow-sm">
+                        <h3 className="fs-6">Carnês Quitados</h3>
+                        <p className="fs-4 fw-bold text-success">{summaryData.total_carnes_quitados}</p> {/* text-success do Bootstrap */}
+                    </div>
                 </div>
-                {/* Card Carnês em Atraso */}
-                <div className="card-dashboard">
-                    <h3>Carnês em Atraso</h3>
-                    <p className="card-value card-value-red">{summaryData.total_carnes_atrasados}</p>
+                <div className="col">
+                    <div className="card text-center p-3 shadow-sm">
+                        <h3 className="fs-6">Carnês em Atraso</h3>
+                        <p className="fs-4 fw-bold text-danger">{summaryData.total_carnes_atrasados}</p> {/* text-danger do Bootstrap */}
+                    </div>
                 </div>
-                {/* Card Dívida Geral em Aberto */}
-                <div className="card-dashboard">
-                    <h3>Dívida Aberta (Total)</h3>
-                    <p className="card-value card-value-red">R$ {Number(summaryData.total_divida_geral_aberta).toFixed(2)}</p>
+                <div className="col">
+                    <div className="card text-center p-3 shadow-sm">
+                        <h3 className="fs-6">Dívida Aberta (Total)</h3>
+                        <p className="fs-4 fw-bold text-danger">R$ {Number(summaryData.total_divida_geral_aberta).toFixed(2)}</p>
+                    </div>
                 </div>
-                {/* Card Recebido Hoje */}
-                <div className="card-dashboard">
-                    <h3>Recebido Hoje</h3>
-                    <p className="card-value card-value-green">R$ {Number(summaryData.total_recebido_hoje).toFixed(2)}</p>
+                <div className="col">
+                    <div className="card text-center p-3 shadow-sm">
+                        <h3 className="fs-6">Recebido Hoje</h3>
+                        <p className="fs-4 fw-bold text-success">R$ {Number(summaryData.total_recebido_hoje).toFixed(2)}</p>
+                    </div>
                 </div>
-                {/* Card Recebido no Mês */}
-                <div className="card-dashboard">
-                    <h3>Recebido no Mês</h3>
-                    <p className="card-value card-value-green">R$ {Number(summaryData.total_recebido_mes).toFixed(2)}</p>
+                <div className="col">
+                    <div className="card text-center p-3 shadow-sm">
+                        <h3 className="fs-6">Recebido no Mês</h3>
+                        <p className="fs-4 fw-bold text-success">R$ {Number(summaryData.total_recebido_mes).toFixed(2)}</p>
+                    </div>
                 </div>
-                {/* Card Parcelas a Vencer (7 dias) */}
-                <div className="card-dashboard">
-                    <h3>Parcelas a Vencer (7d)</h3>
-                    <p className="card-value card-value-blue">{summaryData.parcelas_a_vencer_7dias}</p>
+                <div className="col">
+                    <div className="card text-center p-3 shadow-sm">
+                        <h3 className="fs-6">Parcelas a Vencer (7d)</h3>
+                        <p className="fs-4 fw-bold text-primary">{summaryData.parcelas_a_vencer_7dias}</p>
+                    </div>
                 </div>
-                {/* Card Parcelas Atrasadas */}
-                <div className="card-dashboard">
-                    <h3>Parcelas Atrasadas</h3>
-                    <p className="card-value card-value-red">{summaryData.parcelas_atrasadas}</p>
+                <div className="col">
+                    <div className="card text-center p-3 shadow-sm">
+                        <h3 className="fs-6">Parcelas Atrasadas</h3>
+                        <p className="fs-4 fw-bold text-danger">{summaryData.parcelas_atrasadas}</p>
+                    </div>
                 </div>
             </div>
         </div>

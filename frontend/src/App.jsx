@@ -63,6 +63,18 @@ const AdminRoute = ({ children }) => {
 function App() {
     const [globalAlert, setGlobalAlert] = useState(null);
     const clearGlobalAlert = () => setGlobalAlert(null);
+    // Adicionar classe 'menu-open' ao body quando o menu estiver aberto
+    const { isMenuOpen } = useAuth().isMenuOpen; // Acessar o estado do menu do contexto, se movido para AuthProvider
+
+    // Usar useEffect para adicionar/remover classe no body
+    // useEffect(() => {
+    //     if (isMenuOpen) {
+    //         document.body.classList.add('menu-open');
+    //     } else {
+    //         document.body.classList.remove('menu-open');
+    //     }
+    // }, [isMenuOpen]);
+
 
     return (
         <Router>
@@ -120,9 +132,19 @@ function App() {
 function Header() {
     const { user, logout } = useAuth();
     const location = useLocation();
-    const [isMenuOpen, setIsMenuOpen] = useState(false); // NOVO ESTADO AQUI
+    const [isMenuOpen, setIsMenuOpen] = useState(false); // Estado para controlar o menu hamburger
 
-    const toggleMenu = () => { // NOVA FUNÇÃO PARA ALTERNAR O MENU
+    // Adiciona/remove classe 'menu-open' do body para empurrar o conteúdo principal
+    useEffect(() => {
+        if (isMenuOpen) {
+            document.body.classList.add('menu-open');
+        } else {
+            document.body.classList.remove('menu-open');
+        }
+    }, [isMenuOpen]);
+
+
+    const toggleMenu = () => {
         setIsMenuOpen(!isMenuOpen);
     };
 
@@ -138,15 +160,15 @@ function Header() {
 
     return (
         <header className="main-header"> 
-            {user && ( // O hambúrguer só aparece se o usuário estiver logado
-                <button className={`hamburger-menu ${isMenuOpen ? 'open' : ''}`} onClick={toggleMenu}>
+            {user && ( 
+                <button className={`hamburger-menu ${isMenuOpen ? 'open' : ''}`} onClick={toggleMenu} aria-label="Abrir Menu">
                     <span className="hamburger-icon"></span>
                     <span className="hamburger-icon"></span>
                     <span className="hamburger-icon"></span>
                 </button>
             )}
             <h1 className="app-title"> 
-                <Link to={user ? "/dashboard" : "/"} style={{ color: 'white', textDecoration: 'none' }}>
+                <Link to={user ? "/dashboard" : "/"} className="text-white text-decoration-none"> {/* Classes Bootstrap */}
                     Gestor de Carnês
                 </Link>
             </h1>
@@ -160,24 +182,24 @@ function Header() {
 
             {user && (
                 <nav className={`main-nav ${isMenuOpen ? 'open' : ''}`}> 
-                    <ul className="nav-list"> 
-                        <li className="nav-item"><Link to="/dashboard" className={isLinkActive('/dashboard') ? activeLinkClass : inactiveLinkClass}>Dashboard</Link></li>
-                        <li className="nav-item"><Link to="/nova-venda" className={isLinkActive('/nova-venda') ? activeLinkClass : inactiveLinkClass}>Nova Venda</Link></li>
-                        <li className="nav-item"><Link to="/clients" className={isLinkActive('/clients') ? activeLinkClass : inactiveLinkClass}>Clientes</Link></li>
-                        <li className="nav-item"><Link to="/carnes" className={isLinkActive('/carnes') ? activeLinkClass : inactiveLinkClass}>Carnês</Link></li>
+                    <ul className="navbar-nav"> {/* Usar navbar-nav do Bootstrap */}
+                        <li className="nav-item"><Link to="/dashboard" className={`nav-link ${isLinkActive('/dashboard') ? activeLinkClass : inactiveLinkClass}`} onClick={toggleMenu}>Dashboard</Link></li>
+                        <li className="nav-item"><Link to="/nova-venda" className={`nav-link ${isLinkActive('/nova-venda') ? activeLinkClass : inactiveLinkClass}`} onClick={toggleMenu}>Nova Venda</Link></li>
+                        <li className="nav-item"><Link to="/clients" className={`nav-link ${isLinkActive('/clients') ? activeLinkClass : inactiveLinkClass}`} onClick={toggleMenu}>Clientes</Link></li>
+                        <li className="nav-item"><Link to="/carnes" className={`nav-link ${isLinkActive('/carnes') ? activeLinkClass : inactiveLinkClass}`} onClick={toggleMenu}>Carnês</Link></li>
                         
-                        <li className="nav-item"><Link to="/produtos" className={isLinkActive('/produtos') ? activeLinkClass : inactiveLinkClass}>Produtos</Link></li>
+                        <li className="nav-item"><Link to="/produtos" className={`nav-link ${isLinkActive('/produtos') ? activeLinkClass : inactiveLinkClass}`} onClick={toggleMenu}>Produtos</Link></li>
                         
-                        <li className="nav-item"><Link to="/reports/receipts" className={isLinkActive('/reports/receipts') ? activeLinkClass : inactiveLinkClass}>Rel. Receb.</Link></li>
-                        <li className="nav-item"><Link to="/reports/pending-debts-by-client" className={isLinkActive('/reports/pending-debts-by-client') ? activeLinkClass : inactiveLinkClass}>Rel. Dívidas</Link></li>
+                        <li className="nav-item"><Link to="/reports/receipts" className={`nav-link ${isLinkActive('/reports/receipts') ? activeLinkClass : inactiveLinkClass}`} onClick={toggleMenu}>Rel. Receb.</Link></li>
+                        <li className="nav-item"><Link to="/reports/pending-debts-by-client" className={`nav-link ${isLinkActive('/reports/pending-debts-by-client') ? activeLinkClass : inactiveLinkClass}`} onClick={toggleMenu}>Rel. Dívidas</Link></li>
                         
                         {user.perfil === 'admin' && ( 
                             <>
-                                <li className="nav-item"><Link to="/register-admin" className={isLinkActive('/register-admin') ? activeLinkClass : inactiveLinkClass}>Reg. Admin</Link></li>
-                                <li className="nav-item"><Link to="/register-atendente" className={isLinkActive('/register-atendente') ? activeLinkClass : inactiveLinkClass}>Reg. Atendente</Link></li>
+                                <li className="nav-item"><Link to="/register-admin" className={`nav-link ${isLinkActive('/register-admin') ? activeLinkClass : inactiveLinkClass}`} onClick={toggleMenu}>Reg. Admin</Link></li>
+                                <li className="nav-item"><Link to="/register-atendente" className={`nav-link ${isLinkActive('/register-atendente') ? activeLinkClass : inactiveLinkClass}`} onClick={toggleMenu}>Reg. Atendente</Link></li>
                             </>
                         )}
-                        <li className="nav-item"><Link to="/profile" className={isLinkActive('/profile') ? activeLinkClass : inactiveLinkClass}>Meu Perfil</Link></li>
+                        <li className="nav-item"><Link to="/profile" className={`nav-link ${isLinkActive('/profile') ? activeLinkClass : inactiveLinkClass}`} onClick={toggleMenu}>Meu Perfil</Link></li>
                     </ul>
                 </nav>
             )}

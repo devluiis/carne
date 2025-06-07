@@ -1,4 +1,7 @@
-/* Regras globais e reset básico */
+/* Importação do Bootstrap */
+@import 'bootstrap/dist/css/bootstrap.min.css';
+
+/* Seus estilos globais e de reset */
 body {
     margin: 0;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
@@ -6,7 +9,7 @@ body {
       sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    background-color: #f4f7f6;
+    background-color: #f4f7f6; /* Mantendo seu background */
     color: #333;
 }
 
@@ -16,7 +19,7 @@ body {
   min-height: 100vh;
 }
 
-/* --- ESTILOS DO CABEÇALHO (HEADER) --- */
+/* Estilos gerais para Header */
 header {
     background: #333;
     color: white;
@@ -32,35 +35,36 @@ header h1 {
     font-size: 1.5rem;
 }
 
-header nav {
-    display: flex;
+/* Estilos de navegação padrão (desktop) */
+header nav.navbar { /* Usa a classe navbar do Bootstrap */
+    display: flex; 
     align-items: center;
 }
-header nav ul {
+header nav.navbar ul.navbar-nav { /* Usa navbar-nav do Bootstrap */
     list-style: none;
     margin: 0;
     padding: 0;
     display: flex;
-    flex-wrap: wrap; /* Permitir quebra de linha em telas menores */
+    flex-wrap: wrap; 
     align-items: center;
 }
-header nav ul li {
+header nav ul.navbar-nav li.nav-item { /* nav-item do Bootstrap */
     margin-right: 5px;
 }
-header nav ul li a {
+header nav ul.navbar-nav li.nav-item a.nav-link { /* nav-link do Bootstrap */
     padding: 10px 15px;
     color: white;
     text-decoration: none;
     transition: background-color 0.2s ease;
     display: inline-block;
 }
-header nav ul li a.active-link { /* Classe para links ativos */
+header nav ul.navbar-nav li.nav-item a.active-link { 
     background-color: #555;
     border-radius: 5px;
 }
 .user-info-section { /* Seção "Olá, usuário! Sair" para desktop */
     margin-left: 20px;
-    display: flex;
+    display: flex; 
     align-items: center;
     white-space: nowrap;
 }
@@ -68,9 +72,9 @@ header nav ul li a.active-link { /* Classe para links ativos */
     margin-right: 10px;
 }
 
-/* Esconder o hambúrguer e a seção de informações do usuário mobile por padrão (desktop) */
+/* Ocultar elementos mobile por padrão no desktop */
 .hamburger-menu {
-    display: none;
+    display: none; 
 }
 .user-info-section-mobile {
     display: none;
@@ -82,9 +86,10 @@ main {
   padding: 20px;
 }
 
-/* --- ESTILOS DE FORMULÁRIO --- */
-.form-container {
-    max-width: 600px; /* Padrão para telas maiores */
+/* --- ESTILOS DE FORMULÁRIO (Adaptados para Bootstrap) --- */
+/* .form-container pode ser substituído por .container .card .p-4 */
+.form-container { /* Mantido para componentes que ainda o usam como wrapper */
+    max-width: 600px;
     margin: 40px auto;
     padding: 30px;
     background-color: white;
@@ -92,25 +97,21 @@ main {
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
-
 .form-container h2 {
     text-align: center;
     margin-bottom: 25px;
     color: #333;
 }
-
-.form-group {
-    margin-bottom: 20px;
+.form-group { /* Substituído por mb-3 ou mb-4 do Bootstrap */
+    margin-bottom: 20px; 
 }
-
-.form-group label {
+.form-group label { /* Substituído por form-label do Bootstrap */
     display: block;
     margin-bottom: 8px;
     font-weight: bold;
     color: #555;
 }
-
-.form-input, .form-select, .form-textarea {
+.form-input, .form-select, .form-textarea { /* Substituído por form-control do Bootstrap */
     width: 100%;
     padding: 12px;
     box-sizing: border-box;
@@ -119,75 +120,38 @@ main {
     font-size: 1rem;
     transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
-
 .form-input:focus, .form-select:focus, .form-textarea:focus {
     outline: none;
     border-color: #007bff;
     box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.2);
 }
-
 .form-input[disabled] {
     background-color: #e9ecef;
     cursor: not-allowed;
 }
 
-/* Para grids de 2 colunas em formulários */
-.form-grid-2-col {
+/* Para grids de 2 colunas em formulários - usaremos classes de grid do Bootstrap */
+.form-grid-2-col { /* Pode ser substituído por row e col-md-6 do Bootstrap */
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 15px;
 }
 
-/* --- ESTILOS DE BOTÕES --- */
-.btn {
-    display: inline-block;
-    width: 100%; /* Ajustado para flexibilidade, será sobrescrito por width: auto onde necessário */
-    padding: 12px 15px;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 1rem;
-    font-weight: bold;
-    text-align: center;
-    text-decoration: none;
-    transition: background-color 0.2s ease, transform 0.1s ease;
-}
-
-.btn:hover {
-    filter: brightness(1.1);
-}
-
-.btn:active {
-    transform: scale(0.98);
-}
-
-.btn:disabled {
-    background-color: #ccc;
-    cursor: not-allowed;
-    filter: none;
-}
-
-.btn-primary { background-color: #007bff; color: white; }
-.btn-success { background-color: #28a745; color: white; }
-.btn-danger { background-color: #dc3545; color: white; }
-.btn-secondary { background-color: #6c757d; color: white; }
-.btn-warning { background-color: #ffc107; color: #000; }
-.btn-info { background-color: #17a2b8; color: white; }
-
-/* Modificador de tamanho para botões menores, como em tabelas */
-.btn-sm {
+/* --- ESTILOS DE BOTÕES (Adaptados para Bootstrap) --- */
+/* As classes .btn, .btn-primary, etc. virão do Bootstrap */
+.btn-sm { /* Modificador de tamanho para botões menores, como em tabelas */
     padding: 6px 12px;
     font-size: 0.875rem;
-    width: auto; /* Para botões em linha */
+    width: auto; 
 }
 
-/* Margem utilitária */
+/* Margem utilitária (se ainda for necessária) */
 .mt-2 {
     margin-top: 20px;
 }
 
-/* --- ESTILOS DE TABELA --- */
-.table-container {
+/* --- ESTILOS DE TABELA (Adaptados para Bootstrap) --- */
+.table-container { /* Pode ser substituído por .container .card .p-4 .table-responsive */
     max-width: 1200px;
     margin: 40px auto;
     padding: 30px;
@@ -197,7 +161,8 @@ main {
     overflow-x: auto; /* Garante que a tabela seja rolável em telas pequenas */
 }
 
-.styled-table {
+/* Estilos da tabela customizada (serão substituídos por .table do Bootstrap) */
+.styled-table { 
     width: 100%;
     border-collapse: collapse;
 }
@@ -227,14 +192,14 @@ main {
     gap: 8px;
 }
 
-/* --- ESTILOS DE DASHBOARD --- */
-.dashboard-grid {
+/* --- ESTILOS DE DASHBOARD (Adaptados para Bootstrap) --- */
+.dashboard-grid { /* Usará grid/flex do Bootstrap */
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 20px;
 }
 
-.card-dashboard {
+.card-dashboard { /* Será .card .text-center .shadow-sm .p-4 do Bootstrap */
     background-color: #f9f9f9;
     border: 1px solid #e0e0e0;
     border-radius: 8px;
@@ -269,8 +234,8 @@ main {
     color: #007bff;
 }
 
-/* --- ESTILOS DE ALERTA GLOBAL --- */
-.global-alert {
+/* --- ESTILOS DE ALERTA GLOBAL (Adaptados para Bootstrap) --- */
+.global-alert { /* Será .alert .alert-success/.danger/.warning/.info do Bootstrap */
     position: fixed;
     top: 10px;
     left: 50%;
@@ -297,39 +262,38 @@ main {
     margin-left: 15px;
 }
 
-/* -- Media Queries -- */
-/* Para telas menores (celulares) */
+
+/* -- MEDIA QUERIES (APENAS PARA O MENU HAMBÚRGUER E SEÇÕES DO HEADER) -- */
 @media (max-width: 768px) {
     body {
-        font-size: 0.85rem; /* Reduzir tamanho base da fonte */
+        font-size: 0.85rem; 
     }
     #root {
-        padding: 0.5rem; /* Reduzir padding do root */
+        padding: 0.5rem; 
     }
-    header {
-        flex-direction: row; /* Voltar a ser linha em mobile top-bar */
-        justify-content: space-between; /* Espaço entre hambúrguer, título e info */
+    header.main-header {
+        flex-direction: row; 
+        justify-content: space-between; 
         align-items: center;
         padding: 10px;
-        position: relative; /* Para posicionar o menu absoluto */
+        position: relative; 
     }
-    header h1.app-title { /* O título do app */
-        flex-grow: 1; /* Ocupa o espaço central */
-        text-align: center; /* Centraliza o título */
-        margin: 0; /* Remover margens extras */
+    header h1.app-title {
+        flex-grow: 1; 
+        text-align: center; 
+        margin: 0;
     }
 
-    /* Mostrar o hambúrguer em mobile */
+    /* Hambúrguer (Visível no Mobile) */
     .hamburger-menu {
-        display: block;
+        display: block; 
         background: none;
         border: none;
         cursor: pointer;
         padding: 5px;
-        z-index: 1010; /* Para ficar acima do menu quando aberto */
-        position: relative; /* Para animacao do icon */
+        z-index: 1010; 
+        position: relative; 
     }
-
     .hamburger-icon {
         display: block;
         width: 25px;
@@ -339,74 +303,28 @@ main {
         transition: all 0.3s ease;
         border-radius: 2px;
     }
-    /* Animação do ícone hambúrguer (opcional) */
-    .hamburger-menu.open .hamburger-icon:nth-child(1) {
-        transform: translateY(8px) rotate(45deg);
-    }
-    .hamburger-menu.open .hamburger-icon:nth-child(2) {
-        opacity: 0;
-    }
-    .hamburger-menu.open .hamburger-icon:nth-child(3) {
-        transform: translateY(-8px) rotate(-45deg);
-    }
+    /* Animação do X para o hambúrguer */
+    .hamburger-menu.open .hamburger-icon:nth-child(1) { transform: translateY(8px) rotate(45deg); }
+    .hamburger-menu.open .hamburger-icon:nth-child(2) { opacity: 0; }
+    .hamburger-menu.open .hamburger-icon:nth-child(3) { transform: translateY(-8px) rotate(-45deg); }
 
 
-    /* Ocultar a navegação em desktop por padrão */
-    .main-nav {
-        position: fixed; /* Menu fixo para deslizar */
-        top: 0;
-        left: -250px; /* Escondido à esquerda */
-        width: 250px; /* Largura do menu */
-        height: 100%;
-        background-color: #444; /* Cor de fundo do menu */
-        padding-top: 60px; /* Espaço para o cabeçalho fixo */
-        transition: left 0.3s ease; /* Animação de deslizamento */
-        z-index: 1000; /* Para ficar sobre o conteúdo */
-        flex-direction: column; /* Conteúdo do menu em coluna */
-        align-items: flex-start;
-    }
-
-    .main-nav.open {
-        left: 0; /* Visível quando 'open' */
-    }
-
-    .main-nav ul {
-        flex-direction: column; /* Links empilhados */
-        width: 100%;
-        padding: 0 15px; /* Padding interno do menu */
-    }
-    .main-nav ul li {
-        width: 100%;
-        margin-bottom: 5px;
-        margin-right: 0;
-    }
-    .main-nav ul li a {
-        font-size: 1rem;
-        padding: 10px 15px;
-        width: calc(100% - 30px); /* Ajusta largura para padding */
-        text-align: left;
-        border-radius: 5px;
-    }
-    .main-nav ul li a.active-link {
-        background-color: #666;
-    }
-
-    /* Mostrar a seção de informações do usuário no topo em mobile */
+    /* Seção de Informações do Usuário Mobile (Visível no Mobile) */
     .user-info-section-mobile {
-        display: flex;
+        display: flex; 
         align-items: center;
         font-size: 0.85rem;
-        /* Remover white-space: nowrap; daqui */
-        /* Ajustes para centralizar ou alinhar à direita */
-        justify-content: flex-end; /* Alinha à direita no header */
-        flex-grow: 0; /* Não cresce para ocupar espaço */
-        gap: 5px; /* Espaço entre span e botão */
+        justify-content: flex-end; 
+        flex-grow: 0; 
+        gap: 5px; 
+        color: white; 
     }
-    .user-info-section-mobile span {
-        white-space: nowrap; /* Tenta manter nome na linha */
+    .user-info-section-mobile span.user-name-mobile {
+        white-space: nowrap;
         overflow: hidden;
-        text-overflow: ellipsis; /* Cortar com reticências */
-        max-width: 80px; /* Largura máxima para o nome do usuário */
+        text-overflow: ellipsis;
+        max-width: 80px; 
+        margin-right: 5px;
     }
 
     /* Esconder a seção de informações do usuário padrão em mobile */
@@ -414,109 +332,137 @@ main {
         display: none;
     }
 
-    /* Restante do CSS de media query para forms, tables, dashboard */
-    .form-container, .table-container {
-        margin: 15px auto; /* Reduzir margem vertical */
-        padding: 10px; /* Reduzir padding */
-        max-width: 98%; /* Ocupa quase toda a largura em telas menores */
+    /* Menu de Navegação em Mobile (Desliza para fora da tela) */
+    .main-nav { 
+        position: fixed;
+        top: 0; 
+        left: -250px; 
+        width: 250px; 
+        height: 100%;
+        background-color: #444; 
+        padding-top: 80px; 
+        transition: left 0.3s ease; 
+        z-index: 999; 
+        flex-direction: column; 
+        align-items: flex-start;
     }
 
+    .main-nav.open { 
+        left: 0; 
+    }
+
+    .main-nav ul.nav-list { 
+        flex-direction: column; 
+        width: 100%;
+        padding: 0 15px; 
+    }
+    .main-nav ul.nav-list li.nav-item {
+        width: 100%;
+        margin-bottom: 5px;
+        margin-right: 0;
+    }
+    .main-nav ul.nav-list li.nav-item a {
+        padding: 10px 15px;
+        font-size: 1rem;
+        width: calc(100% - 30px); 
+        text-align: left;
+        border-radius: 5px;
+    }
+    .main-nav ul.nav-list li.nav-item a.active-link {
+        background-color: #666;
+    }
+
+    /* --- Estilos do main content (para não ficar por baixo do menu aberto) --- */
+    main {
+        transition: transform 0.3s ease;
+    }
+    body.menu-open main { /* Quando o menu está aberto, empurra o conteúdo principal */
+        transform: translateX(250px); /* Move o main content para a direita */
+    }
+
+    /* Adaptação dos grids para uma coluna em mobile */
+    .form-grid-2-col,
+    .dashboard-grid,
+    .table-container > .form-container > div {
+        grid-template-columns: 1fr !important;
+        gap: 10px !important;
+    }
+
+    /* Adaptação de containers e padding para mobile */
+    .form-container, .table-container {
+        margin: 15px auto;
+        padding: 10px;
+        max-width: 98%;
+    }
     .form-container h2 {
         font-size: 1.3rem;
         margin-bottom: 15px;
     }
-
     .form-group label {
         font-size: 0.85rem;
     }
-
     .form-input, .form-select, .form-textarea {
         padding: 8px;
         font-size: 0.85rem;
     }
-
     .btn {
         padding: 10px 10px;
         font-size: 0.9rem;
     }
     .btn-sm {
-        padding: 4px 8px; /* Ainda menor para mobile */
+        padding: 4px 8px;
         font-size: 0.8rem;
     }
 
-    /* Layout de grid em formulários (ex: ProdutoFormPage) */
-    .form-grid-2-col {
-        grid-template-columns: 1fr !important; /* Uma coluna em telas pequenas */
-        gap: 10px !important;
-    }
-
-    /* Dashboard Cards */
-    .dashboard-grid {
-        grid-template-columns: 1fr !important; /* Uma coluna em telas pequenas */
-        gap: 10px !important;
-    }
-    .card-dashboard h3 {
-        font-size: 1rem;
-    }
-    .card-dashboard .card-value {
-        font-size: 1.8em;
-    }
-
-    /* Tabelas Responsivas: Transformar em blocos empilhados */
+    /* Tabelas Responsivas: Modo "cartão" */
     .styled-table {
-        display: block; 
-        width: 100%; 
-        overflow-x: auto; 
-        border-collapse: collapse; 
+        width: 100%;
+        display: block; /* Essencial para quebrar layout */
+        overflow-x: auto; /* Fallback para tabelas muito largas */
     }
-    .styled-table thead, .styled-table tbody tr {
-        position: absolute;
-        top: -9999px;
-        left: -9999px;
+    .styled-table thead { /* Esconder cabeçalho original em mobile */
+        display: none;
+    }
+    .styled-table tbody {
+        display: block; /* Fazer o corpo da tabela se comportar como um bloco */
+        width: 100%;
     }
     .styled-table tr {
         border: 1px solid #ccc;
-        display: block; 
-        margin-bottom: 10px; 
+        margin-bottom: 10px;
+        display: block; /* Cada linha vira um "cartão" */
         padding: 10px;
     }
     .styled-table td {
-        border: none; 
+        border: none;
+        border-bottom: 1px solid #eee; /* Linha divisória entre os campos do cartão */
         position: relative;
-        padding-left: 50%; 
-        text-align: right; 
-        display: block; 
+        padding-left: 50%; /* Espaço para o pseudo-elemento ::before (label) */
+        text-align: right; /* Alinha o valor à direita */
+        display: block;
+        word-wrap: break-word; /* Quebra palavras longas */
         font-size: 0.9rem;
-        word-wrap: break-word; 
     }
     .styled-table td:last-child {
-        border-bottom: none; 
+        border-bottom: none; /* Último campo do cartão não tem borda inferior */
     }
     .styled-table td:before {
+        content: attr(data-label); /* Usa o atributo data-label do HTML */
         position: absolute;
         top: 6px;
         left: 6px;
-        width: 45%;
+        width: 45%; /* Largura da label */
         padding-right: 10px;
         white-space: nowrap;
         text-align: left;
         font-weight: bold;
         color: #555;
-        content: attr(data-label); 
+        box-sizing: border-box; /* Incluir padding na largura */
     }
-
     .table-actions {
-        justify-content: flex-end; /* Alinhar botões à direita no mobile */
-        flex-wrap: wrap; /* Permitir quebra de linha para botões */
-        gap: 5px; /* Espaço menor entre botões */
-    }
-
-    /* Ajustes específicos para a seção de filtros nas páginas de lista */
-    .table-container > .form-container {
-        padding: 10px;
-    }
-    .table-container > .form-container > div { /* Para o grid de filtros */
-        grid-template-columns: 1fr !important;
-        gap: 10px !important;
+        justify-content: flex-end; /* Alinha botões à direita em mobile */
+        flex-wrap: wrap;
+        gap: 5px;
+        margin-top: 10px; /* Espaço acima dos botões no cartão */
     }
 }

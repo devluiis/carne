@@ -95,17 +95,15 @@ function CarnesPage() {
 
     return (
         <>
-            <div className="table-container">
-                <h2 className="text-center">
-                    Lista de Carnês
-                </h2>
+            <div className="container table-container"> {/* container do Bootstrap */}
+                <h2 className="text-center mb-4">Lista de Carnês</h2>
                 
-                <div className="form-container" style={{maxWidth: 'none', margin: '0 0 20px 0', padding: '20px'}}>
+                <div className="card mb-4 p-3"> {/* card mb-4 p-3 do Bootstrap */}
                     <h3>Filtrar Carnês:</h3>
-                    <div className="form-grid-2-col" style={{gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', alignItems: 'flex-end'}}>
-                        <div className="form-group">
-                            <label>Status:</label>
-                            <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="form-select">
+                    <div className="row g-3 align-items-end"> {/* row g-3 do Bootstrap */}
+                        <div className="col-md-3 col-sm-6"> {/* col-md-3 col-sm-6 do Bootstrap */}
+                            <label htmlFor="filterStatus" className="form-label">Status:</label> {/* form-label do Bootstrap */}
+                            <select id="filterStatus" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="form-select"> {/* form-select do Bootstrap */}
                                 <option value="">Todos</option>
                                 <option value="Ativo">Ativo</option>
                                 <option value="Quitado">Quitado</option>
@@ -113,86 +111,89 @@ function CarnesPage() {
                                 <option value="Cancelado">Cancelado</option>
                             </select>
                         </div>
-                        <div className="form-group">
-                            <label>Vencimento De:</label>
-                            <input type="date" value={filterDateStart} onChange={(e) => setFilterDateStart(e.target.value)} className="form-input" />
+                        <div className="col-md-3 col-sm-6">
+                            <label htmlFor="filterDateStart" className="form-label">Vencimento De:</label>
+                            <input type="date" id="filterDateStart" value={filterDateStart} onChange={(e) => setFilterDateStart(e.target.value)} className="form-control" /> {/* form-control do Bootstrap */}
                         </div>
-                        <div className="form-group">
-                            <label>Vencimento Até:</label>
-                            <input type="date" value={filterDateEnd} onChange={(e) => setFilterDateEnd(e.target.value)} className="form-input" />
+                        <div className="col-md-3 col-sm-6">
+                            <label htmlFor="filterDateEnd" className="form-label">Vencimento Até:</label>
+                            <input type="date" id="filterDateEnd" value={filterDateEnd} onChange={(e) => setFilterDateEnd(e.target.value)} className="form-control" />
                         </div>
-                        <div className="form-group">
-                            <label>Descrição ou Cliente:</label>
+                        <div className="col-md-3 col-sm-6">
+                            <label htmlFor="filterSearchQuery" className="form-label">Descrição ou Cliente:</label>
                             <input
                                 type="text"
+                                id="filterSearchQuery"
                                 placeholder="Descrição, Nome ou CPF/CNPJ"
                                 value={filterSearchQuery}
                                 onChange={(e) => setFilterSearchQuery(e.target.value)}
-                                className="form-input"
+                                className="form-control"
                             />
                         </div>
-                        <div className="form-group" style={{display: 'flex', gap: '10px'}}>
-                            <button onClick={fetchCarnes} className="btn btn-primary" style={{width: 'auto'}}>Aplicar Filtros</button>
-                            <button onClick={handleClearFilters} className="btn btn-secondary" style={{width: 'auto'}}>Limpar Filtros</button>
+                        <div className="col-12 d-flex gap-2"> {/* col-12 d-flex gap-2 do Bootstrap */}
+                            <button onClick={fetchCarnes} className="btn btn-primary flex-fill">Aplicar Filtros</button> {/* flex-fill para ocupar espaço */}
+                            <button onClick={handleClearFilters} className="btn btn-secondary flex-fill">Limpar Filtros</button>
                         </div>
                     </div>
                 </div>
 
                 {id_cliente ? (
-                     <button onClick={() => navigate(`/carnes/new/${id_cliente}`)} className="btn btn-success" style={{width: 'auto', marginBottom: '20px'}}>
+                     <button onClick={() => navigate(`/carnes/new/${id_cliente}`)} className="btn btn-success mb-3"> {/* mb-3 do Bootstrap */}
                         + Adicionar Carnê para este Cliente
                     </button>
                 ) : (
-                    <button onClick={() => navigate('/nova-venda')} className="btn btn-success" style={{width: 'auto', marginBottom: '20px'}}>
+                    <button onClick={() => navigate('/nova-venda')} className="btn btn-success mb-3">
                         + Registrar Nova Venda/Carnê
                     </button>
                 )}
 
                 {carnesList.length === 0 ? (
-                    <p className="text-center" style={{padding: '20px', backgroundColor: '#f8f9fa', borderRadius: '5px'}}>
+                    <p className="text-center p-3 bg-light rounded">
                         Nenhum carnê encontrado com os filtros aplicados.
                     </p>
                 ) : (
-                    <table className="styled-table">
-                        <thead>
-                            <tr>
-                                <th>Cliente</th>
-                                <th>Descrição</th>
-                                <th>Data Venda</th>
-                                <th>Valor Total</th>
-                                <th>Entrada</th>
-                                <th>Nº Parc.</th>
-                                <th>Status</th>
-                                <th>Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {carnesList.map((carne) => (
-                                <tr key={carne.id_carne}>
-                                    <td data-label="Cliente">{carne.cliente?.nome || 'N/A'}</td>
-                                    <td data-label="Descrição">{carne.descricao || 'N/A'}</td>
-                                    <td data-label="Data Venda">{carne.data_venda ? new Date(carne.data_venda + 'T00:00:00').toLocaleDateString() : 'N/A'}</td>
-                                    <td data-label="Valor Total">R$ {Number(carne.valor_total_original).toFixed(2)}</td>
-                                    <td data-label="Entrada">R$ {Number(carne.valor_entrada || 0).toFixed(2)}</td>
-                                    <td data-label="Nº Parc.">{carne.numero_parcelas}</td>
-                                    <td data-label="Status">
-                                        <span style={getStatusStyle(carne.status_carne)}>
-                                            {carne.status_carne}
-                                        </span>
-                                    </td>
-                                    <td data-label="Ações">
-                                        <div className="table-actions">
-                                            <button onClick={() => navigate(`/carnes/details/${carne.id_carne}`)} className="btn btn-info btn-sm">Detalhes</button>
-                                            <button onClick={() => navigate(`/carnes/edit/${carne.id_carne}`)} className="btn btn-warning btn-sm">Editar</button>
-                                            {user?.perfil === 'admin' && 
-                                                <button onClick={() => handleOpenDeleteModal(carne.id_carne)} className="btn btn-danger btn-sm">Excluir</button>
-                                            }
-                                        </div>
-                                    </td>
+                    <div className="table-responsive"> {/* table-responsive do Bootstrap */}
+                        <table className="table table-striped table-hover"> {/* Classes de tabela do Bootstrap */}
+                            <thead>
+                                <tr>
+                                    <th>Cliente</th>
+                                    <th>Descrição</th>
+                                    <th>Data Venda</th>
+                                    <th>Valor Total</th>
+                                    <th>Entrada</th>
+                                    <th>Nº Parc.</th>
+                                    <th>Status</th>
+                                    <th>Ações</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                {carnesList.map((carne) => (
+                                    <tr key={carne.id_carne}>
+                                        <td data-label="Cliente">{carne.cliente?.nome || 'N/A'}</td>
+                                        <td data-label="Descrição">{carne.descricao || 'N/A'}</td>
+                                        <td data-label="Data Venda">{carne.data_venda ? new Date(carne.data_venda + 'T00:00:00').toLocaleDateString() : 'N/A'}</td>
+                                        <td data-label="Valor Total">R$ {Number(carne.valor_total_original).toFixed(2)}</td>
+                                        <td data-label="Entrada">R$ {Number(carne.valor_entrada || 0).toFixed(2)}</td>
+                                        <td data-label="Nº Parc.">{carne.numero_parcelas}</td>
+                                        <td data-label="Status">
+                                            <span className={`badge bg-${getStatusBadgeClass(carne.status_carne)}`}> {/* Classe para badge do Bootstrap */}
+                                                {carne.status_carne}
+                                            </span>
+                                        </td>
+                                        <td data-label="Ações">
+                                            <div className="d-flex flex-wrap gap-2"> {/* d-flex flex-wrap gap-2 do Bootstrap */}
+                                                <button onClick={() => navigate(`/carnes/details/${carne.id_carne}`)} className="btn btn-info btn-sm">Detalhes</button>
+                                                <button onClick={() => navigate(`/carnes/edit/${carne.id_carne}`)} className="btn btn-warning btn-sm">Editar</button>
+                                                {user?.perfil === 'admin' && 
+                                                    <button onClick={() => handleOpenDeleteModal(carne.id_carne)} className="btn btn-danger btn-sm">Excluir</button>
+                                                }
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 )}
             </div>
 
@@ -208,5 +209,15 @@ function CarnesPage() {
         </>
     );
 }
+
+// Função auxiliar para classes de badge do Bootstrap
+const getStatusBadgeClass = (status) => {
+    switch (status) {
+        case 'Quitado': return 'success';
+        case 'Em Atraso': return 'danger';
+        case 'Cancelado': return 'secondary';
+        case 'Ativo': default: return 'primary'; // Ou info
+    }
+};
 
 export default CarnesPage;

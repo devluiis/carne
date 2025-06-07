@@ -69,55 +69,60 @@ function ClientForm() {
     }
 
     return (
-        <div className="form-container">
-            <h2>{isEditing ? 'Editar Cliente' : 'Cadastrar Novo Cliente'}</h2>
-            {formError && <p style={{ color: 'red', textAlign: 'center', marginBottom: '15px' }}>{formError}</p>}
+        <div className="container form-container"> {/* Usando container do Bootstrap */}
+            <h2 className="text-center">{isEditing ? 'Editar Cliente' : 'Cadastrar Novo Cliente'}</h2>
+            {formError && <p className="text-danger text-center mb-3">{formError}</p>} {/* Classes Bootstrap para erro */}
             <form onSubmit={handleSubmit}>
-                <div className="form-group">
-                    <label>Nome Completo / Razão Social:</label>
+                <div className="mb-3"> {/* mb-3 do Bootstrap */}
+                    <label htmlFor="nome" className="form-label">Nome Completo / Razão Social:</label> {/* form-label do Bootstrap */}
                     <input
                         type="text"
+                        id="nome"
                         value={nome}
                         onChange={(e) => setNome(e.target.value)}
                         required
-                        className="form-input"
+                        className="form-control" /* form-control do Bootstrap */
                     />
                 </div>
-                <div className="form-group">
-                    <label>CPF / CNPJ:</label>
+                <div className="mb-3">
+                    <label htmlFor="cpfCnpj" className="form-label">CPF / CNPJ:</label>
                     <input
                         type="text"
+                        id="cpfCnpj"
                         value={cpfCnpj}
                         onChange={(e) => setCpfCnpj(e.target.value)}
                         required
-                        className="form-input"
+                        className="form-control"
                     />
                 </div>
-                <div className="form-group">
-                    <label>Endereço:</label>
+                <div className="mb-3">
+                    <label htmlFor="endereco" className="form-label">Endereço:</label>
                     <input
                         type="text"
+                        id="endereco"
                         value={endereco}
                         onChange={(e) => setEndereco(e.target.value)}
-                        className="form-input"
+                        className="form-control"
                     />
                 </div>
-                <div className="form-group">
-                    <label>Telefone:</label>
+                <div className="mb-3">
+                    <label htmlFor="telefone" className="form-label">Telefone:</label>
                     <input
                         type="text"
+                        id="telefone"
                         value={telefone}
                         onChange={(e) => setTelefone(e.target.value)}
-                        className="form-input"
+                        className="form-control"
                     />
                 </div>
-                <div className="form-group">
-                    <label>Email:</label>
+                <div className="mb-3">
+                    <label htmlFor="email" className="form-label">Email:</label>
                     <input
                         type="email"
+                        id="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className="form-input"
+                        className="form-control"
                     />
                 </div>
                 <button type="submit" className="btn btn-primary" disabled={submitLoading}>

@@ -6,7 +6,7 @@ import LoadingSpinner from '../components/LoadingSpinner.jsx';
 
 function CarneForm() {
     const [idCliente, setIdCliente] = useState('');
-    const [dataVenda, setDataVenda] = useState(''); // <<<< NOVO ESTADO
+    const [dataVenda, setDataVenda] = useState('');
     const [descricao, setDescricao] = useState('');
     const [valorTotalOriginal, setValorTotalOriginal] = useState('');
     const [numeroParcelas, setNumeroParcelas] = useState('');
@@ -32,7 +32,7 @@ function CarneForm() {
             const response = await carnes.getById(carneId);
             const carne = response.data;
             setIdCliente(carne.id_cliente);
-            setDataVenda(carne.data_venda ? new Date(carne.data_venda + 'T00:00:00').toISOString().split('T')[0] : ''); // <<<< CARREGAR DATA DA VENDA
+            setDataVenda(carne.data_venda ? new Date(carne.data_venda + 'T00:00:00').toISOString().split('T')[0] : '');
             setDescricao(carne.descricao || '');
             setValorTotalOriginal(String(carne.valor_total_original));
             setNumeroParcelas(String(carne.numero_parcelas));
@@ -71,7 +71,6 @@ function CarneForm() {
                 if (id) {
                     fetchCarneParaEdicao(id).finally(() => setLoadingInitial(false));
                 } else {
-                    // Definir data da venda como hoje por padrão ao criar um novo carnê
                     setDataVenda(new Date().toISOString().split('T')[0]);
                     setLoadingInitial(false);
                 }
@@ -90,7 +89,7 @@ function CarneForm() {
             setGlobalAlert({ message: 'Selecione um cliente.', type: 'warning' });
             setSubmitLoading(false); return;
         }
-        if (!dataVenda) { // <<<< VALIDAÇÃO PARA DATA DA VENDA
+        if (!dataVenda) {
             setGlobalAlert({ message: 'Data da venda é obrigatória.', type: 'warning' });
             setSubmitLoading(false); return;
         }
@@ -114,7 +113,7 @@ function CarneForm() {
             setGlobalAlert({ message: 'Data do primeiro vencimento é obrigatória.', type: 'warning' });
             setSubmitLoading(false); return;
         }
-        if (new Date(dataPrimeiroVencimento) < new Date(dataVenda) && !id) { // Apenas na criação, na edição pode ser mais complexo
+        if (new Date(dataPrimeiroVencimento) < new Date(dataVenda) && !id) {
              setGlobalAlert({ message: 'A data do primeiro vencimento não pode ser anterior à data da venda.', type: 'warning' });
              setSubmitLoading(false); return;
         }
@@ -134,7 +133,7 @@ function CarneForm() {
 
         const carneData = {
             id_cliente: parseInt(idCliente),
-            data_venda: dataVenda, // <<<< ENVIAR DATA DA VENDA
+            data_venda: dataVenda, 
             descricao,
             valor_total_original: vTotal,
             numero_parcelas: nParcelas,
@@ -175,44 +174,43 @@ function CarneForm() {
     }
 
     return (
-        <div className="form-container">
-            <h2>{id ? 'Editar Carnê' : 'Cadastrar Novo Carnê'}</h2>
-            {editWarningMessage && <p style={{ color: 'orange', fontWeight: 'bold', marginBottom: '15px', textAlign: 'center' }}>{editWarningMessage}</p>}
+        <div className="container form-container"> {/* container do Bootstrap */}
+            <h2 className="text-center mb-4">{id ? 'Editar Carnê' : 'Cadastrar Novo Carnê'}</h2> {/* mb-4 do Bootstrap */}
+            {editWarningMessage && <p className="text-warning text-center mb-3 fw-bold">{editWarningMessage}</p>} {/* Classes Bootstrap */}
             
             <form onSubmit={handleSubmit}>
-                <div className="form-group">
-                    <label>Cliente:</label>
-                    <select value={idCliente} onChange={(e) => setIdCliente(e.target.value)} required className="form-select" disabled={!!id || !!clientIdFromUrl || (id && hasPayments) }>
+                <div className="mb-3"> {/* mb-3 do Bootstrap */}
+                    <label htmlFor="clienteSelect" className="form-label">Cliente:</label> {/* form-label do Bootstrap */}
+                    <select id="clienteSelect" value={idCliente} onChange={(e) => setIdCliente(e.target.value)} required className="form-select" disabled={!!id || !!clientIdFromUrl || (id && hasPayments) }> {/* form-select do Bootstrap */}
                         <option value="">Selecione um Cliente</option>
                         {clientOptions.map(client => (<option key={client.id_cliente} value={client.id_cliente}>{client.nome} ({client.cpf_cnpj})</option>))}
                     </select>
                 </div>
 
-                {/* NOVO CAMPO "DATA DA VENDA" */}
-                <div className="form-group">
-                    <label>Data da Venda/Emissão do Carnê:</label>
-                    <input type="date" value={dataVenda} onChange={(e) => setDataVenda(e.target.value)} required className="form-input" disabled={id && hasPayments}/>
+                <div className="mb-3">
+                    <label htmlFor="dataVenda" className="form-label">Data da Venda/Emissão do Carnê:</label>
+                    <input type="date" id="dataVenda" value={dataVenda} onChange={(e) => setDataVenda(e.target.value)} required className="form-control" disabled={id && hasPayments}/> {/* form-control do Bootstrap */}
                 </div>
 
-                <div className="form-group">
-                    <label>Descrição (Opcional):</label>
-                    <input type="text" value={descricao} onChange={(e) => setDescricao(e.target.value)} className="form-input"/>
+                <div className="mb-3">
+                    <label htmlFor="descricao" className="form-label">Descrição (Opcional):</label>
+                    <input type="text" id="descricao" value={descricao} onChange={(e) => setDescricao(e.target.value)} className="form-control"/>
                 </div>
 
-                <div className="form-group">
-                    <label>Valor Total Original da Dívida:</label>
-                    <input type="number" step="0.01" value={valorTotalOriginal} onChange={(e) => setValorTotalOriginal(e.target.value)} required className="form-input" disabled={id && hasPayments} />
+                <div className="mb-3">
+                    <label htmlFor="valorTotalOriginal" className="form-label">Valor Total Original da Dívida:</label>
+                    <input type="number" id="valorTotalOriginal" step="0.01" value={valorTotalOriginal} onChange={(e) => setValorTotalOriginal(e.target.value)} required className="form-control" disabled={id && hasPayments} />
                 </div>
 
-                <div className="form-group">
-                    <label>Valor de Entrada (Opcional):</label>
-                    <input type="number" step="0.01" value={valorEntrada} onChange={(e) => setValorEntrada(e.target.value)} className="form-input" min="0" disabled={id && hasPayments} />
+                <div className="mb-3">
+                    <label htmlFor="valorEntrada" className="form-label">Valor de Entrada (Opcional):</label>
+                    <input type="number" id="valorEntrada" step="0.01" value={valorEntrada} onChange={(e) => setValorEntrada(e.target.value)} className="form-control" min="0" disabled={id && hasPayments} />
                 </div>
 
                 {parseFloat(valorEntrada) > 0 && (
-                    <div className="form-group">
-                        <label>Forma de Pagamento da Entrada:</label>
-                        <select value={formaPagamentoEntrada} onChange={(e) => setFormaPagamentoEntrada(e.target.value)} required={parseFloat(valorEntrada) > 0} className="form-select" disabled={id && hasPayments}>
+                    <div className="mb-3">
+                        <label htmlFor="formaPagamentoEntrada" className="form-label">Forma de Pagamento da Entrada:</label>
+                        <select id="formaPagamentoEntrada" value={formaPagamentoEntrada} onChange={(e) => setFormaPagamentoEntrada(e.target.value)} required={parseFloat(valorEntrada) > 0} className="form-select" disabled={id && hasPayments}>
                             <option value="">Selecione...</option>
                             <option value="Dinheiro">Dinheiro</option>
                             <option value="PIX">PIX</option>
@@ -222,42 +220,42 @@ function CarneForm() {
                     </div>
                 )}
 
-                <div className="form-group">
-                    <label>Número de Parcelas:</label>
-                    <input type="number" value={numeroParcelas} onChange={(e) => setNumeroParcelas(e.target.value)} required className="form-input" disabled={id && hasPayments} min="1"/>
+                <div className="mb-3">
+                    <label htmlFor="numeroParcelas" className="form-label">Número de Parcelas:</label>
+                    <input type="number" id="numeroParcelas" value={numeroParcelas} onChange={(e) => setNumeroParcelas(e.target.value)} required className="form-control" disabled={id && hasPayments} min="1"/>
                 </div>
 
-                <div className="form-group">
-                    <label>Data do Primeiro Vencimento:</label>
-                    <input type="date" value={dataPrimeiroVencimento} onChange={(e) => setDataPrimeiroVencimento(e.target.value)} required className="form-input" disabled={id && hasPayments} />
+                <div className="mb-3">
+                    <label htmlFor="dataPrimeiroVencimento" className="form-label">Data do Primeiro Vencimento:</label>
+                    <input type="date" id="dataPrimeiroVencimento" value={dataPrimeiroVencimento} onChange={(e) => setDataPrimeiroVencimento(e.target.value)} required className="form-control" disabled={id && hasPayments} />
                 </div>
 
-                <div className="form-group">
-                    <label>Frequência de Pagamento:</label>
-                    <select value={frequenciaPagamento} onChange={(e) => setFrequenciaPagamento(e.target.value)} required className="form-select" disabled={id && hasPayments}>
+                <div className="mb-3">
+                    <label htmlFor="frequenciaPagamento" className="form-label">Frequência de Pagamento:</label>
+                    <select id="frequenciaPagamento" value={frequenciaPagamento} onChange={(e) => setFrequenciaPagamento(e.target.value)} required className="form-select" disabled={id && hasPayments}>
                         <option value="mensal">Mensal</option>
                         <option value="quinzenal">Quinzenal</option>
                         <option value="trimestral">Trimestral</option>
                     </select>
                 </div>
 
-                <div className="form-group">
-                    <label>Status do Carnê:</label>
-                    <select value={statusCarne} onChange={(e) => setStatusCarne(e.target.value)} required className="form-select">
+                <div className="mb-3">
+                    <label htmlFor="statusCarne" className="form-label">Status do Carnê:</label>
+                    <select id="statusCarne" value={statusCarne} onChange={(e) => setStatusCarne(e.target.value)} required className="form-select">
                         <option value="Ativo">Ativo</option>
                         <option value="Cancelado">Cancelado</option>
                     </select>
                 </div>
 
-                <div className="form-group">
-                    <label>Observações (Opcional):</label>
-                    <textarea value={observacoes} onChange={(e) => setObservacoes(e.target.value)} rows="3" className="form-textarea"></textarea>
+                <div className="mb-3">
+                    <label htmlFor="observacoes" className="form-label">Observações (Opcional):</label>
+                    <textarea id="observacoes" value={observacoes} onChange={(e) => setObservacoes(e.target.value)} rows="3" className="form-control"></textarea>
                 </div>
 
-                <button type="submit" className="btn btn-primary" disabled={submitLoading}>
+                <button type="submit" className="btn btn-primary w-100" disabled={submitLoading}>
                     {submitLoading ? 'Salvando...' : (id ? 'Atualizar Carnê' : 'Cadastrar Carnê')}
                 </button>
-                <button type="button" onClick={() => navigate('/carnes')} className="btn btn-secondary mt-2">
+                <button type="button" onClick={() => navigate('/carnes')} className="btn btn-secondary w-100 mt-2">
                     Cancelar
                 </button>
             </form>

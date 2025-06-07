@@ -27,37 +27,41 @@ function LoginForm() {
     };
 
     return (
-        <div className="form-container" style={{maxWidth: '450px'}}> {/* Mantido maxWidth para este formulário específico */}
-            <h2>Login</h2>
-            <form onSubmit={handleSubmit}>
-                <div className="form-group">
-                    <label>Email:</label>
-                    <input
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                        className="form-input"
-                    />
-                </div>
-                <div className="form-group">
-                    <label>Senha:</label>
-                    <input
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                        className="form-input"
-                    />
-                </div>
-                <button type="submit" className="btn btn-primary" disabled={loading}>
-                    {loading ? 'Entrando...' : 'Entrar'}
-                </button>
-            </form>
-            <p className="text-center mt-2">
-                Não tem uma conta?{' '}
-                <Link to="/register-user">Registre-se</Link>
-            </p>
+        <div className="container d-flex justify-content-center align-items-center vh-100"> {/* Centraliza na tela */}
+            <div className="card p-4 shadow-sm" style={{maxWidth: '450px'}}> {/* Card do Bootstrap */}
+                <h2 className="text-center mb-4">Login</h2>
+                <form onSubmit={handleSubmit}>
+                    <div className="mb-3"> {/* mb-3 do Bootstrap */}
+                        <label htmlFor="email" className="form-label">Email:</label> {/* form-label do Bootstrap */}
+                        <input
+                            type="email"
+                            id="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            required
+                            className="form-control" /* form-control do Bootstrap */
+                        />
+                    </div>
+                    <div className="mb-3">
+                        <label htmlFor="password" className="form-label">Senha:</label>
+                        <input
+                            type="password"
+                            id="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                            className="form-control"
+                        />
+                    </div>
+                    <button type="submit" className="btn btn-primary w-100" disabled={loading}> {/* w-100 para largura total */}
+                        {loading ? 'Entrando...' : 'Entrar'}
+                    </button>
+                </form>
+                <p className="text-center mt-3 mb-0"> {/* mt-3 mb-0 do Bootstrap */}
+                    Não tem uma conta?{' '}
+                    <Link to="/register-user">Registre-se</Link>
+                </p>
+            </div>
         </div>
     );
 }

@@ -80,17 +80,16 @@ function ClientList() { // Renomeie para ClientsPage se este for seu arquivo pri
 
     return (
         <>
-            <div className="table-container">
-                <h2 className="text-center">Lista de Clientes</h2>
+            <div className="container table-container"> {/* container do Bootstrap */}
+                <h2 className="text-center mb-4">Lista de Clientes</h2> {/* mb-4 do Bootstrap */}
                 
-                <div className="form-group" style={{ display: 'flex', gap: '10px', marginBottom: '20px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <div className="input-group mb-3"> {/* input-group do Bootstrap para busca */}
                     <input
                         type="text"
                         placeholder="Buscar por nome ou CPF/CNPJ..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="form-input"
-                        style={{ flexGrow: 1 }}
+                        className="form-control" /* form-control do Bootstrap */
                     />
                     <button
                         onClick={handleSearch}
@@ -108,44 +107,50 @@ function ClientList() { // Renomeie para ClientsPage se este for seu arquivo pri
                     </button>
                 </div>
 
-                <button onClick={() => navigate('/clients/new')} className="btn btn-success" style={{width: 'auto', marginBottom: '20px'}}>
+                <button onClick={() => navigate('/clients/new')} className="btn btn-success mb-3"> {/* mb-3 do Bootstrap */}
                     Adicionar Novo Cliente
                 </button>
                 
                 {clientList.length === 0 && !searchQuery ? (
-                    <p className="text-center">Nenhum cliente cadastrado.</p>
+                    <p className="text-center p-3 bg-light rounded"> {/* p-3 bg-light rounded do Bootstrap */}
+                        Nenhum cliente cadastrado.
+                    </p>
                 ) : clientList.length === 0 && searchQuery ? (
-                    <p className="text-center">Nenhum cliente encontrado para a busca "{searchQuery}".</p>
+                    <p className="text-center p-3 bg-light rounded">
+                        Nenhum cliente encontrado para a busca "{searchQuery}".
+                    </p>
                 ) : (
-                    <table className="styled-table">
-                        <thead>
-                            <tr>
-                                <th>Nome</th>
-                                <th>CPF/CNPJ</th>
-                                <th>Telefone</th>
-                                <th>Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {clientList.map((client) => (
-                                <tr key={client.id_cliente}>
-                                    <td data-label="Nome">{client.nome}</td>
-                                    <td data-label="CPF/CNPJ">{client.cpf_cnpj}</td>
-                                    <td data-label="Telefone">{client.telefone || 'N/A'}</td>
-                                    <td data-label="Ações">
-                                        <div className="table-actions">
-                                            <button onClick={() => navigate(`/clients/edit/${client.id_cliente}`)} className="btn btn-warning btn-sm">Editar</button>
-                                            {user && user.perfil === 'admin' && (
-                                                <button onClick={() => handleOpenDeleteClientModal(client.id_cliente)} className="btn btn-danger btn-sm">Excluir</button>
-                                            )}
-                                            <button onClick={() => navigate(`/clients/${client.id_cliente}/carnes`)} className="btn btn-secondary btn-sm">Ver Carnês</button>
-                                            <button onClick={() => navigate(`/clients/details/${client.id_cliente}`)} className="btn btn-info btn-sm">Resumo</button>
-                                        </div>
-                                    </td>
+                    <div className="table-responsive"> {/* table-responsive do Bootstrap */}
+                        <table className="table table-striped table-hover"> {/* table-striped table-hover do Bootstrap */}
+                            <thead>
+                                <tr>
+                                    <th>Nome</th>
+                                    <th>CPF/CNPJ</th>
+                                    <th>Telefone</th>
+                                    <th>Ações</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                {clientList.map((client) => (
+                                    <tr key={client.id_cliente}>
+                                        <td data-label="Nome">{client.nome}</td>
+                                        <td data-label="CPF/CNPJ">{client.cpf_cnpj}</td>
+                                        <td data-label="Telefone">{client.telefone || 'N/A'}</td>
+                                        <td data-label="Ações">
+                                            <div className="d-flex flex-wrap gap-2"> {/* d-flex flex-wrap gap-2 do Bootstrap */}
+                                                <button onClick={() => navigate(`/clients/edit/${client.id_cliente}`)} className="btn btn-warning btn-sm">Editar</button>
+                                                {user && user.perfil === 'admin' && (
+                                                    <button onClick={() => handleOpenDeleteClientModal(client.id_cliente)} className="btn btn-danger btn-sm">Excluir</button>
+                                                )}
+                                                <button onClick={() => navigate(`/clients/${client.id_cliente}/carnes`)} className="btn btn-secondary btn-sm">Ver Carnês</button>
+                                                <button onClick={() => navigate(`/clients/details/${client.id_cliente}`)} className="btn btn-info btn-sm">Resumo</button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 )}
             </div>
 
