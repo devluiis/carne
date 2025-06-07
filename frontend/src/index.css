@@ -59,19 +59,20 @@ header h1 {
     justify-content: flex-end;
 }
 
-/* Oculta a seção de informações do usuário no desktop, que será exibida no mobile */
-.mobile-user-info-section { 
-    display: none;
-}
-
-/* Estilo para a seção de informações do usuário no desktop */
-.user-info {
+/* Oculta a seção de informações do usuário e o botão sair no desktop, 
+   eles serão exibidos de forma diferente no mobile */
+.user-info { 
     display: flex;
     align-items: center;
     gap: 10px;
     white-space: nowrap;
     color: white;
 }
+/* Oculta a versão mobile da info do usuário no desktop */
+.mobile-only-user-info-section { 
+    display: none;
+}
+
 
 .nav-list {
     list-style: none;
@@ -103,6 +104,7 @@ header h1 {
     font-weight: bold;
 }
 
+/* Botão sair no desktop */
 .logout-btn {
     padding: 8px 12px;
     font-size: 0.875rem;
@@ -663,7 +665,7 @@ main {
     
     /* Oculta os itens do menu de desktop */
     .main-nav .nav-list,
-    .user-info:not(.mobile-user-info-section) { /* Oculta a info do usuário normal no desktop */
+    .user-info { /* Oculta a info do usuário normal no desktop */
         display: none;
     }
 
@@ -671,12 +673,23 @@ main {
         display: block; /* Mostra o botão hamburger */
     }
 
+    /* Overlay que aparece quando o menu está aberto */
+    .menu-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 940; /* Entre o header e o menu principal */
+    }
+
     .main-nav {
         position: fixed;
         top: 0;
         right: -70vw; /* Largura do menu baseada na viewport, ex: 70% da tela */
         width: 70vw; /* Largura do menu quando aberto */
-        max-width: 300px; /* Largura máxima para não ficar muito grande em tablets */
+        max-width: 250px; /* Largura máxima para não ficar muito grande em tablets */
         height: 100%;
         background-color: #444;
         box-shadow: -2px 0 5px rgba(0,0,0,0.5);
@@ -685,7 +698,7 @@ main {
         z-index: 950;
         display: flex;
         flex-direction: column;
-        justify-content: flex-start;
+        justify-content: flex-start; /* Alinha ao topo */
         align-items: stretch;
     }
 
@@ -702,6 +715,7 @@ main {
         padding: 20px;
         flex-grow: 1; /* Permite que a lista ocupe o espaço restante */
         overflow-y: auto; /* Adiciona scroll se a lista for muito longa */
+        -webkit-overflow-scrolling: touch; /* Suaviza o scroll no iOS */
     }
 
     .main-nav .nav-link {
@@ -715,7 +729,7 @@ main {
     }
 
     /* Exibe e estiliza a informação do usuário e botão de sair para mobile */
-    .mobile-user-info-section { /* Esta classe é exibida no mobile */
+    .mobile-only-user-info-section { 
         display: flex !important; /* Força a exibição */
         flex-direction: column;
         align-items: flex-start;
@@ -724,13 +738,16 @@ main {
         border-top: 1px solid #555; /* Separador */
         margin-top: auto; /* Empurra para o final do menu */
     }
-    .mobile-user-info-section span {
+    .mobile-only-user-info-section span {
         margin-bottom: 10px;
         font-weight: bold;
         color: white;
     }
-    .mobile-user-info-section .logout-btn {
+    /* Estilo específico para o botão de sair no menu mobile */
+    .logout-btn-mobile {
         width: 100%;
+        padding: 10px 15px; /* Padding maior para o botão */
+        font-size: 1rem; /* Tamanho da fonte normal */
     }
 
     /* Botão de fechar o menu */

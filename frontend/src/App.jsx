@@ -2,6 +2,7 @@ import React, { useState, createContext, useContext } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './components/AuthProvider.jsx';
 
+// Importações das páginas
 import LoginPage from './pages/LoginPage.jsx';
 import DashboardPage from './pages/DashboardPage.jsx';
 import ClientsPage from './pages/ClientsPage.jsx';
@@ -18,15 +19,18 @@ import RegisterUserPage from './pages/RegisterUserPage.jsx';
 import RegisterAdminPage from './pages/RegisterAdminPage.jsx';
 import RegisterUserByAdminPage from './pages/RegisterUserByAdminPage.jsx';
 
+// Importações para produtos
 import ProdutosPage from './pages/ProdutosPage.jsx';
 import ProdutoFormPage from './pages/ProdutoFormPage.jsx';
 
+// Seu GlobalAlert e Contexto
 import GlobalAlert from './components/GlobalAlert.jsx';
-import LoadingSpinner from './components/LoadingSpinner.jsx';
+import LoadingSpinner from './components/LoadingSpinner.jsx'; // Importar LoadingSpinner
 
 const GlobalAlertContext = createContext(null);
 export const useGlobalAlert = () => useContext(GlobalAlertContext);
 
+// Componentes de Rota Protegida
 const PrivateRoute = ({ children }) => {
     const { user, loading } = useAuth();
     if (loading) {
@@ -74,6 +78,7 @@ function App() {
                             <Route path="/" element={<LoginPage />} />
                             <Route path="/register-user" element={<RegisterUserPage />} />
 
+                            {/* Rotas Privadas */}
                             <Route path="/dashboard" element={<PrivateRoute><DashboardPage /></PrivateRoute>} />
                             <Route path="/nova-venda" element={<PrivateRoute><NovaVendaPage /></PrivateRoute>} />
 
@@ -88,6 +93,7 @@ function App() {
                             <Route path="/carnes/edit/:id" element={<PrivateRoute><CarneForm /></PrivateRoute>} />
                             <Route path="/carnes/details/:id" element={<PrivateRoute><CarneDetailsPage /></PrivateRoute>} />
                             
+                            {/* Rotas para Produtos */}
                             <Route path="/produtos" element={<PrivateRoute><ProdutosPage /></PrivateRoute>} />
                             <Route path="/produtos/novo" element={<AdminRoute><ProdutoFormPage /></AdminRoute>} />
                             <Route path="/produtos/editar/:id" element={<AdminRoute><ProdutoFormPage /></AdminRoute>} />
@@ -97,6 +103,7 @@ function App() {
                             
                             <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
 
+                            {/* Rotas de Admin */}
                             <Route path="/register-admin" element={<AdminRoute><RegisterAdminPage /></AdminRoute>} />
                             <Route path="/register-atendente" element={<AdminRoute><RegisterUserByAdminPage /></AdminRoute>} />
                         </Routes>
@@ -136,9 +143,13 @@ function Header() {
             </h1>
             {user && (
                 <>
+                    {/* Botão de menu Hamburger (mobile) */}
                     <button className="menu-toggle" onClick={toggleMenu} aria-label="Abrir Menu">
                         ☰
                     </button>
+                    {/* Overlay para fechar o menu ao clicar fora */}
+                    {isMenuOpen && <div className="menu-overlay" onClick={closeMenu}></div>}
+
                     <nav className={`main-nav ${isMenuOpen ? 'menu-open' : ''}`}>
                         <button className="close-menu-button" onClick={closeMenu} aria-label="Fechar Menu">
                             &times;
@@ -163,9 +174,9 @@ function Header() {
                             <li><Link to="/profile" className={isLinkActive('/profile') ? "nav-link active" : "nav-link"} onClick={closeMenu}>Meu Perfil</Link></li>
                         </ul>
                         {/* Esta div user-info é a que deve aparecer no menu mobile */}
-                        <div className="user-info mobile-user-info-section"> 
+                        <div className="user-info mobile-only-user-info-section"> 
                             <span>Olá, {user.nome}! ({user.perfil})</span>
-                            <button onClick={() => { logout(); closeMenu(); }} className="btn btn-danger btn-sm logout-btn">Sair</button>
+                            <button onClick={() => { logout(); closeMenu(); }} className="btn btn-danger btn-sm logout-btn-mobile">Sair</button> {/* Nova classe para o botão sair mobile */}
                         </div>
                     </nav>
                 </>
