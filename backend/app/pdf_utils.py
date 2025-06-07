@@ -246,7 +246,6 @@ def generate_carne_pdf_bytes(db_carne: models.Carne) -> bytes:
                     </div>
                     
                     <p class="bottom-info">Verifique os dados antes de pagar: {db_carne.descricao or 'N/A'} - Parcela {parcela.numero_parcela}</p>
-                    <p class="date-signature-line">Data do Pagamento: ___/___/_____</p>
                 </div>
             """
         html_content += """</div>""" # Fechar o último installments-page-grid
