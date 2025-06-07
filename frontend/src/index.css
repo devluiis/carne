@@ -816,3 +816,24 @@ main {
         width: 100%;
     }
 }
+
+.logout-btn-mobile {
+    width: 100%;
+    padding: 10px 15px;
+    font-size: 1rem;
+    display: block;
+    box-sizing: border-box;
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-weight: bold;
+    text-align: center;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: background-color 0.2s ease;
+}
+
+.logout-btn-mobile:hover {
+    background-color: #c82333;
+}
