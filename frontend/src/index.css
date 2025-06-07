@@ -304,41 +304,60 @@ main {
     }
     header h1 {
         font-size: 1.3rem; /* Menor em mobile */
+        width: 100%; /* Ocupa a largura total */
+        text-align: center; /* Centraliza o título */
+        margin-bottom: 10px; /* Espaço abaixo do título */
     }
     header nav {
-        width: 100%;
-        margin-top: 10px;
+        width: 100%; /* Navegação ocupa a largura toda */
+        margin-top: 5px; /* Reduzir margem superior */
     }
     header nav ul {
         flex-direction: column; /* Links da navegação em coluna */
         align-items: flex-start;
         width: 100%;
         margin-top: 5px;
+        padding: 0; /* Garante que não há padding extra aqui */
     }
     header nav ul li {
         margin-right: 0;
         margin-bottom: 3px; /* Espaço entre links empilhados */
-        width: 100%;
+        width: 100%; /* Ocupa a largura toda */
+        text-align: left; /* Alinhar o texto do item de lista */
     }
     header nav ul li a {
         padding: 6px 8px; /* Reduzir padding dos links */
         font-size: 0.85rem;
-        width: calc(100% - 16px); /* Ajuste para padding */
+        width: calc(100% - 16px); /* Ajuste para padding horizontal (10px de cada lado) */
+        box-sizing: border-box; /* Incluir padding na largura */
         text-align: left;
     }
+    header nav ul li a.active-link {
+        border-radius: 3px; /* Ajustar borda para menor */
+    }
+
     .user-info-section { /* Para 'Olá, usuário! Sair' */
         margin-left: 0; /* Remover margem extra */
         margin-top: 10px;
         width: 100%;
-        justify-content: space-between;
+        display: flex; /* Garante que os itens fiquem lado a lado */
+        justify-content: center; /* Centraliza no container */
+        align-items: center;
+        flex-wrap: wrap; /* Permitir quebra se a tela for muito estreita */
         font-size: 0.85rem;
+        padding: 5px 0; /* Um pouco de padding */
+        background-color: #444; /* Fundo para destacar */
+        border-radius: 5px;
     }
     .user-info-section span {
         margin-right: 5px;
+        white-space: normal; /* Permitir que o texto quebre linha */
+        text-align: center;
     }
     .user-info-section .btn-sm {
         padding: 6px 10px;
         font-size: 0.8rem;
+        margin-left: 5px; /* Espaço entre o nome e o botão */
     }
 
     .form-container, .table-container {
@@ -365,6 +384,10 @@ main {
         padding: 10px 10px;
         font-size: 0.9rem;
     }
+    .btn-sm {
+        padding: 4px 8px; /* Ainda menor para mobile */
+        font-size: 0.8rem;
+    }
 
     /* Layout de grid em formulários (ex: ProdutoFormPage) */
     .form-grid-2-col {
@@ -386,37 +409,35 @@ main {
 
     /* Tabelas Responsivas: Transformar em blocos empilhados */
     .styled-table {
-        display: block; /* Para permitir que o overflow-x: auto funcione */
-        width: 100%; /* Ocupa largura total */
-        overflow-x: auto; /* Adiciona scroll horizontal */
-        border-collapse: collapse; /* Mantenha o collapse */
+        display: block; 
+        width: 100%; 
+        overflow-x: auto; 
+        border-collapse: collapse; 
     }
-    /* Estilos para células em mobile: esconder thead e exibir labels */
     .styled-table thead, .styled-table tbody tr {
-        position: absolute; /* Esconde o cabeçalho */
+        position: absolute;
         top: -9999px;
         left: -9999px;
     }
     .styled-table tr {
         border: 1px solid #ccc;
-        display: block; /* Cada linha vira um bloco */
-        margin-bottom: 10px; /* Espaçamento entre os "cartões" de linha */
+        display: block; 
+        margin-bottom: 10px; 
         padding: 10px;
     }
     .styled-table td {
-        border: none; /* Remove bordas de célula */
+        border: none; 
         position: relative;
-        padding-left: 50%; /* Espaço para a label "virtual" */
-        text-align: right; /* Alinha o valor à direita */
-        display: block; /* Faz a célula ocupar a largura total */
+        padding-left: 50%; 
+        text-align: right; 
+        display: block; 
         font-size: 0.9rem;
-        word-wrap: break-word; /* Quebra palavras longas */
+        word-wrap: break-word; 
     }
     .styled-table td:last-child {
-        border-bottom: none; /* Última célula não tem borda inferior */
+        border-bottom: none; 
     }
     .styled-table td:before {
-        /* Adiciona o cabeçalho como uma label antes do conteúdo da célula */
         position: absolute;
         top: 6px;
         left: 6px;
@@ -426,11 +447,13 @@ main {
         text-align: left;
         font-weight: bold;
         color: #555;
-        content: attr(data-label); /* Usa o atributo data-label */
+        content: attr(data-label); 
     }
 
     .table-actions {
         justify-content: flex-end; /* Alinhar botões à direita no mobile */
+        flex-wrap: wrap; /* Permitir quebra de linha para botões */
+        gap: 5px; /* Espaço menor entre botões */
     }
 
     /* Ajustes específicos para a seção de filtros nas páginas de lista */
@@ -441,33 +464,4 @@ main {
         grid-template-columns: 1fr !important;
         gap: 10px !important;
     }
-}
-
-/* Adicione em index.css, fora das media queries */
-.loading-spinner-container {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    padding: 40px;
-    min-height: 300px; /* Garante que o spinner tenha espaço */
-}
-
-.loading-spinner {
-    border: 5px solid #f3f3f3; /* Cinza claro */
-    border-top: 5px solid #3498db; /* Azul */
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin: 20px auto; /* Centraliza o spinner */
-}
-
-.loading-spinner-message {
-    margin-top: 15px;
-    color: #555;
-    font-weight: bold;
-}
-
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
 }

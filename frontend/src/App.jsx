@@ -29,27 +29,8 @@ import GlobalAlert from './components/GlobalAlert.jsx';
 const GlobalAlertContext = createContext(null);
 export const useGlobalAlert = () => useContext(GlobalAlertContext);
 
-// Componente de Spinner simples (movido para components/LoadingSpinner.jsx)
-// A versão globalmente importada no App.jsx pode ser removida se você usa o componente separado.
-// Mantido aqui APENAS se você não tem LoadingSpinner.jsx como um arquivo separado e apenas usa a definição interna.
-// Caso contrário, use `import LoadingSpinner from './components/LoadingSpinner.jsx';` e remova a definição abaixo.
-// Já que você me forneceu LoadingSpinner.jsx, vou remover esta definição interna.
-/*
-const LoadingSpinner = ({ message }) => (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh', flexDirection: 'column' }}>
-        <div className="loading-spinner-animation" style={{border: '4px solid #f3f3f3', borderTop: '4px solid #3498db', borderRadius: '50%', width: '40px', height: '40px', animation: 'spin 1s linear infinite'}}></div>
-        <p style={{marginTop: '10px'}}>{message || 'Carregando...'}</p>
-        <style>
-            {`
-                @keyframes spin {
-                    0% { transform: rotate(0deg); }
-                    100% { transform: rotate(360deg); }
-                }
-            `}
-        </style>
-    </div>
-);
-*/
+// Componente de Spinner
+import LoadingSpinner from './components/LoadingSpinner.jsx';
 
 
 // Componentes de Rota Protegida
@@ -119,8 +100,8 @@ function App() {
                             
                             {/* <<<< NOVAS ROTAS PARA PRODUTOS >>>> */}
                             <Route path="/produtos" element={<PrivateRoute><ProdutosPage /></PrivateRoute>} />
-                            <Route path="/produtos/novo" element={<AdminRoute><ProdutoFormPage /></AdminRoute>} /> {/* Apenas admin cria */}
-                            <Route path="/produtos/editar/:id" element={<AdminRoute><ProdutoFormPage /></AdminRoute>} /> {/* Apenas admin edita */}
+                            <Route path="/produtos/novo" element={<AdminRoute><ProdutoFormPage /></AdminRoute>} /> 
+                            <Route path="/produtos/editar/:id" element={<AdminRoute><ProdutoFormPage /></AdminRoute>} /> 
                             
                             <Route path="/reports/receipts" element={<PrivateRoute><ReceiptsReportPage /></PrivateRoute>} />
                             <Route path="/reports/pending-debts-by-client/:client_id?" element={<PrivateRoute><PendingDebtsReportPage /></PrivateRoute>} />
@@ -138,7 +119,6 @@ function App() {
     );
 }
 
-
 function Header() {
     const { user, logout } = useAuth();
     const location = useLocation();
@@ -150,8 +130,8 @@ function Header() {
                (path.includes(':') && location.pathname.startsWith(path.substring(0, path.indexOf(':'))));
     };
 
-    const activeLinkClass = "active-link"; // Definir a classe ativa
-    const inactiveLinkClass = ""; // <-- ADICIONE ESTA LINHA para que não seja undefined
+    const activeLinkClass = "active-link"; 
+    const inactiveLinkClass = ""; // Definido
 
     return (
         <header>
@@ -161,8 +141,8 @@ function Header() {
                 </Link>
             </h1>
             {user && (
-                <nav className="main-nav">
-                    <ul>
+                <nav className="main-nav"> 
+                    <ul> 
                         <li className="nav-item"><Link to="/dashboard" className={isLinkActive('/dashboard') ? activeLinkClass : inactiveLinkClass}>Dashboard</Link></li>
                         <li className="nav-item"><Link to="/nova-venda" className={isLinkActive('/nova-venda') ? activeLinkClass : inactiveLinkClass}>Nova Venda</Link></li>
                         <li className="nav-item"><Link to="/clients" className={isLinkActive('/clients') ? activeLinkClass : inactiveLinkClass}>Clientes</Link></li>
@@ -176,12 +156,12 @@ function Header() {
                         {user.perfil === 'admin' && ( 
                             <>
                                 <li className="nav-item"><Link to="/register-admin" className={isLinkActive('/register-admin') ? activeLinkClass : inactiveLinkClass}>Reg. Admin</Link></li>
-                                <li className="nav-item"><Link to="/register-atendente" className={isLinkActive('/register-atendente') ? activeLinkClass : inactiveLinkClass}>Reg. Atendente</Link></li> {/* Correção aqui também */}
+                                <li className="nav-item"><Link to="/register-atendente" className={isLinkActive('/register-atendente') ? activeLinkClass : inactiveLinkClass}>Reg. Atendente</Link></li>
                             </>
                         )}
                         <li className="nav-item"><Link to="/profile" className={isLinkActive('/profile') ? activeLinkClass : inactiveLinkClass}>Meu Perfil</Link></li>
                     </ul>
-                    <div className="user-info-section">
+                    <div className="user-info-section"> 
                          <span>Olá, {user.nome}! ({user.perfil})</span>
                         <button onClick={logout} className="btn btn-danger btn-sm">Sair</button>
                     </div>

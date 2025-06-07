@@ -1,18 +1,18 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { clients } from '../api';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from './AuthProvider.jsx';
-import { useGlobalAlert } from '../App.jsx'; // Importar useGlobalAlert
-import LoadingSpinner from './LoadingSpinner.jsx'; // Importar LoadingSpinner
-import ConfirmationModal from './ConfirmationModal.jsx'; // Importar ConfirmationModal
+import { useAuth } from '../components/AuthProvider.jsx'; // Corrigido o caminho de importação para components/AuthProvider.jsx
+import { useGlobalAlert } from '../App.jsx';
+import LoadingSpinner from '../components/LoadingSpinner.jsx'; // Importar LoadingSpinner
+import ConfirmationModal from '../components/ConfirmationModal.jsx'; // Importar ConfirmationModal
 
-function ClientList() { // Sugestão: Se este for o arquivo antigo, pode renomeá-lo ou usar apenas ClientsPage.jsx
+function ClientList() {
     const [clientList, setClientList] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const navigate = useNavigate();
     const { user } = useAuth();
-    const { setGlobalAlert } = useGlobalAlert(); // Usar o contexto de alerta global
+    const { setGlobalAlert } = useGlobalAlert();
 
     // Estados para o modal de confirmação de exclusão de cliente
     const [showDeleteClientModal, setShowDeleteClientModal] = useState(false);
@@ -32,17 +32,17 @@ function ClientList() { // Sugestão: Se este for o arquivo antigo, pode renome�
     }, [setGlobalAlert]);
 
     useEffect(() => {
-        if (user) { // Garante que o usuário está logado para buscar
-            fetchClients(searchQuery); 
+        if (user) {
+            fetchClients(searchQuery);
         } else {
             setLoading(false);
-            setGlobalAlert({ message: 'Faça login para ver os clientes.', type: 'error' }); // Mensagem de alerta global
+            setGlobalAlert({ message: 'Faça login para ver os clientes.', type: 'error' });
         }
     }, [user, fetchClients, searchQuery]);
 
 
     const handleSearch = () => {
-        fetchClients(searchQuery); 
+        fetchClients(searchQuery);
     };
 
     const handleClearSearch = () => {
@@ -65,7 +65,7 @@ function ClientList() { // Sugestão: Se este for o arquivo antigo, pode renome�
         try {
             await clients.delete(clientToDeleteId);
             setGlobalAlert({ message: 'Cliente excluído com sucesso!', type: 'success' });
-            fetchClients(searchQuery); 
+            fetchClients(searchQuery);
         } catch (err) {
             const errorMessage = `Falha ao excluir cliente: ${err.response?.data?.detail || err.message}`;
             setGlobalAlert({ message: errorMessage, type: 'error' });
@@ -85,7 +85,7 @@ function ClientList() { // Sugestão: Se este for o arquivo antigo, pode renome�
             <div className="table-container">
                 <h2 className="text-center">Lista de Clientes</h2>
                 
-                <div style={{ marginBottom: '20px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}> {/* Adicionado flexWrap */}
+                <div className="form-group" style={{ display: 'flex', gap: '10px', marginBottom: '20px', alignItems: 'center', flexWrap: 'wrap' }}> {/* Adicionado flexWrap */}
                     <input
                         type="text"
                         placeholder="Buscar por nome ou CPF/CNPJ..."
@@ -97,14 +97,14 @@ function ClientList() { // Sugestão: Se este for o arquivo antigo, pode renome�
                     <button
                         onClick={handleSearch}
                         className="btn btn-primary"
-                        style={{ width: 'auto' }} /* Reduzir largura do botão */
+                        style={{ width: 'auto' }}
                     >
                         Buscar
                     </button>
                     <button
                         onClick={handleClearSearch}
                         className="btn btn-secondary"
-                        style={{ width: 'auto' }} /* Reduzir largura do botão */
+                        style={{ width: 'auto' }}
                     >
                         Limpar
                     </button>
@@ -131,10 +131,10 @@ function ClientList() { // Sugestão: Se este for o arquivo antigo, pode renome�
                         <tbody>
                             {clientList.map((client) => (
                                 <tr key={client.id_cliente}>
-                                    <td data-label="Nome">{client.nome}</td>
-                                    <td data-label="CPF/CNPJ">{client.cpf_cnpj}</td>
-                                    <td data-label="Telefone">{client.telefone || 'N/A'}</td>
-                                    <td data-label="Ações">
+                                    <td data-label="Nome">{client.nome}</td> {/* Adicionado data-label */}
+                                    <td data-label="CPF/CNPJ">{client.cpf_cnpj}</td> {/* Adicionado data-label */}
+                                    <td data-label="Telefone">{client.telefone || 'N/A'}</td> {/* Adicionado data-label */}
+                                    <td data-label="Ações"> {/* Adicionado data-label */}
                                         <div className="table-actions">
                                             <button onClick={() => navigate(`/clients/edit/${client.id_cliente}`)} className="btn btn-warning btn-sm">Editar</button>
                                             {user && user.perfil === 'admin' && (
