@@ -22,7 +22,7 @@ import ProdutosPage from './pages/ProdutosPage.jsx';
 import ProdutoFormPage from './pages/ProdutoFormPage.jsx';
 
 import GlobalAlert from './components/GlobalAlert.jsx';
-import LoadingSpinner from './components/LoadingSpinner.jsx'; // Importar LoadingSpinner
+import LoadingSpinner from './components/LoadingSpinner.jsx';
 
 const GlobalAlertContext = createContext(null);
 export const useGlobalAlert = () => useContext(GlobalAlertContext);
@@ -110,9 +110,17 @@ function App() {
 function Header() {
     const { user, logout } = useAuth();
     const location = useLocation();
+    const [isMenuOpen, setIsMenuOpen] = useState(false); // Estado para controlar o menu móvel
+
+    const toggleMenu = () => {
+        setIsMenuOpen(!isMenuOpen);
+    };
+
+    const closeMenu = () => { // Função para fechar o menu ao clicar em um link
+        setIsMenuOpen(false);
+    };
 
     const isLinkActive = (path) => {
-        // Ajustado para ser mais robusto com rotas dinâmicas
         if (path === '/') return location.pathname === path;
         return location.pathname === path || 
                location.pathname.startsWith(path + '/') || 
@@ -123,35 +131,43 @@ function Header() {
         <header>
             <h1>
                 <Link to={user ? "/dashboard" : "/"} className="app-title-link">
-                    Gestor de Carnês
+                    Bios Store
                 </Link>
             </h1>
             {user && (
-                <nav className="main-nav"> {/* Nova classe para a navegação principal */}
-                    <ul className="nav-list"> {/* Nova classe para a lista de navegação */}
-                        <li><Link to="/dashboard" className={isLinkActive('/dashboard') ? "nav-link active" : "nav-link"}>Dashboard</Link></li>
-                        <li><Link to="/nova-venda" className={isLinkActive('/nova-venda') ? "nav-link active" : "nav-link"}>Nova Venda</Link></li>
-                        <li><Link to="/clients" className={isLinkActive('/clients') ? "nav-link active" : "nav-link"}>Clientes</Link></li>
-                        <li><Link to="/carnes" className={isLinkActive('/carnes') ? "nav-link active" : "nav-link"}>Carnês</Link></li>
-                        
-                        <li><Link to="/produtos" className={isLinkActive('/produtos') ? "nav-link active" : "nav-link"}>Produtos</Link></li>
-                        
-                        <li><Link to="/reports/receipts" className={isLinkActive('/reports/receipts') ? "nav-link active" : "nav-link"}>Rel. Receb.</Link></li>
-                        <li><Link to="/reports/pending-debts-by-client" className={isLinkActive('/reports/pending-debts-by-client') ? "nav-link active" : "nav-link"}>Rel. Dívidas</Link></li>
-                        
-                        {user.perfil === 'admin' && ( 
-                            <>
-                                <li><Link to="/register-admin" className={isLinkActive('/register-admin') ? "nav-link active" : "nav-link"}>Reg. Admin</Link></li>
-                                <li><Link to="/register-atendente" className={isLinkActive('/register-atendente') ? "nav-link active" : "nav-link"}>Reg. Atendente</Link></li>
-                            </>
-                        )}
-                        <li><Link to="/profile" className={isLinkActive('/profile') ? "nav-link active" : "nav-link"}>Meu Perfil</Link></li>
-                    </ul>
-                    <div className="user-info"> {/* Nova classe para informações do usuário */}
-                         <span>Olá, {user.nome}! ({user.perfil})</span>
-                        <button onClick={logout} className="btn btn-danger btn-sm logout-btn">Sair</button>
-                    </div>
-                </nav>
+                <>
+                    <button className="menu-toggle" onClick={toggleMenu} aria-label="Abrir Menu">
+                        ☰ {/* Ícone de hamburger */}
+                    </button>
+                    <nav className={`main-nav ${isMenuOpen ? 'menu-open' : ''}`}>
+                        <button className="close-menu-button" onClick={closeMenu} aria-label="Fechar Menu">
+                            &times; {/* Botão de fechar para o menu móvel */}
+                        </button>
+                        <ul className="nav-list">
+                            <li><Link to="/dashboard" className={isLinkActive('/dashboard') ? "nav-link active" : "nav-link"} onClick={closeMenu}>Dashboard</Link></li>
+                            <li><Link to="/nova-venda" className={isLinkActive('/nova-venda') ? "nav-link active" : "nav-link"} onClick={closeMenu}>Nova Venda</Link></li>
+                            <li><Link to="/clients" className={isLinkActive('/clients') ? "nav-link active" : "nav-link"} onClick={closeMenu}>Clientes</Link></li>
+                            <li><Link to="/carnes" className={isLinkActive('/carnes') ? "nav-link active" : "nav-link"} onClick={closeMenu}>Carnês</Link></li>
+                            
+                            <li><Link to="/produtos" className={isLinkActive('/produtos') ? "nav-link active" : "nav-link"} onClick={closeMenu}>Produtos</Link></li>
+                            
+                            <li><Link to="/reports/receipts" className={isLinkActive('/reports/receipts') ? "nav-link active" : "nav-link"} onClick={closeMenu}>Rel. Receb.</Link></li>
+                            <li><Link to="/reports/pending-debts-by-client" className={isLinkActive('/reports/pending-debts-by-client') ? "nav-link active" : "nav-link"} onClick={closeMenu}>Rel. Dívidas</Link></li>
+                            
+                            {user.perfil === 'admin' && ( 
+                                <>
+                                    <li><Link to="/register-admin" className={isLinkActive('/register-admin') ? "nav-link active" : "nav-link"} onClick={closeMenu}>Reg. Admin</Link></li>
+                                    <li><Link to="/register-atendente" className={isLinkActive('/register-atendente') ? "nav-link active" : "nav-link"} onClick={closeMenu}>Reg. Atendente</Link></li>
+                                </>
+                            )}
+                            <li><Link to="/profile" className={isLinkActive('/profile') ? "nav-link active" : "nav-link"} onClick={closeMenu}>Meu Perfil</Link></li>
+                        </ul>
+                        <div className="user-info">
+                            <span>Olá, {user.nome}! ({user.perfil})</span>
+                            <button onClick={() => { logout(); closeMenu(); }} className="btn btn-danger btn-sm logout-btn">Sair</button>
+                        </div>
+                    </nav>
+                </>
             )}
         </header>
     );
