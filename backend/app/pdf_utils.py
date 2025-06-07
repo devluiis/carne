@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 from datetime import datetime, date
-from app import models
+from app import models # Para type hinting
 from sqlalchemy.orm import Session # Mantido para type hinting
 import base64 # Importar para conversão para base64
 from weasyprint import HTML, CSS # Importar WeasyPrint
@@ -77,7 +77,7 @@ def generate_carne_pdf_bytes(db_carne: models.Carne) -> bytes:
             .signature-name, .signature-cpf, .signature-date {{ text-align: center; font-size: 8pt; margin: 0; }}
             .signature-date {{ text-align: left; margin-top: 10px; }}
 
-            /* Layout para Comprovantes de Parcela (2 por página, similar ao boleto) */
+            /* Layout para Comprovantes de Parcela (Múltiplos por página) */
             .installments-page-grid {{
                 display: flex;
                 flex-wrap: wrap;
@@ -97,6 +97,8 @@ def generate_carne_pdf_bytes(db_carne: models.Carne) -> bytes:
                 box-sizing: border-box; /* Incluir padding/border na largura */
                 border: 1px solid #000;
                 padding: 5px; /* Reduzir padding interno */
+                margin-right: 1%; /* Espaço entre os comprovantes na mesma linha */
+                margin-left: 0.5%; /* Pequena margem para centralizar */
                 margin-bottom: 10px; /* Espaço entre linhas de comprovantes */
                 page-break-inside: avoid; /* Evita que o bloco seja quebrado no meio da página */
                 position: relative;
@@ -133,6 +135,7 @@ def generate_carne_pdf_bytes(db_carne: models.Carne) -> bytes:
                 text-align: center;
                 margin-top: 5px;
             }}
+            .qr-code-img-container {{ text-align: center; }} /* Para centralizar a imagem */
             .qr-code-img {{ width: 70px; height: 70px; border: 1px solid #ccc; padding: 2px; }}
             .qr-code-label {{ font-size: 7pt; margin-top: 2px; }}
 
@@ -187,7 +190,7 @@ def generate_carne_pdf_bytes(db_carne: models.Carne) -> bytes:
                 <p>Declaro que recebi o(s) produto(s) e/ou serviço(s) referente(s) a este carnê e concordo com os termos de pagamento aqui estabelecidos. O não pagamento de qualquer parcela na data de vencimento implicará na cobrança de multa e juros conforme legislação vigente e/ou contrato.</p>
                 <div class="signature-line"><span></span></div>
                 <p class="signature-name">{db_carne.cliente.nome}</p>
-                <p class="signature-cpf">CPF/CNPJ: {db_carne.cliente.cpf_cnpj}</p>
+                <p class="signature-cpf">CPF/CPN: {db_carne.cliente.cpf_cnpj}</p>
                 <p class="signature-date">Data: ___/___/_____</p>
             </div>
         </div>
@@ -204,8 +207,8 @@ def generate_carne_pdf_bytes(db_carne: models.Carne) -> bytes:
             html_content += f"""
                 <div class="installment-receipt-block">
                     <div class="receipt-header">
-                        <img class="logo" src="{logo_base64}">
-                        <h4>COMPROVANTE - PARCELA {parcela.numero_parcela}</h4>
+                        {logo_html}
+                        <h4 style="font-size: 10pt; text-align: right; flex-grow: 1;">COMPROVANTE - PARCELA {parcela.numero_parcela}</h4>
                     </div>
                     
                     <div class="receipt-section">
@@ -213,10 +216,13 @@ def generate_carne_pdf_bytes(db_carne: models.Carne) -> bytes:
                             <h5>Recibo do Pagador</h5>
                             <p><strong>{db_carne.cliente.nome}</strong></p>
                             <p>CPF/CNPJ: {db_carne.cliente.cpf_cnpj}</p>
+                            <p>Carnê ID: {parcela.id_carne} - {db_carne.descricao or 'N/A'}</p>
                         </div>
                         <div class="receipt-col right">
                             <h5>Vencimento</h5>
                             <p><strong>{parcela.data_vencimento.strftime('%d/%m/%Y')}</strong></p>
+                            <h5>Valor</h5>
+                            <p><strong>R$ {f"{parcela.valor_devido:.2f}".replace('.', ',')}</strong></p>
                         </div>
                         <div style="clear:both;"></div>
                     </div>
@@ -226,28 +232,21 @@ def generate_carne_pdf_bytes(db_carne: models.Carne) -> bytes:
                             <h5>Beneficiário</h5>
                             <p><strong>{STORE_NAME}</strong></p>
                             <p>CNPJ: {STORE_CNPJ}</p>
+                            <p>Tel: {STORE_PHONE}</p>
                         </div>
                         <div class="receipt-col right">
-                            <h5>Valor</h5>
-                            <p><strong>R$ {f"{parcela.valor_devido:.2f}".replace('.', ',')}</strong></p>
+                            {qr_code_html}
+                            <p class="qr-code-label">Pague sua cobrança usando o Pix</p>
                         </div>
                         <div style="clear:both;"></div>
                     </div>
-
-                    <div class="qr-section">
-                        {qr_code_html}
-                        <p class="qr-code-label">Pague sua cobrança usando o Pix</p>
-                    </div>
                     
-                    <p style="font-size: 7pt; text-align: center; margin-top: 5px;">
+                    <div style="font-size: 7pt; text-align: center; margin-top: 5px;">
                         CNPJ PIX: {PIX_CNPJ_CONSTANT}
-                    </p>
-                    <p style="font-size: 7pt; text-align: center; margin-top: 5px;">
-                        Verifique dados antes de pagar: {db_carne.descricao or 'N/A'} - Parcela {parcela.numero_parcela}
-                    </p>
-                    <p style="font-size: 7pt; text-align: left; margin-top: 10px;">
+                    </div>
+                    <div style="font-size: 7pt; text-align: left; margin-top: 10px;">
                         Data do Pagamento: ___/___/_____
-                    </p>
+                    </div>
                 </div>
             """
         html_content += """</div>""" # Fechar o último installments-page-grid
