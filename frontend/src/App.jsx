@@ -142,12 +142,17 @@ function Header() {
                             )}
                             <li><Link to="/profile" className={isLinkActive('/profile') ? "nav-link active" : "nav-link"} onClick={closeMenu}>Meu Perfil</Link></li>
                         </ul>
+
+                        {/* Info do usuário (MOBILE) */}
                         <div className="user-info mobile-only-user-info-section">
                             <span>Olá, {user.nome}! ({user.perfil})</span>
-                            <button onClick={() => { logout(); closeMenu(); }} className="btn btn-danger btn-sm logout-btn-mobile">Sair</button>
+                            <button onClick={() => { logout(); closeMenu(); }} className="btn btn-danger btn-sm logout-btn-mobile">
+                                Sair
+                            </button>
                         </div>
                     </nav>
 
+                    {/* Info do usuário (DESKTOP) */}
                     <div className="user-info">
                         <span>Olá, {user.nome}! ({user.perfil})</span>
                         <button onClick={logout} className="btn btn-danger btn-sm logout-btn">Sair</button>
