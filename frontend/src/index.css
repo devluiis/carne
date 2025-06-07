@@ -39,8 +39,9 @@ header h1 {
     text-decoration: none;
 }
 
+/* Botão de menu Hamburger (mobile) - Oculto por padrão no desktop */
 .menu-toggle {
-    display: none; /* Oculto por padrão em desktop */
+    display: none; 
     background: none;
     border: none;
     color: white;
@@ -49,7 +50,8 @@ header h1 {
     padding: 5px 10px;
 }
 
-/* Estilo para a barra de navegação no desktop */
+/* --- ESTILOS PARA DESKTOP (PADRÃO) --- */
+/* A barra de navegação principal e a info do usuário devem estar visíveis no desktop */
 .main-nav {
     display: flex;
     flex-wrap: wrap;
@@ -59,8 +61,7 @@ header h1 {
     justify-content: flex-end;
 }
 
-/* Oculta a seção de informações do usuário e o botão sair no desktop, 
-   eles serão exibidos de forma diferente no mobile */
+/* A seção de info do usuário padrão (desktop) */
 .user-info { 
     display: flex;
     align-items: center;
@@ -68,11 +69,11 @@ header h1 {
     white-space: nowrap;
     color: white;
 }
-/* Oculta a versão mobile da info do usuário no desktop */
+
+/* A seção de info do usuário específica para mobile deve estar OCULTA no desktop */
 .mobile-only-user-info-section { 
     display: none;
 }
-
 
 .nav-list {
     list-style: none;
@@ -104,7 +105,6 @@ header h1 {
     font-weight: bold;
 }
 
-/* Botão sair no desktop */
 .logout-btn {
     padding: 8px 12px;
     font-size: 0.875rem;
@@ -657,58 +657,49 @@ main {
 
 /* --- Responsividade (Media Queries) --- */
 
-@media (max-width: 900px) { /* Ajuste o breakpoint conforme necessário */
+/* Breakpoint para dispositivos menores (tablets e celulares) */
+@media (max-width: 900px) { /* Ajuste este breakpoint conforme necessário */
     header {
         flex-wrap: nowrap;
         justify-content: space-between;
     }
     
-    /* Oculta os itens do menu de desktop */
-    .main-nav .nav-list,
-    .user-info { /* Oculta a info do usuário normal no desktop */
-        display: none;
-    }
-
-    .menu-toggle {
-        display: block; /* Mostra o botão hamburger */
-    }
-
-    /* Overlay que aparece quando o menu está aberto */
-    .menu-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        background-color: rgba(0, 0, 0, 0.5);
-        z-index: 940; /* Entre o header e o menu principal */
-    }
-
+    /* Oculta o menu de navegação completo e a info do usuário padrão do desktop */
     .main-nav {
+        display: none; /* Oculta o menu por padrão */
         position: fixed;
         top: 0;
-        right: -70vw; /* Largura do menu baseada na viewport, ex: 70% da tela */
+        right: -70vw; /* Menu fora da tela */
         width: 70vw; /* Largura do menu quando aberto */
-        max-width: 250px; /* Largura máxima para não ficar muito grande em tablets */
-        height: 100%;
+        max-width: 250px; /* Largura máxima para não ficar muito grande */
+        height: 100%; /* Altura total da viewport */
         background-color: #444;
         box-shadow: -2px 0 5px rgba(0,0,0,0.5);
         transition: right 0.3s ease-in-out;
         padding-top: 60px; /* Espaço para o botão de fechar */
         z-index: 950;
-        display: flex;
-        flex-direction: column;
-        justify-content: flex-start; /* Alinha ao topo */
-        align-items: stretch;
+        flex-direction: column; /* Organiza os itens em coluna */
     }
 
+    /* Mostra o menu quando 'menu-open' está ativo */
     .main-nav.menu-open {
-        right: 0;
-        display: flex; /* Garante que o menu seja flex quando aberto */
+        display: flex; /* Altera para flexbox para exibir o menu */
+        right: 0; /* Desliza para dentro da tela */
     }
 
+    /* Mostra o botão hamburger */
+    .menu-toggle {
+        display: block; 
+    }
+
+    /* Oculta a seção de info do usuário normal do desktop */
+    .user-info { 
+        display: none; 
+    }
+
+    /* Exibe e estiliza a lista de links no menu mobile */
     .main-nav .nav-list {
-        display: flex; /* Volta a exibir a lista no menu móvel */
+        display: flex; /* Volta a exibir a lista */
         flex-direction: column;
         width: 100%;
         gap: 10px;
@@ -724,13 +715,10 @@ main {
         padding: 12px 15px;
         border-radius: 5px;
     }
-    .main-nav .nav-link.active {
-        background-color: #007bff;
-    }
 
-    /* Exibe e estiliza a informação do usuário e botão de sair para mobile */
+    /* Exibe e estiliza a seção de informações do usuário (mobile) */
     .mobile-only-user-info-section { 
-        display: flex !important; /* Força a exibição */
+        display: flex !important; /* Garante que seja exibido */
         flex-direction: column;
         align-items: flex-start;
         width: 100%;
@@ -746,8 +734,11 @@ main {
     /* Estilo específico para o botão de sair no menu mobile */
     .logout-btn-mobile {
         width: 100%;
-        padding: 10px 15px; /* Padding maior para o botão */
-        font-size: 1rem; /* Tamanho da fonte normal */
+        padding: 10px 15px;
+        font-size: 1rem;
+        /* Garante que o botão seja exibido como um bloco flexível */
+        display: block; 
+        box-sizing: border-box; /* Para que padding não adicione largura extra */
     }
 
     /* Botão de fechar o menu */
@@ -763,6 +754,17 @@ main {
         cursor: pointer;
         padding: 5px 10px;
         z-index: 960;
+    }
+
+    /* Overlay para fechar o menu ao clicar fora */
+    .menu-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 940; /* Entre o header e o menu principal */
     }
 
     /* Outras responsividades gerais para mobile */
