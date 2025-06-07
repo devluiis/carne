@@ -78,7 +78,7 @@ def generate_carne_pdf_bytes(db_carne: models.Carne) -> bytes:
             .signature-name, .signature-cpf, .signature-date {{ text-align: center; font-size: 8pt; margin: 0; }}
             .signature-date {{ text-align: left; margin-top: 10px; }}
 
-            /* Layout para Comprovantes de Parcela (2 por página, similar ao boleto) */
+            /* Layout para Comprovantes de Parcela (Múltiplos por página) */
             .installments-page-grid {{
                 display: flex;
                 flex-wrap: wrap;
@@ -203,7 +203,7 @@ def generate_carne_pdf_bytes(db_carne: models.Carne) -> bytes:
                 <div class="installment-receipt-block">
                     <div class="receipt-header">
                         <img class="logo" src="{logo_base64}">
-                        <h4 style="font-size: 10pt; text-align: right; flex-grow: 1;">COMPROVANTE - PARCELA {parcela.numero_parcela}</h4>
+                        <h4 style="font-size: 10pt; text-align: right; flex-grow: 1; padding-left: 5px;">COMPROVANTE - PARCELA {parcela.numero_parcela}</h4>
                     </div>
                     
                     <div class="receipt-content">
@@ -239,14 +239,17 @@ def generate_carne_pdf_bytes(db_carne: models.Carne) -> bytes:
                                 <div class="qr-code-area">
                                     {qr_code_html}
                                     <p class="qr-code-label">Pague sua cobrança usando o Pix</p>
-                                    <p class="qr-code-label">CNPJ PIX: {PIX_CNPJ_CONSTANT}</p>
                                 </div>
                             </div>
                         </div>
                     </div>
                     
-                    <p class="bottom-info">Verifique os dados antes de pagar: {db_carne.descricao or 'N/A'} - Parcela {parcela.numero_parcela}</p>
-                    <p class="date-signature-line">Data do Pagamento: ___/___/_____</p>
+                    <div style="font-size: 7pt; text-align: center; margin-top: 5px;">
+                        CNPJ PIX: {PIX_CNPJ_CONSTANT}
+                    </div>
+                    <div style="font-size: 7pt; text-align: left; margin-top: 10px;">
+                        Data do Pagamento: ___/___/_____
+                    </div>
                 </div>
             """
         html_content += """</div>""" # Fechar o último installments-page-grid
