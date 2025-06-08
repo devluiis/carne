@@ -115,7 +115,7 @@ function Header() {
         <header>
             <h1>
                 <Link to={user ? "/dashboard" : "/"} className="app-title-link">
-                    Gestor de Carnês
+                    Bios Store
                 </Link>
             </h1>
 
