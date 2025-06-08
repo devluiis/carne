@@ -112,7 +112,7 @@ function CarneDetailsPage() {
         setPdfLoading(true);
         setGlobalAlert({message: "Gerando PDF do carnê...", type: "info"});
 
-        const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+        const apiUrl = import.meta.env.VITE_API_BASE_URL || 'https://carne.onrender.com';
         const pdfUrl = `${apiUrl}/carnes/${carne.id_carne}/pdf`;
 
         try {
