@@ -186,7 +186,6 @@ class CarneBase(BaseModel):
     descricao: Optional[str] = None
     valor_total_original: float = Field(..., gt=0)
     numero_parcelas: int = Field(..., gt=0)
-    # valor_parcela_original: float # REMOVIDO DA ENTRADA, AGORA É CALCULADO INTERNAMENTE
     valor_parcela_sugerido: Optional[float] = Field(None, gt=0, description="Valor sugerido para cada parcela pelo usuário.") # NOVO CAMPO
     data_primeiro_vencimento: date
     frequencia_pagamento: str
@@ -194,17 +193,15 @@ class CarneBase(BaseModel):
     observacoes: Optional[str] = None
     valor_entrada: float = Field(0.00, ge=0)
     forma_pagamento_entrada: Optional[str] = None
+    parcela_fixa: Optional[bool] = True # NOVO CAMPO: Indica se as parcelas têm valor fixo ou flexível
 
 class CarneCreate(CarneBase):
-    # Ao criar, o valor_parcela_sugerido é o que esperamos
-    # valor_parcela_original será definido no CRUD
     pass
 
 class CarneResponse(CarneBase):
     id_carne: int
     data_criacao: datetime
-    # valor_parcela_original agora é um campo de saída (calculado no backend)
-    valor_parcela_original: float # Adicionado de volta na resposta, pois o backend irá calculá-lo
+    valor_parcela_original: float # Este é o valor da parcela calculado ou o valor total para carnê flexível
     cliente: ClientResponseMin
     parcelas: List[ParcelaResponse] = []
 
@@ -251,21 +248,10 @@ class ProdutoBase(BaseModel):
     unidade_medida: Optional[str] = Field("unidade", max_length=20, description="Unidade de medida (un, pç, kg, etc.)")
 
 class ProdutoCreate(ProdutoBase):
-    # Pode adicionar campos específicos para criação se necessário,
-    # ou validações mais estritas do que em ProdutoBase.
-    # Por exemplo, tornar nome obrigatório já está em ProdutoBase.
-    # Se preco_venda for obrigatório na criação:
-    # preco_venda: Decimal = Field(..., ge=0)
     pass
 
 class ProdutoUpdate(ProdutoBase):
-    # Na atualização, todos os campos são opcionais.
-    # Pydantic já trata isso se usarmos .model_dump(exclude_unset=True) no CRUD.
-    # Se quisermos ser explícitos:
     nome: Optional[str] = Field(None, min_length=1, max_length=255)
-    # preco_venda, preco_custo, etc., já são Optional em ProdutoBase,
-    # então não precisam ser redefinidos aqui a menos que queiramos mudar validações.
-
 
 class ProdutoResponse(ProdutoBase):
     id_produto: int

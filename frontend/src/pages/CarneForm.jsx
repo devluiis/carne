@@ -10,13 +10,14 @@ function CarneForm() {
     const [descricao, setDescricao] = useState('');
     const [valorTotalOriginal, setValorTotalOriginal] = useState('');
     const [numeroParcelas, setNumeroParcelas] = useState('');
-    const [valorParcelaSugerido, setValorParcelaSugerido] = useState(''); // NOVO ESTADO
+    const [valorParcelaSugerido, setValorParcelaSugerido] = useState('');
     const [dataPrimeiroVencimento, setDataPrimeiroVencimento] = useState('');
     const [frequenciaPagamento, setFrequenciaPagamento] = useState('mensal');
     const [statusCarne, setStatusCarne] = useState('Ativo');
     const [observacoes, setObservacoes] = useState('');
     const [valorEntrada, setValorEntrada] = useState('');
     const [formaPagamentoEntrada, setFormaPagamentoEntrada] = useState('');
+    const [parcelaFixa, setParcelaFixa] = useState(true); // NOVO ESTADO: true por padrão
 
     const [clientOptions, setClientOptions] = useState([]);
     const [loadingInitial, setLoadingInitial] = useState(true);
@@ -37,19 +38,19 @@ function CarneForm() {
             setDescricao(carne.descricao || '');
             setValorTotalOriginal(String(carne.valor_total_original));
             setNumeroParcelas(String(carne.numero_parcelas));
-            // O valorParcelaSugerido não vem do backend diretamente, mas podemos preencher com o valor_parcela_original
-            setValorParcelaSugerido(String(carne.valor_parcela_original)); // Preencher com o valor original para edição
+            setValorParcelaSugerido(String(carne.valor_parcela_original)); // Para carnês fixos, use o valor original. Para flexíveis, será o total.
             setDataPrimeiroVencimento(carne.data_primeiro_vencimento ? new Date(carne.data_primeiro_vencimento + 'T00:00:00').toISOString().split('T')[0] : '');
             setFrequenciaPagamento(carne.frequencia_pagamento);
             setStatusCarne(carne.status_carne);
             setObservacoes(carne.observacoes || '');
             setValorEntrada(String(carne.valor_entrada || 0));
             setFormaPagamentoEntrada(carne.forma_pagamento_entrada || '');
+            setParcelaFixa(carne.parcela_fixa); // Define o estado do checkbox
 
             const anyPayments = carne.parcelas?.some(p => p.pagamentos?.length > 0 || parseFloat(p.valor_pago) > 0);
             setHasPayments(anyPayments);
             if (anyPayments) {
-                setEditWarningMessage('Este carnê possui pagamentos. Apenas Descrição, Data da Venda, Status e Observações podem ser alterados. Campos financeiros serão desabilitados.');
+                setEditWarningMessage('Este carnê possui pagamentos. Apenas Descrição, Data da Venda, Status e Observações podem ser alterados. Campos financeiros e o tipo de parcelamento serão desabilitados.');
             }
         } catch (err) {
             console.error('Erro ao carregar carnê para edição:', err);
@@ -86,8 +87,8 @@ function CarneForm() {
 
         const vTotal = parseFloat(valorTotalOriginal);
         const vEntrada = parseFloat(valorEntrada) || 0;
-        const nParcelas = parseInt(numeroParcelas);
-        const vParcelaSugerido = parseFloat(valorParcelaSugerido); // NOVO VALOR
+        let nParcelas = parseInt(numeroParcelas); // Pode ser 1 para carnês flexíveis
+        const vParcelaSugerido = parseFloat(valorParcelaSugerido);
 
         if (!idCliente) {
             setGlobalAlert({ message: 'Selecione um cliente.', type: 'warning' });
@@ -109,10 +110,6 @@ function CarneForm() {
             setGlobalAlert({ message: 'Valor de entrada não pode ser maior que o valor total.', type: 'warning' });
             setSubmitLoading(false); return;
         }
-        if (isNaN(nParcelas) || nParcelas <= 0) {
-            setGlobalAlert({ message: 'Número de parcelas deve ser um inteiro positivo.', type: 'warning' });
-            setSubmitLoading(false); return;
-        }
         if (!dataPrimeiroVencimento) {
             setGlobalAlert({ message: 'Data do primeiro vencimento é obrigatória.', type: 'warning' });
             setSubmitLoading(false); return;
@@ -126,16 +123,23 @@ function CarneForm() {
             setSubmitLoading(false); return;
         }
 
-        // Validação do valor da parcela sugerido (se preenchido)
-        if (valorParcelaSugerido !== '' && (isNaN(vParcelaSugerido) || vParcelaSugerido <= 0)) {
-            setGlobalAlert({ message: 'Valor sugerido da parcela deve ser um número positivo.', type: 'warning' });
-            setSubmitLoading(false); return;
-        }
-        if (valorParcelaSugerido !== '' && vParcelaSugerido * nParcelas < (vTotal - vEntrada) && nParcelas > 1) {
-            // Se o valor sugerido por parcela multiplicado pelo número de parcelas é menor que o valor a parcelar,
-            // a última parcela será maior que a sugerida. Isso é um aviso, não um erro.
-            setGlobalAlert({ message: 'A soma das parcelas sugeridas é menor que o valor a parcelar. A última parcela será ajustada para um valor maior.', type: 'info' });
-            // Não retorna, apenas avisa.
+        // Validações específicas para parcela fixa
+        if (parcelaFixa) {
+            if (isNaN(nParcelas) || nParcelas <= 0) {
+                setGlobalAlert({ message: 'Para carnês com parcela fixa, o número de parcelas deve ser um inteiro positivo.', type: 'warning' });
+                setSubmitLoading(false); return;
+            }
+            if (valorParcelaSugerido !== '' && (isNaN(vParcelaSugerido) || vParcelaSugerido <= 0)) {
+                setGlobalAlert({ message: 'Valor sugerido da parcela deve ser um número positivo.', type: 'warning' });
+                setSubmitLoading(false); return;
+            }
+            if (valorParcelaSugerido !== '' && vParcelaSugerido * nParcelas < (vTotal - vEntrada) && nParcelas > 1) {
+                setGlobalAlert({ message: 'A soma das parcelas sugeridas é menor que o valor a parcelar. A última parcela será ajustada para um valor maior.', type: 'info' });
+            }
+        } else { // Para carnê não fixo
+            nParcelas = 1; // Força para 1 parcela no backend
+            // Limpa valorParcelaSugerido, pois não é aplicável
+            // setValorParcelaSugerido(''); // Isso não deve ser feito aqui, apenas na montagem da requisição
         }
 
 
@@ -145,13 +149,14 @@ function CarneForm() {
             descricao,
             valor_total_original: vTotal,
             numero_parcelas: nParcelas,
-            valor_parcela_sugerido: valorParcelaSugerido !== '' ? vParcelaSugerido : null, // Envia o sugerido, ou null se vazio
+            valor_parcela_sugerido: parcelaFixa && valorParcelaSugerido !== '' ? vParcelaSugerido : null, // Envia o sugerido APENAS se for parcela fixa
             data_primeiro_vencimento: dataPrimeiroVencimento,
-            frequencia_pagamento: frequenciaPagamento,
+            frequencia_pagamento: parcelaFixa ? frequenciaPagamento : "única", // Frequência padrão para não fixo
             status_carne: statusCarne,
             observacoes,
             valor_entrada: vEntrada,
-            forma_pagamento_entrada: vEntrada > 0 ? formaPagamentoEntrada : null
+            forma_pagamento_entrada: vEntrada > 0 ? formaPagamentoEntrada : null,
+            parcela_fixa: parcelaFixa // Envia o novo campo
         };
 
         try {
@@ -197,7 +202,7 @@ function CarneForm() {
                         onChange={(e) => setIdCliente(e.target.value)}
                         required
                         className="form-select"
-                        disabled={isFinancialFieldDisabled || !!clientIdFromUrl}
+                        disabled={isFinancialFieldDisabled || !!clientIdFromUrl || id}
                     >
                         <option value="">Selecione um Cliente</option>
                         {clientOptions.map(client => (<option key={client.id_cliente} value={client.id_cliente}>{client.nome} ({client.cpf_cnpj})</option>))}
@@ -276,35 +281,97 @@ function CarneForm() {
                     </div>
                 )}
 
+                {/* NOVO CAMPO: Parcela Fixa */}
                 <div className="form-group">
-                    <label htmlFor="numeroParcelas">Número de Parcelas:<span className="required-star">*</span></label>
                     <input
-                        type="number"
-                        id="numeroParcelas"
-                        value={numeroParcelas}
-                        onChange={(e) => setNumeroParcelas(e.target.value)}
-                        required
-                        className="form-input"
+                        type="checkbox"
+                        id="parcelaFixa"
+                        checked={parcelaFixa}
+                        onChange={(e) => setParcelaFixa(e.target.checked)}
                         disabled={isFinancialFieldDisabled}
-                        min="1"
+                        style={{ marginRight: '10px' }}
                     />
+                    <label htmlFor="parcelaFixa" style={{ display: 'inline' }}>Carnê com parcelas de valor fixo?</label>
+                    <small className="form-text-muted" style={{ display: 'block', marginTop: '5px' }}>
+                        Desmarque para permitir pagamentos flexíveis em uma única parcela.
+                    </small>
                 </div>
 
-                {/* NOVO CAMPO: Valor Sugerido da Parcela */}
-                <div className="form-group">
-                    <label htmlFor="valorParcelaSugerido">Valor Sugerido por Parcela (Opcional):</label>
-                    <input
-                        type="number"
-                        id="valorParcelaSugerido"
-                        step="0.01"
-                        value={valorParcelaSugerido}
-                        onChange={(e) => setValorParcelaSugerido(e.target.value)}
-                        className="form-input"
-                        min="0.01"
-                        disabled={isFinancialFieldDisabled}
-                    />
-                     <small className="form-text-muted">Se preenchido, a última parcela será ajustada para fechar o valor total.</small>
-                </div>
+                {parcelaFixa ? (
+                    <>
+                        <div className="form-group">
+                            <label htmlFor="numeroParcelas">Número de Parcelas:<span className="required-star">*</span></label>
+                            <input
+                                type="number"
+                                id="numeroParcelas"
+                                value={numeroParcelas}
+                                onChange={(e) => setNumeroParcelas(e.target.value)}
+                                required
+                                className="form-input"
+                                disabled={isFinancialFieldDisabled}
+                                min="1"
+                            />
+                        </div>
+
+                        <div className="form-group">
+                            <label htmlFor="valorParcelaSugerido">Valor Sugerido por Parcela (Opcional):</label>
+                            <input
+                                type="number"
+                                id="valorParcelaSugerido"
+                                step="0.01"
+                                value={valorParcelaSugerido}
+                                onChange={(e) => setValorParcelaSugerido(e.target.value)}
+                                className="form-input"
+                                min="0.01"
+                                disabled={isFinancialFieldDisabled}
+                            />
+                            <small className="form-text-muted">Se preenchido, a última parcela será ajustada para fechar o valor total.</small>
+                        </div>
+
+                        <div className="form-group">
+                            <label htmlFor="frequenciaPagamento">Frequência de Pagamento:<span className="required-star">*</span></label>
+                            <select
+                                id="frequenciaPagamento"
+                                value={frequenciaPagamento}
+                                onChange={(e) => setFrequenciaPagamento(e.target.value)}
+                                required
+                                className="form-select"
+                                disabled={isFinancialFieldDisabled}
+                            >
+                                <option value="mensal">Mensal</option>
+                                <option value="quinzenal">Quinzenal</option>
+                                <option value="trimestral">Trimestral</option>
+                            </select>
+                        </div>
+                    </>
+                ) : (
+                    <>
+                        {/* Se não for parcela fixa, exibe mensagem e desabilita/oculta campos irrelevantes */}
+                        <div className="form-group">
+                            <label htmlFor="numeroParcelas">Número de Parcelas:</label>
+                            <input
+                                type="number"
+                                id="numeroParcelas"
+                                value="1" // Forçado a 1
+                                disabled
+                                className="form-input"
+                            />
+                            <small className="form-text-muted">Carnês flexíveis são tratados como 1 parcela para o saldo total.</small>
+                        </div>
+
+                        <div className="form-group">
+                            <label htmlFor="frequenciaPagamento">Frequência de Pagamento:</label>
+                            <input
+                                type="text"
+                                id="frequenciaPagamento"
+                                value="Única / Variável"
+                                disabled
+                                className="form-input"
+                            />
+                            <small className="form-text-muted">Pagamentos podem ser feitos a qualquer momento para abater o saldo.</small>
+                        </div>
+                    </>
+                )}
 
                 <div className="form-group">
                     <label htmlFor="dataPrimeiroVencimento">Data do Primeiro Vencimento:<span className="required-star">*</span></label>
@@ -317,22 +384,6 @@ function CarneForm() {
                         className="form-input"
                         disabled={isFinancialFieldDisabled}
                     />
-                </div>
-
-                <div className="form-group">
-                    <label htmlFor="frequenciaPagamento">Frequência de Pagamento:<span className="required-star">*</span></label>
-                    <select
-                        id="frequenciaPagamento"
-                        value={frequenciaPagamento}
-                        onChange={(e) => setFrequenciaPagamento(e.target.value)}
-                        required
-                        className="form-select"
-                        disabled={isFinancialFieldDisabled}
-                    >
-                        <option value="mensal">Mensal</option>
-                        <option value="quinzenal">Quinzenal</option>
-                        <option value="trimestral">Trimestral</option>
-                    </select>
                 </div>
 
                 <div className="form-group">
