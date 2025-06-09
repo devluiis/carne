@@ -10,6 +10,7 @@ function CarneForm() {
     const [descricao, setDescricao] = useState('');
     const [valorTotalOriginal, setValorTotalOriginal] = useState('');
     const [numeroParcelas, setNumeroParcelas] = useState('');
+    const [valorParcelaSugerido, setValorParcelaSugerido] = useState(''); // NOVO ESTADO
     const [dataPrimeiroVencimento, setDataPrimeiroVencimento] = useState('');
     const [frequenciaPagamento, setFrequenciaPagamento] = useState('mensal');
     const [statusCarne, setStatusCarne] = useState('Ativo');
@@ -22,7 +23,7 @@ function CarneForm() {
     const [submitLoading, setSubmitLoading] = useState(false);
     const [hasPayments, setHasPayments] = useState(false);
     const [editWarningMessage, setEditWarningMessage] = useState('');
-    
+
     const navigate = useNavigate();
     const { id, clientIdFromUrl } = useParams();
     const { setGlobalAlert } = useGlobalAlert();
@@ -36,6 +37,8 @@ function CarneForm() {
             setDescricao(carne.descricao || '');
             setValorTotalOriginal(String(carne.valor_total_original));
             setNumeroParcelas(String(carne.numero_parcelas));
+            // O valorParcelaSugerido não vem do backend diretamente, mas podemos preencher com o valor_parcela_original
+            setValorParcelaSugerido(String(carne.valor_parcela_original)); // Preencher com o valor original para edição
             setDataPrimeiroVencimento(carne.data_primeiro_vencimento ? new Date(carne.data_primeiro_vencimento + 'T00:00:00').toISOString().split('T')[0] : '');
             setFrequenciaPagamento(carne.frequencia_pagamento);
             setStatusCarne(carne.status_carne);
@@ -46,7 +49,7 @@ function CarneForm() {
             const anyPayments = carne.parcelas?.some(p => p.pagamentos?.length > 0 || parseFloat(p.valor_pago) > 0);
             setHasPayments(anyPayments);
             if (anyPayments) {
-                setEditWarningMessage('Este carnê possui pagamentos. Apenas Descrição, Data da Venda, Status e Observações podem ser alterados.');
+                setEditWarningMessage('Este carnê possui pagamentos. Apenas Descrição, Data da Venda, Status e Observações podem ser alterados. Campos financeiros serão desabilitados.');
             }
         } catch (err) {
             console.error('Erro ao carregar carnê para edição:', err);
@@ -84,6 +87,7 @@ function CarneForm() {
         const vTotal = parseFloat(valorTotalOriginal);
         const vEntrada = parseFloat(valorEntrada) || 0;
         const nParcelas = parseInt(numeroParcelas);
+        const vParcelaSugerido = parseFloat(valorParcelaSugerido); // NOVO VALOR
 
         if (!idCliente) {
             setGlobalAlert({ message: 'Selecione um cliente.', type: 'warning' });
@@ -122,14 +126,18 @@ function CarneForm() {
             setSubmitLoading(false); return;
         }
 
-        const valorAParcelar = vTotal - vEntrada;
-        let valorParcelaCalculado = 0;
-        if (nParcelas > 0 && valorAParcelar >= 0) {
-            valorParcelaCalculado = valorAParcelar / nParcelas;
-        } else if (valorAParcelar < 0) { 
-            setGlobalAlert({ message: 'Valor a parcelar é negativo após deduzir a entrada.', type: 'error' });
+        // Validação do valor da parcela sugerido (se preenchido)
+        if (valorParcelaSugerido !== '' && (isNaN(vParcelaSugerido) || vParcelaSugerido <= 0)) {
+            setGlobalAlert({ message: 'Valor sugerido da parcela deve ser um número positivo.', type: 'warning' });
             setSubmitLoading(false); return;
         }
+        if (valorParcelaSugerido !== '' && vParcelaSugerido * nParcelas < (vTotal - vEntrada) && nParcelas > 1) {
+            // Se o valor sugerido por parcela multiplicado pelo número de parcelas é menor que o valor a parcelar,
+            // a última parcela será maior que a sugerida. Isso é um aviso, não um erro.
+            setGlobalAlert({ message: 'A soma das parcelas sugeridas é menor que o valor a parcelar. A última parcela será ajustada para um valor maior.', type: 'info' });
+            // Não retorna, apenas avisa.
+        }
+
 
         const carneData = {
             id_cliente: parseInt(idCliente),
@@ -137,7 +145,7 @@ function CarneForm() {
             descricao,
             valor_total_original: vTotal,
             numero_parcelas: nParcelas,
-            valor_parcela_original: valorParcelaCalculado,
+            valor_parcela_sugerido: valorParcelaSugerido !== '' ? vParcelaSugerido : null, // Envia o sugerido, ou null se vazio
             data_primeiro_vencimento: dataPrimeiroVencimento,
             frequencia_pagamento: frequenciaPagamento,
             status_carne: statusCarne,
@@ -158,7 +166,7 @@ function CarneForm() {
                 if (newCarneId) {
                     navigate(`/carnes/details/${newCarneId}`);
                 } else {
-                    navigate('/carnes'); 
+                    navigate('/carnes');
                 }
             }
         } catch (err) {
@@ -169,6 +177,8 @@ function CarneForm() {
         }
     };
 
+    const isFinancialFieldDisabled = id && hasPayments;
+
     if (loadingInitial) {
         return <LoadingSpinner message="Carregando dados do formulário..." />;
     }
@@ -177,17 +187,17 @@ function CarneForm() {
         <div className="form-container">
             <h2>{id ? 'Editar Carnê' : 'Cadastrar Novo Carnê'}</h2>
             {editWarningMessage && <p className="text-center text-warning" style={{fontWeight: 'bold', marginBottom: '15px'}}>{editWarningMessage}</p>}
-            
+
             <form onSubmit={handleSubmit}>
                 <div className="form-group">
-                    <label htmlFor="idCliente">Cliente:</label>
-                    <select 
+                    <label htmlFor="idCliente">Cliente:<span className="required-star">*</span></label>
+                    <select
                         id="idCliente"
-                        value={idCliente} 
-                        onChange={(e) => setIdCliente(e.target.value)} 
-                        required 
-                        className="form-select" 
-                        disabled={!!id || !!clientIdFromUrl || (id && hasPayments)}
+                        value={idCliente}
+                        onChange={(e) => setIdCliente(e.target.value)}
+                        required
+                        className="form-select"
+                        disabled={isFinancialFieldDisabled || !!clientIdFromUrl}
                     >
                         <option value="">Selecione um Cliente</option>
                         {clientOptions.map(client => (<option key={client.id_cliente} value={client.id_cliente}>{client.nome} ({client.cpf_cnpj})</option>))}
@@ -195,67 +205,67 @@ function CarneForm() {
                 </div>
 
                 <div className="form-group">
-                    <label htmlFor="dataVenda">Data da Venda/Emissão do Carnê:</label>
-                    <input 
-                        type="date" 
+                    <label htmlFor="dataVenda">Data da Venda/Emissão do Carnê:<span className="required-star">*</span></label>
+                    <input
+                        type="date"
                         id="dataVenda"
-                        value={dataVenda} 
-                        onChange={(e) => setDataVenda(e.target.value)} 
-                        required 
-                        className="form-input" 
-                        disabled={id && hasPayments}
+                        value={dataVenda}
+                        onChange={(e) => setDataVenda(e.target.value)}
+                        required
+                        className="form-input"
+                        disabled={isFinancialFieldDisabled}
                     />
                 </div>
 
                 <div className="form-group">
                     <label htmlFor="descricaoCarne">Descrição (Opcional):</label>
-                    <input 
-                        type="text" 
+                    <input
+                        type="text"
                         id="descricaoCarne"
-                        value={descricao} 
-                        onChange={(e) => setDescricao(e.target.value)} 
+                        value={descricao}
+                        onChange={(e) => setDescricao(e.target.value)}
                         className="form-input"
                     />
                 </div>
 
                 <div className="form-group">
-                    <label htmlFor="valorTotalOriginal">Valor Total Original da Dívida:</label>
-                    <input 
-                        type="number" 
+                    <label htmlFor="valorTotalOriginal">Valor Total Original da Dívida:<span className="required-star">*</span></label>
+                    <input
+                        type="number"
                         id="valorTotalOriginal"
-                        step="0.01" 
-                        value={valorTotalOriginal} 
-                        onChange={(e) => setValorTotalOriginal(e.target.value)} 
-                        required 
-                        className="form-input" 
-                        disabled={id && hasPayments} 
+                        step="0.01"
+                        value={valorTotalOriginal}
+                        onChange={(e) => setValorTotalOriginal(e.target.value)}
+                        required
+                        className="form-input"
+                        disabled={isFinancialFieldDisabled}
                     />
                 </div>
 
                 <div className="form-group">
                     <label htmlFor="valorEntrada">Valor de Entrada (Opcional):</label>
-                    <input 
-                        type="number" 
+                    <input
+                        type="number"
                         id="valorEntrada"
-                        step="0.01" 
-                        value={valorEntrada} 
-                        onChange={(e) => setValorEntrada(e.target.value)} 
-                        className="form-input" 
-                        min="0" 
-                        disabled={id && hasPayments} 
+                        step="0.01"
+                        value={valorEntrada}
+                        onChange={(e) => setValorEntrada(e.target.value)}
+                        className="form-input"
+                        min="0"
+                        disabled={isFinancialFieldDisabled}
                     />
                 </div>
 
                 {parseFloat(valorEntrada) > 0 && (
                     <div className="form-group">
-                        <label htmlFor="formaPagamentoEntrada">Forma de Pagamento da Entrada:</label>
-                        <select 
+                        <label htmlFor="formaPagamentoEntrada">Forma de Pagamento da Entrada:<span className="required-star">*</span></label>
+                        <select
                             id="formaPagamentoEntrada"
-                            value={formaPagamentoEntrada} 
-                            onChange={(e) => setFormaPagamentoEntrada(e.target.value)} 
-                            required={parseFloat(valorEntrada) > 0} 
-                            className="form-select" 
-                            disabled={id && hasPayments}
+                            value={formaPagamentoEntrada}
+                            onChange={(e) => setFormaPagamentoEntrada(e.target.value)}
+                            required={parseFloat(valorEntrada) > 0}
+                            className="form-select"
+                            disabled={isFinancialFieldDisabled}
                         >
                             <option value="">Selecione...</option>
                             <option value="Dinheiro">Dinheiro</option>
@@ -267,41 +277,57 @@ function CarneForm() {
                 )}
 
                 <div className="form-group">
-                    <label htmlFor="numeroParcelas">Número de Parcelas:</label>
-                    <input 
-                        type="number" 
+                    <label htmlFor="numeroParcelas">Número de Parcelas:<span className="required-star">*</span></label>
+                    <input
+                        type="number"
                         id="numeroParcelas"
-                        value={numeroParcelas} 
-                        onChange={(e) => setNumeroParcelas(e.target.value)} 
-                        required 
-                        className="form-input" 
-                        disabled={id && hasPayments} 
+                        value={numeroParcelas}
+                        onChange={(e) => setNumeroParcelas(e.target.value)}
+                        required
+                        className="form-input"
+                        disabled={isFinancialFieldDisabled}
                         min="1"
                     />
                 </div>
 
+                {/* NOVO CAMPO: Valor Sugerido da Parcela */}
                 <div className="form-group">
-                    <label htmlFor="dataPrimeiroVencimento">Data do Primeiro Vencimento:</label>
-                    <input 
-                        type="date" 
+                    <label htmlFor="valorParcelaSugerido">Valor Sugerido por Parcela (Opcional):</label>
+                    <input
+                        type="number"
+                        id="valorParcelaSugerido"
+                        step="0.01"
+                        value={valorParcelaSugerido}
+                        onChange={(e) => setValorParcelaSugerido(e.target.value)}
+                        className="form-input"
+                        min="0.01"
+                        disabled={isFinancialFieldDisabled}
+                    />
+                     <small className="form-text-muted">Se preenchido, a última parcela será ajustada para fechar o valor total.</small>
+                </div>
+
+                <div className="form-group">
+                    <label htmlFor="dataPrimeiroVencimento">Data do Primeiro Vencimento:<span className="required-star">*</span></label>
+                    <input
+                        type="date"
                         id="dataPrimeiroVencimento"
-                        value={dataPrimeiroVencimento} 
-                        onChange={(e) => setDataPrimeiroVencimento(e.target.value)} 
-                        required 
-                        className="form-input" 
-                        disabled={id && hasPayments} 
+                        value={dataPrimeiroVencimento}
+                        onChange={(e) => setDataPrimeiroVencimento(e.target.value)}
+                        required
+                        className="form-input"
+                        disabled={isFinancialFieldDisabled}
                     />
                 </div>
 
                 <div className="form-group">
-                    <label htmlFor="frequenciaPagamento">Frequência de Pagamento:</label>
-                    <select 
+                    <label htmlFor="frequenciaPagamento">Frequência de Pagamento:<span className="required-star">*</span></label>
+                    <select
                         id="frequenciaPagamento"
-                        value={frequenciaPagamento} 
-                        onChange={(e) => setFrequenciaPagamento(e.target.value)} 
-                        required 
-                        className="form-select" 
-                        disabled={id && hasPayments}
+                        value={frequenciaPagamento}
+                        onChange={(e) => setFrequenciaPagamento(e.target.value)}
+                        required
+                        className="form-select"
+                        disabled={isFinancialFieldDisabled}
                     >
                         <option value="mensal">Mensal</option>
                         <option value="quinzenal">Quinzenal</option>
@@ -311,11 +337,11 @@ function CarneForm() {
 
                 <div className="form-group">
                     <label htmlFor="statusCarne">Status do Carnê:</label>
-                    <select 
+                    <select
                         id="statusCarne"
-                        value={statusCarne} 
-                        onChange={(e) => setStatusCarne(e.target.value)} 
-                        required 
+                        value={statusCarne}
+                        onChange={(e) => setStatusCarne(e.target.value)}
+                        required
                         className="form-select"
                     >
                         <option value="Ativo">Ativo</option>
@@ -325,11 +351,11 @@ function CarneForm() {
 
                 <div className="form-group">
                     <label htmlFor="observacoesCarne">Observações (Opcional):</label>
-                    <textarea 
+                    <textarea
                         id="observacoesCarne"
-                        value={observacoes} 
-                        onChange={(e) => setObservacoes(e.target.value)} 
-                        rows="3" 
+                        value={observacoes}
+                        onChange={(e) => setObservacoes(e.target.value)}
+                        rows="3"
                         className="form-textarea"
                     ></textarea>
                 </div>

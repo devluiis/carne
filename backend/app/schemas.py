@@ -182,11 +182,12 @@ class PendingDebtsReportResponse(BaseModel):
 # --- Carne (Schemas) ---
 class CarneBase(BaseModel):
     id_cliente: int
-    data_venda: date 
+    data_venda: date
     descricao: Optional[str] = None
     valor_total_original: float = Field(..., gt=0)
     numero_parcelas: int = Field(..., gt=0)
-    valor_parcela_original: float # Frontend calcula e envia. Backend valida.
+    # valor_parcela_original: float # REMOVIDO DA ENTRADA, AGORA É CALCULADO INTERNAMENTE
+    valor_parcela_sugerido: Optional[float] = Field(None, gt=0, description="Valor sugerido para cada parcela pelo usuário.") # NOVO CAMPO
     data_primeiro_vencimento: date
     frequencia_pagamento: str
     status_carne: Optional[str] = "Ativo"
@@ -195,11 +196,15 @@ class CarneBase(BaseModel):
     forma_pagamento_entrada: Optional[str] = None
 
 class CarneCreate(CarneBase):
+    # Ao criar, o valor_parcela_sugerido é o que esperamos
+    # valor_parcela_original será definido no CRUD
     pass
 
 class CarneResponse(CarneBase):
     id_carne: int
     data_criacao: datetime
+    # valor_parcela_original agora é um campo de saída (calculado no backend)
+    valor_parcela_original: float # Adicionado de volta na resposta, pois o backend irá calculá-lo
     cliente: ClientResponseMin
     parcelas: List[ParcelaResponse] = []
 
@@ -217,7 +222,7 @@ class DashboardSummaryResponse(BaseModel):
     total_recebido_mes: float
     parcelas_a_vencer_7dias: int
     parcelas_atrasadas: int
-    
+
     class Config:
         from_attributes = True
 
@@ -260,7 +265,7 @@ class ProdutoUpdate(ProdutoBase):
     nome: Optional[str] = Field(None, min_length=1, max_length=255)
     # preco_venda, preco_custo, etc., já são Optional em ProdutoBase,
     # então não precisam ser redefinidos aqui a menos que queiramos mudar validações.
-    
+
 
 class ProdutoResponse(ProdutoBase):
     id_produto: int
