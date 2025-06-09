@@ -1,3 +1,4 @@
+// frontend/src/components/AuthProvider.jsx
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { auth } from '../api'; // Certifique-se que api.js exporta 'auth'
 
@@ -18,11 +19,12 @@ export const AuthProvider = ({ children }) => {
             setLoading(false);
             return;
         }
-        
+
         try {
             // auth.getMe() usará o token via interceptor configurado em api.js
             const response = await auth.getMe();
             setUser(response.data);
+            // Garantir que o user seja sempre armazenado como JSON string
             localStorage.setItem('user', JSON.stringify(response.data));
         } catch (error) {
             console.error('Erro ao buscar usuário (sessão pode ter expirado ou token inválido):', error);
@@ -39,12 +41,23 @@ export const AuthProvider = ({ children }) => {
         const storedUser = localStorage.getItem('user');
         if (storedUser) {
             try {
-                setUser(JSON.parse(storedUser));
+                // Tenta parsear, mas se falhar, limpa o localStorage
+                const parsedUser = JSON.parse(storedUser);
+                // Adicionando uma verificação básica para garantir que é um objeto útil
+                if (typeof parsedUser === 'object' && parsedUser !== null && parsedUser.email) {
+                    setUser(parsedUser);
+                } else {
+                    console.warn("Stored user data is not valid JSON or expected format. Clearing localStorage.");
+                    localStorage.removeItem('user');
+                }
             } catch (e) {
-                console.error("Erro ao fazer parse do usuário do localStorage:", e);
+                console.error("Erro ao fazer parse do usuário do localStorage, limpando dados:", e);
                 localStorage.removeItem('user');
+                localStorage.removeItem('token'); // Limpa o token também, para garantir uma sessão limpa
+                setToken(null); // Atualiza o estado do token
             }
         }
+        // Sempre tenta buscar o usuário via API para validar o token e atualizar o estado
         fetchUser();
     }, [fetchUser]);
 
@@ -57,8 +70,8 @@ export const AuthProvider = ({ children }) => {
             const userData = response.data.user_data;
 
             localStorage.setItem('token', newToken);
-            localStorage.setItem('user', JSON.stringify(userData));
-            
+            localStorage.setItem('user', JSON.stringify(userData)); // Sempre stringify
+
             setToken(newToken);
             setUser(userData);
             return true;
@@ -117,11 +130,11 @@ export const AuthProvider = ({ children }) => {
             throw error;
         }
     };
-    
+
     const updateUser = (newUserData) => {
         const updatedUser = { ...user, ...newUserData };
         setUser(updatedUser);
-        localStorage.setItem('user', JSON.stringify(updatedUser));
+        localStorage.setItem('user', JSON.stringify(updatedUser)); // Sempre stringify
     };
 
     const value = {
