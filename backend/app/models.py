@@ -65,7 +65,7 @@ class Parcela(Base):
     juros_multa_anterior_aplicada = Column(DECIMAL(10, 2), default=0.00, nullable=False)
 
     carne = relationship("Carne", back_populates="parcelas")
-    pagamentos = relationship("Pagamento", back_pop_populates="parcela", cascade="all, delete-orphan")
+    pagamentos = relationship("Pagamento", back_populates="parcela", cascade="all, delete-orphan") # CORRIGIDO: back_populates
 
 class Pagamento(Base):
     __tablename__ = "pagamento"
