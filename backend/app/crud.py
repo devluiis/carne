@@ -1,3 +1,4 @@
+# backend/app/crud.py
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import IntegrityError
 from app import models, schemas
@@ -507,7 +508,8 @@ def create_carne(db: Session, carne: schemas.CarneCreate):
             saldo_devedor=valor_a_parcelar,
             status_parcela='Pendente',
             juros_multa=Decimal('0.00'),
-            juros_multa_anterior_aplicada=Decimal('0.00')
+            juros_multa_anterior_aplicada=Decimal('0.00'),
+            observacoes=None # Observações iniciais da parcela, se houver
         )
         db.add(db_parcela)
         db.commit()
@@ -571,7 +573,8 @@ def create_carne(db: Session, carne: schemas.CarneCreate):
                     saldo_devedor=parcela_valor_devido,
                     status_parcela='Pendente',
                     juros_multa=Decimal('0.00'),
-                    juros_multa_anterior_aplicada=Decimal('0.00')
+                    juros_multa_anterior_aplicada=Decimal('0.00'),
+                    observacoes=None # Observações iniciais da parcela, se houver
                 )
                 db.add(db_parcela)
                 current_due_date = calculate_next_due_date(current_due_date, carne.frequencia_pagamento)
@@ -669,7 +672,8 @@ def update_carne(db: Session, carne_id: int, carne_update: schemas.CarneCreate):
                 saldo_devedor=valor_a_parcelar,
                 status_parcela='Pendente',
                 juros_multa=Decimal('0.00'),
-                juros_multa_anterior_aplicada=Decimal('0.00')
+                juros_multa_anterior_aplicada=Decimal('0.00'),
+                observacoes=None
             )
             db.add(db_parcela_nova)
         else: # Se o carnê é fixo (ou mudou para fixo)
@@ -702,7 +706,8 @@ def update_carne(db: Session, carne_id: int, carne_update: schemas.CarneCreate):
                 db_parcela_nova = models.Parcela(
                     id_carne=db_carne.id_carne, numero_parcela=i + 1, valor_devido=parcela_valor_devido,
                     data_vencimento=current_due_date, valor_pago=Decimal('0.00'), saldo_devedor=parcela_valor_devido,
-                    status_parcela='Pendente', juros_multa=Decimal('0.00'), juros_multa_anterior_aplicada=Decimal('0.00')
+                    status_parcela='Pendente', juros_multa=Decimal('0.00'), juros_multa_anterior_aplicada=Decimal('0.00'),
+                    observacoes=None
                 )
                 db.add(db_parcela_nova)
                 current_due_date = calculate_next_due_date(current_due_date, db_carne.frequencia_pagamento)
@@ -732,7 +737,18 @@ def get_parcela(db: Session, parcela_id: int, apply_interest: bool = True):
         _apply_interest_and_fine_if_due(db, db_parcela)
         db.commit()
         db.refresh(db_parcela)
+    
+    # Adicionar informações de juros e multa percentuais para o PDF
+    # Isso pode ser feito aqui ou na função que chama get_parcela para o PDF
+    # parcela_data_for_schema = schemas.ParcelaResponse.model_validate(db_parcela).model_dump()
+    # parcela_data_for_schema['juros_multa_percentual'] = MULTA_ATRASO_PERCENTUAL
+    # parcela_data_for_schema['juros_mora_percentual_ao_dia'] = JUROS_MORA_PERCENTUAL_AO_MES / Decimal('30')
+    
+    # Se você quiser retornar um objeto schema completo aqui, descomente e ajuste:
+    # return schemas.ParcelaResponse(**parcela_data_for_schema)
+    # Por agora, continuaremos retornando o objeto models.Parcela para compatibilidade.
     return db_parcela
+
 
 def get_parcelas_by_carne(db: Session, carne_id: int, skip: int = 0, limit: int = 100):
     db_parcelas = db.query(models.Parcela).filter(models.Parcela.id_carne == carne_id)\
@@ -1217,3 +1233,89 @@ def get_dashboard_summary(db: Session):
         parcelas_a_vencer_7dias=parcelas_a_vencer_7dias,
         parcelas_atrasadas=parcelas_atrasadas
     )
+
+def get_carne_data_for_pdf(db: Session, carne_id: int):
+    """
+    Função para buscar os dados completos de um carnê e suas parcelas,
+    incluindo informações do cliente e juros/multas para o PDF.
+    """
+    db_carne = db.query(models.Carne).options(
+        joinedload(models.Carne.cliente),
+        joinedload(models.Carne.parcelas).joinedload(models.Parcela.pagamentos)
+    ).filter(models.Carne.id_carne == carne_id).first()
+
+    if not db_carne:
+        return None, None, None
+
+    # Aplica juros/multas e atualiza status das parcelas e do carnê
+    needs_commit = False
+    for parcela in db_carne.parcelas:
+        original_juros_multa = parcela.juros_multa
+        original_saldo_devedor = parcela.saldo_devedor
+        original_status_parcela = parcela.status_parcela
+        _apply_interest_and_fine_if_due(db, parcela)
+        if (parcela.juros_multa != original_juros_multa or
+            parcela.saldo_devedor != original_saldo_devedor or
+            parcela.status_parcela != original_status_parcela):
+            needs_commit = True
+            db.add(parcela)
+    
+    # Recalcula o status do carnê após aplicar juros às parcelas
+    if db_carne.status_carne != 'Cancelado':
+        all_parcels_paid = all(p.status_parcela in ['Paga', 'Paga com Atraso'] for p in db_carne.parcelas)
+        has_overdue_parcel = any(p.status_parcela == 'Atrasada' for p in db_carne.parcelas)
+        has_partially_paid_parcel = any(p.status_parcela == 'Parcialmente Paga' for p in db_carne.parcelas)
+        
+        new_status_carne = db_carne.status_carne # Manter o status atual se não houver mudança
+
+        if all_parcels_paid and db_carne.parcelas:
+            new_status_carne = 'Quitado'
+        elif has_overdue_parcel:
+            new_status_carne = 'Em Atraso'
+        elif has_partially_paid_parcel:
+            new_status_carne = 'Ativo'
+        else:
+            new_status_carne = 'Ativo'
+        
+        if db_carne.status_carne != new_status_carne:
+            db_carne.status_carne = new_status_carne
+            needs_commit = True
+            db.add(db_carne)
+
+    if needs_commit:
+        db.commit()
+        db.refresh(db_carne) # Refresha o carnê para ter os dados mais recentes
+
+    # Preparar dados para o PDF
+    parcelas_for_pdf = []
+    for p in db_carne.parcelas:
+        parcela_dict = {
+            "id_parcela": p.id_parcela,
+            "numero_parcela": p.numero_parcela,
+            "valor_devido": p.valor_devido,
+            "data_vencimento": p.data_vencimento,
+            "saldo_devedor": p.saldo_devedor,
+            "status_parcela": p.status_parcela,
+            "juros_multa": p.juros_multa,
+            "observacoes": p.observacoes, # Inclui o campo de observações da parcela
+            "juros_multa_percentual": float(MULTA_ATRASO_PERCENTUAL), #
+            "juros_mora_percentual_ao_dia": float(JUROS_MORA_PERCENTUAL_AO_MES / Decimal('30')) #
+        }
+        parcelas_for_pdf.append(parcela_dict)
+
+    cliente_for_pdf = {
+        "nome": db_carne.cliente.nome,
+        "cpf_cnpj": db_carne.cliente.cpf_cnpj,
+        "endereco": db_carne.cliente.endereco,
+        "telefone": db_carne.cliente.telefone,
+        "email": db_carne.cliente.email
+    }
+
+    carne_for_pdf = {
+        "id_carne": db_carne.id_carne,
+        "descricao": db_carne.descricao,
+        "numero_parcelas": db_carne.numero_parcelas,
+        "valor_total_original": db_carne.valor_total_original
+    }
+
+    return parcelas_for_pdf, cliente_for_pdf, carne_for_pdf

@@ -63,6 +63,8 @@ class Parcela(Base):
     status_parcela = Column(String(50), default='Pendente', nullable=False)
     juros_multa = Column(DECIMAL(10, 2), default=0.00, nullable=False)
     juros_multa_anterior_aplicada = Column(DECIMAL(10, 2), default=0.00, nullable=False)
+    # Adicionando campo para observações específicas da parcela
+    observacoes = Column(String, nullable=True)
 
     carne = relationship("Carne", back_populates="parcelas")
     pagamentos = relationship("Pagamento", back_populates="parcela", cascade="all, delete-orphan")

@@ -1,3 +1,4 @@
+# backend/app/schemas.py
 from pydantic import BaseModel, EmailStr, Field
 from datetime import datetime, date
 from typing import Optional, List
@@ -104,6 +105,8 @@ class ParcelaBase(BaseModel):
     valor_devido: float
     data_vencimento: date
     status_parcela: Optional[str] = "Pendente"
+    # Campo adicionado para observações da parcela
+    observacoes: Optional[str] = None
 
 class ParcelaCreate(ParcelaBase):
     pass
@@ -116,6 +119,11 @@ class ParcelaResponse(ParcelaBase):
     juros_multa: float
     juros_multa_anterior_aplicada: float = Field(0.00)
     pagamentos: List[PagamentoResponseMin] = []
+
+    # Campos adicionais para o PDF, podem ser calculados no CRUD
+    juros_multa_percentual: Optional[float] = None
+    juros_mora_percentual_ao_dia: Optional[float] = None
+    # observacoes: Optional[str] = None # Já existe em ParcelaBase
 
     class Config:
         from_attributes = True

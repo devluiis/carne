@@ -29,7 +29,7 @@ function CarneDetailsPage() {
     const navigate = useNavigate();
     const [carne, setCarne] = useState(null);
     const [loading, setLoading] = useState(true);
-    // REMOVIDO: const [pdfLoading, setPdfLoading] = useState(false);
+    const [pdfLoading, setPdfLoading] = useState(false); // NOVO ESTADO para loading do PDF
     const [error, setError] = useState('');
     
     const [showPaymentForm, setShowPaymentForm] = useState(false);
@@ -120,7 +120,28 @@ function CarneDetailsPage() {
         }
     };
     
-    // REMOVIDO: handleGeneratePdf function
+    // NOVA FUNÇÃO: Gerar PDF
+    const handleGeneratePdf = async () => {
+        setPdfLoading(true);
+        try {
+            const response = await carnes.generatePdf(id);
+            const blob = new Blob([response.data], { type: 'application/pdf' });
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `carne_${carne.id_carne}_${carne.cliente?.nome.replace(/\s/g, '_')}.pdf`);
+            document.body.appendChild(link);
+            link.click();
+            link.parentNode.removeChild(link);
+            window.URL.revokeObjectURL(url);
+            setGlobalAlert({ message: 'PDF gerado com sucesso!', type: 'success' });
+        } catch (err) {
+            console.error('Erro ao gerar PDF:', err);
+            setGlobalAlert({ message: `Falha ao gerar PDF: ${err.response?.data?.detail || err.message}`, type: 'error' });
+        } finally {
+            setPdfLoading(false);
+        }
+    };
 
 
     // --- Funções de Renegociação ---
@@ -173,7 +194,14 @@ function CarneDetailsPage() {
         <div className="form-container large-container">
             <div className="header-with-button">
                 <h2>Detalhes do Carnê: {carne.descricao || `ID ${carne.id_carne}`}</h2>
-                {/* REMOVIDO O BOTÃO DE GERAR PDF */}
+                {/* BOTÃO DE GERAR PDF */}
+                <button 
+                    onClick={handleGeneratePdf} 
+                    className="btn btn-info" 
+                    disabled={pdfLoading}
+                >
+                    {pdfLoading ? 'Gerando PDF...' : 'Gerar PDF do Carnê'}
+                </button>
             </div>
 
             <div className="carne-info-box">
@@ -215,7 +243,6 @@ function CarneDetailsPage() {
                                     <td>{parcela.numero_parcela}</td>
                                     <td>R$ {Number(parcela.valor_devido).toFixed(2)}</td>
                                     <td>R$ {Number(parcela.juros_multa).toFixed(2)}</td>
-                                    <td>R$ {Number(parcela.valor_pago).toFixed(2)}</td>
                                     <td>R$ {Number(parcela.saldo_devedor).toFixed(2)}</td>
                                     <td>{new Date(parcela.data_vencimento).toLocaleDateString()}</td>
                                     <td>

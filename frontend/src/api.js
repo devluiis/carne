@@ -58,6 +58,8 @@ export const carnes = {
     create: (carneData) => api.post(`/carnes/`, carneData),
     update: (id, carneData) => api.put(`/carnes/${id}`, carneData),
     delete: (id) => api.delete(`/carnes/${id}`),
+    // NOVA FUNÇÃO para o PDF
+    generatePdf: (id) => api.get(`/carnes/${id}/pdf`, { responseType: 'blob' }), // Importante: responseType 'blob'
 };
 
 export const parcelas = {

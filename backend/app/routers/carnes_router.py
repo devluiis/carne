@@ -6,8 +6,9 @@ from datetime import date
 from app import schemas, crud, models
 from app.database import get_db
 from app.auth import get_current_active_user, get_current_admin_user
-from fastapi.responses import Response
-# REMOVIDA A IMPORTAÇÃO: from app.pdf_utils import generate_carne_pdf_bytes, LOGO_PATH
+from fastapi.responses import Response, StreamingResponse
+from app.pdf_utils import generate_carne_parcelas_pdf # NOVA IMPORTAÇÃO
+from io import BytesIO # Necessário para o buffer do PDF
 
 router = APIRouter(prefix="/carnes", tags=["Carnês"])
 
@@ -63,6 +64,31 @@ def delete_carne(carne_id: int, db: Session = Depends(get_db), current_user: mod
     if db_carne is None:
         raise HTTPException(status_code=404, detail="Carnê não encontrado")
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# --- NOVA ROTA PARA GERAR PDF DO CARNÊ ---
+@router.get("/{carne_id}/pdf", tags=["Carnês PDF"])
+async def get_carne_pdf_route(
+    carne_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_active_user) # Quem pode gerar PDF? Atendente ou Admin.
+):
+    parcelas_data, cliente_info, carne_info = crud.get_carne_data_for_pdf(db, carne_id)
+
+    if not parcelas_data or not cliente_info or not carne_info:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dados do carnê ou cliente não encontrados para gerar o PDF.")
+
+    buffer = BytesIO()
+    generate_carne_parcelas_pdf(parcelas_data, cliente_info, carne_info, buffer)
+    buffer.seek(0)
+
+    filename = f"carne_parcelas_{carne_id}_{cliente_info['nome']}.pdf"
+    
+    return StreamingResponse(
+        buffer,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
 
 
 # --- Rotas de Parcela (associadas a um Carnê) ---
@@ -133,7 +159,3 @@ def delete_pagamento(pagamento_id: int, db: Session = Depends(get_db), current_u
     if not result or not result.get("ok"):
         raise HTTPException(status_code=404, detail="Pagamento não encontrado ou falha ao estornar")
     return Response(status_code=status.HTTP_204_NO_CONTENT)
-
-# ROTA E FUNÇÃO DE PDF REMOVIDOS AQUI
-# @router.get("/{carne_id}/pdf", tags=["Carnês PDF"])
-# async def get_carne_pdf_route(...)

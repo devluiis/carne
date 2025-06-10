@@ -3,16 +3,21 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import Base, engine
 
-from app.routers import auth_router, clients_router, carnes_router, reports_router # <<< ADICIONE reports_router AQUI
-from app.models import Usuario
-from app.routers import auth_router, clients_router, carnes_router, reports_router, produtos_router # <<<< ADICIONE produtos_router
-
 from app.routers import auth_router, clients_router, carnes_router, reports_router
+from app.models import Usuario
+from app.routers import auth_router, clients_router, carnes_router, reports_router, produtos_router
 
 # IMPORTES NECESSÁRIOS PARA SERVIR ARQUIVOS ESTÁTICOS
 from fastapi.staticfiles import StaticFiles
 import os
 # from fastapi.responses import FileResponse # Não é estritamente necessário se html=True em StaticFiles cobre o index.html
+
+# NOVO: Criação da pasta 'static' se não existir para o logo
+static_folder_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
+if not os.path.exists(static_folder_path):
+    os.makedirs(static_folder_path)
+    print(f"Pasta 'static' criada em: {static_folder_path}")
+# Certifique-se de ter um arquivo 'logo.png' dentro desta pasta 'static' no backend/app/static/
 
 
 # Cria as tabelas no banco de dados
@@ -48,16 +53,15 @@ app.add_middleware(
 app.include_router(auth_router.router, tags=["Autenticação"])
 app.include_router(clients_router.router, tags=["Clientes"])
 app.include_router(carnes_router.router, tags=["Carnês"])
-app.include_router(reports_router.router, tags=["Relatórios e Dashboard"]) # <<< ADICIONE ESTA LINHA
-app.include_router(produtos_router.router, prefix="/api", tags=["Produtos"]) # <<<< ADICIONE ESTA LINHA
+app.include_router(reports_router.router, tags=["Relatórios e Dashboard"])
+app.include_router(produtos_router.router, prefix="/api", tags=["Produtos"])
 
-# Inclui os routers da API PRIMEIRO
 # Os prefixos e tags já estão definidos dentro de cada arquivo de router.
-app.include_router(auth_router.router)
-app.include_router(clients_router.router)
-app.include_router(carnes_router.router)
-app.include_router(reports_router.router)
-
+# As linhas abaixo são redundantes se já incluídas acima com tags e prefixos.
+# app.include_router(auth_router.router)
+# app.include_router(clients_router.router)
+# app.include_router(carnes_router.router)
+# app.include_router(reports_router.router)
 
 
 @app.on_event("startup")
