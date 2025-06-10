@@ -49,7 +49,7 @@ origins = [
     "https://biosxambioa.netlify.app",    # SEU DOMÍNIO DO NETLIFY
     "http://localhost:5173",            # Para desenvolvimento local do frontend
     "http://localhost:8000",            # Para desenvolvimento local do backend/Swagger
-    "https://carne.onrender.com"        # Seu próprio domínio do backend (opcional, mas boa prática para requests internas)
+    "https://carnebios.onrender.com"        # Seu próprio domínio do backend (opcional, mas boa prática para requests internas)
 ]
 
 app.add_middleware(
