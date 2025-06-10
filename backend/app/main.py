@@ -6,11 +6,38 @@ from app.database import Base, engine
 from app.routers import auth_router, clients_router, carnes_router, reports_router
 from app.models import Usuario
 from app.routers import auth_router, clients_router, carnes_router, reports_router, produtos_router
+from app.config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
 
 # IMPORTES NECESSÁRIOS PARA SERVIR ARQUIVOS ESTÁTICOS
 from fastapi.staticfiles import StaticFiles
 import os
 import sys # Importa o módulo sys
+import logging 
+
+app = FastAPI()
+
+# Configuração de logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+def verify_config():
+    """Função para verificar as configurações ao iniciar"""
+    logger.info(f"Configuração JWT - Algoritmo: {ALGORITHM}")
+    logger.info(f"Configuração JWT - Tempo de expiração: {ACCESS_TOKEN_EXPIRE_MINUTES} minutos")
+    # Não logamos a SECRET_KEY por segurança
+
+# Verifique as configurações ao iniciar
+verify_config()  # Esta linha deve vir DEPOIS das importações
+
+# Inclua seus routers
+app.include_router(auth_router.router)
+app.include_router(clients_router.router)
+app.include_router(carnes_router.router)
+app.include_router(reports_router.router)
+
+@app.get("/")
+async def root():
+    return {"message": "API Carne Digital"}
 
 # NOVO: TENTA ADICIONAR O DIRETÓRIO site-packages DO AMBIENTE VIRTUAL AO PATH
 # Isso é um fallback para resolver ModuleNotFoundError em ambientes de deploy problemáticos.
@@ -102,3 +129,4 @@ else:
     # Monta os arquivos estáticos. O html=True serve o index.html para rotas não encontradas (bom para SPAs)
     # e o index.html será servido para a rota "/"
     app.mount("/", StaticFiles(directory=frontend_build_path, html=True), name="static-frontend")
+    
