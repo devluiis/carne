@@ -13,7 +13,7 @@ from typing import Optional, List
 
 # Caminho para o logo (ajuste conforme a sua estrutura de arquivos)
 # Assumindo que o logo está em backend/app/static/logo.png
-LOGO_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "logo.png")
+LOGO_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "logobios.jpeg")
 if not os.path.exists(LOGO_PATH):
     print(f"AVISO: Logo da empresa não encontrado em {LOGO_PATH}. O PDF será gerado sem logo da empresa.")
     LOGO_PATH = None
