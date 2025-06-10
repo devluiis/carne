@@ -10,7 +10,21 @@ from app.routers import auth_router, clients_router, carnes_router, reports_rout
 # IMPORTES NECESSÁRIOS PARA SERVIR ARQUIVOS ESTÁTICOS
 from fastapi.staticfiles import StaticFiles
 import os
-# from fastapi.responses import FileResponse # Não é estritamente necessário se html=True em StaticFiles cobre o index.html
+import sys # Importa o módulo sys
+
+# NOVO: TENTA ADICIONAR O DIRETÓRIO site-packages DO AMBIENTE VIRTUAL AO PATH
+# Isso é um fallback para resolver ModuleNotFoundError em ambientes de deploy problemáticos.
+# O Render instala as libs em /opt/render/project/src/.venv/lib/python3.11/site-packages
+try:
+    VENV_SITE_PACKAGES = os.path.join(os.environ.get('VIRTUAL_ENV', '/opt/render/project/src/.venv'), 'lib', f'python{sys.version_info.major}.{sys.version_info.minor}', 'site-packages')
+    if os.path.exists(VENV_SITE_PACKAGES) and VENV_SITE_PACKAGES not in sys.path:
+        sys.path.insert(0, VENV_SITE_PACKAGES)
+        print(f"DEBUG: Adicionado {VENV_SITE_PACKAGES} ao sys.path para resolução de módulos.")
+    else:
+        print(f"DEBUG: Não foi possível adicionar {VENV_SITE_PACKAGES} ao sys.path ou já estava presente.")
+except Exception as e:
+    print(f"ERRO DEBUG: Falha ao tentar adicionar site-packages ao sys.path: {e}")
+
 
 # NOVO: Criação da pasta 'static' se não existir para o logo
 static_folder_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
@@ -55,13 +69,6 @@ app.include_router(clients_router.router, tags=["Clientes"])
 app.include_router(carnes_router.router, tags=["Carnês"])
 app.include_router(reports_router.router, tags=["Relatórios e Dashboard"])
 app.include_router(produtos_router.router, prefix="/api", tags=["Produtos"])
-
-# Os prefixos e tags já estão definidos dentro de cada arquivo de router.
-# As linhas abaixo são redundantes se já incluídas acima com tags e prefixos.
-# app.include_router(auth_router.router)
-# app.include_router(clients_router.router)
-# app.include_router(carnes_router.router)
-# app.include_router(reports_router.router)
 
 
 @app.on_event("startup")
