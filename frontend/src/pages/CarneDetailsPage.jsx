@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { carnes, parcelas, pagamentos, api } from '../api';
+import { carnes, parcelas, pagamentos } from '../api'; // Removida importação 'api'
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../components/AuthProvider.jsx';
 import { useGlobalAlert } from '../App.jsx';
 import LoadingSpinner from '../components/LoadingSpinner.jsx';
-import ConfirmationModal from '../components/ConfirmationModal.jsx'; // Importar ConfirmationModal
+import ConfirmationModal from '../components/ConfirmationModal.jsx';
 
 // Função auxiliar para estilos de status
 const getStatusStyle = (status) => {
@@ -29,7 +29,7 @@ function CarneDetailsPage() {
     const navigate = useNavigate();
     const [carne, setCarne] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [pdfLoading, setPdfLoading] = useState(false);
+    // REMOVIDO: const [pdfLoading, setPdfLoading] = useState(false);
     const [error, setError] = useState('');
     
     const [showPaymentForm, setShowPaymentForm] = useState(false);
@@ -38,15 +38,15 @@ function CarneDetailsPage() {
     const [valorPago, setValorPago] = useState('');
     const [formaPagamento, setFormaPagamento] = useState('Dinheiro');
     const [observacoesPagamento, setObservacoesPagamento] = useState('');
-    const [dataPagamento, setDataPagamento] = useState(''); // NOVO ESTADO para data do pagamento
+    const [dataPagamento, setDataPagamento] = useState('');
     const [paymentFormError, setPaymentFormError] = useState('');
     const [paymentLoading, setPaymentLoading] = useState(false);
 
-    const [showRenegotiateModal, setShowRenegotiateModal] = useState(false); // NOVO
-    const [renegotiateParcelaId, setRenegotiateParcelaId] = useState(null); // NOVO
-    const [newRenegotiateDueDate, setNewRenegotiateDueDate] = useState(''); // NOVO
-    const [newRenegotiateValue, setNewRenegotiateValue] = useState(''); // NOVO
-    const [renegotiateLoading, setRenegotiateLoading] = useState(false); // NOVO
+    const [showRenegotiateModal, setShowRenegotiateModal] = useState(false);
+    const [renegotiateParcelaId, setRenegotiateParcelaId] = useState(null);
+    const [newRenegotiateDueDate, setNewRenegotiateDueDate] = useState('');
+    const [newRenegotiateValue, setNewRenegotiateValue] = useState('');
+    const [renegotiateLoading, setRenegotiateLoading] = useState(false);
     
     const { user } = useAuth();
     const { setGlobalAlert } = useGlobalAlert();
@@ -75,7 +75,7 @@ function CarneDetailsPage() {
         setValorPago(parcela.saldo_devedor.toFixed(2));
         setFormaPagamento('Dinheiro');
         setObservacoesPagamento('');
-        setDataPagamento(new Date().toISOString().split('T')[0]); // Preenche com a data atual
+        setDataPagamento(new Date().toISOString().split('T')[0]);
         setPaymentFormError('');
         setShowPaymentForm(true);
     };
@@ -90,7 +90,7 @@ function CarneDetailsPage() {
             valor_pago: parseFloat(valorPago),
             forma_pagamento: formaPagamento,
             observacoes: observacoesPagamento,
-            data_pagamento: new Date(dataPagamento).toISOString() // Envia como ISO string (datetime)
+            data_pagamento: new Date(dataPagamento).toISOString()
         };
 
         try {
@@ -120,44 +120,14 @@ function CarneDetailsPage() {
         }
     };
     
-    const handleGeneratePdf = async () => {
-        if (!carne) return;
-        setPdfLoading(true);
-        setGlobalAlert({message: "Gerando PDF do carnê...", type: "info"});
+    // REMOVIDO: handleGeneratePdf function
 
-        // Usar a variável de ambiente VITE_API_BASE_URL para compatibilidade com build
-        const apiUrl = import.meta.env.VITE_API_BASE_URL || 'https://carne.onrender.com';
-        const pdfUrl = `${apiUrl}/carnes/${carne.id_carne}/pdf`;
-
-        try {
-            const response = await api.get(pdfUrl, { responseType: 'blob' });
-            const file = new Blob([response.data], { type: 'application/pdf' });
-            const fileURL = URL.createObjectURL(file);
-            window.open(fileURL, '_blank');
-            setGlobalAlert({message: "PDF pronto para visualização!", type: "success"});
-        } catch (err) {
-            console.error('Erro ao gerar PDF:', err);
-            let errorDetail = "Falha ao gerar o PDF.";
-            if (err.response?.data instanceof Blob && err.response?.data.type === "application/json") {
-                try {
-                    const errorJsonText = await err.response.data.text();
-                    const parsedError = JSON.parse(errorJsonText);
-                    errorDetail = parsedError.detail || "Erro no servidor ao gerar PDF.";
-                } catch { /* Mantém o errorDetail genérico */ }
-            } else {
-                errorDetail = err.response?.data?.detail || err.message || errorDetail;
-            }
-            setGlobalAlert({ message: `Erro ao gerar PDF: ${errorDetail}`, type: 'error' });
-        } finally {
-            setPdfLoading(false);
-        }
-    };
 
     // --- Funções de Renegociação ---
     const handleOpenRenegotiateModal = (parcela) => {
         setRenegotiateParcelaId(parcela.id_parcela);
-        setNewRenegotiateDueDate(parcela.data_vencimento); // Preenche com a data atual de vencimento
-        setNewRenegotiateValue(parcela.saldo_devedor.toFixed(2)); // Sugere o saldo devedor atual
+        setNewRenegotiateDueDate(parcela.data_vencimento);
+        setNewRenegotiateValue(parcela.saldo_devedor.toFixed(2));
         setShowRenegotiateModal(true);
     };
 
@@ -167,12 +137,12 @@ function CarneDetailsPage() {
             const renegotiationData = {
                 new_data_vencimento: newRenegotiateDueDate,
                 new_valor_devido: parseFloat(newRenegotiateValue),
-                status_parcela_apos_renegociacao: 'Renegociada' // Ou 'Pendente'
+                status_parcela_apos_renegociacao: 'Renegociada'
             };
             await parcelas.renegotiate(renegotiateParcelaId, renegotiationData);
             setGlobalAlert({ message: 'Parcela renegociada com sucesso!', type: 'success' });
             setShowRenegotiateModal(false);
-            fetchCarneDetails(); // Recarrega os detalhes do carnê para ver as mudanças
+            fetchCarneDetails();
         } catch (err) {
             const errorDetail = err.response?.data?.detail || err.message;
             setGlobalAlert({ message: `Erro ao renegociar parcela: ${errorDetail}`, type: 'error' });
@@ -200,19 +170,13 @@ function CarneDetailsPage() {
     }
 
     return (
-        <div className="form-container large-container"> {/* Usando large-container para ajustar o max-width */}
-            <div className="header-with-button"> {/* Nova classe para o cabeçalho e botão */}
+        <div className="form-container large-container">
+            <div className="header-with-button">
                 <h2>Detalhes do Carnê: {carne.descricao || `ID ${carne.id_carne}`}</h2>
-                <button 
-                    onClick={handleGeneratePdf} 
-                    className="btn btn-info" 
-                    disabled={pdfLoading}
-                >
-                    {pdfLoading ? 'Gerando PDF...' : '🖨️ Imprimir Carnê (PDF)'}
-                </button>
+                {/* REMOVIDO O BOTÃO DE GERAR PDF */}
             </div>
 
-            <div className="carne-info-box"> {/* Nova classe para o bloco de informações */}
+            <div className="carne-info-box">
                 <p><strong>Cliente:</strong> {carne.cliente ? `${carne.cliente.nome} (${carne.cliente.cpf_cnpj})` : carne.id_cliente}</p>
                 <p><strong>Valor Total Original:</strong> R$ {Number(carne.valor_total_original).toFixed(2)}</p>
                 <p><strong>Valor de Entrada:</strong> R$ {Number(carne.valor_entrada || 0).toFixed(2)}</p>
@@ -251,7 +215,6 @@ function CarneDetailsPage() {
                                     <td>{parcela.numero_parcela}</td>
                                     <td>R$ {Number(parcela.valor_devido).toFixed(2)}</td>
                                     <td>R$ {Number(parcela.juros_multa).toFixed(2)}</td>
-                                    <td>R$ {Number(parcela.juros_multa_anterior_aplicada).toFixed(2)}</td> {/* Exibir valor anterior */}
                                     <td>R$ {Number(parcela.valor_pago).toFixed(2)}</td>
                                     <td>R$ {Number(parcela.saldo_devedor).toFixed(2)}</td>
                                     <td>{new Date(parcela.data_vencimento).toLocaleDateString()}</td>
@@ -283,14 +246,14 @@ function CarneDetailsPage() {
                                 </tr>
                                 {parcela.pagamentos && parcela.pagamentos.length > 0 && (
                                     <tr>
-                                        <td colSpan="9" className="sub-table-cell"> {/* Colspan ajustado para novas colunas */}
+                                        <td colSpan="8" className="sub-table-cell">
                                             <div className="payments-sub-table-container">
                                                 <h4 className="payments-sub-table-title">Pagamentos Registrados:</h4>
                                                 <table className="styled-table sub-table">
                                                     <thead>
                                                         <tr>
                                                             <th>ID</th>
-                                                            <th>Data Pgto</th> {/* Nome da coluna ajustado */}
+                                                            <th>Data Pgto</th>
                                                             <th>Valor Pago</th>
                                                             <th>Forma</th>
                                                             <th>Obs.</th>
@@ -330,13 +293,13 @@ function CarneDetailsPage() {
             )}
 
             {showPaymentForm && selectedParcela && (
-                <div className="form-container payment-form-section"> {/* Nova classe para o formulário de pagamento */}
+                <div className="form-container payment-form-section">
                     <h3>Registrar Pagamento para Parcela #{selectedParcela.numero_parcela}</h3>
                     <p>Saldo Devedor Atual (incl. Juros/Multas): <strong className="text-danger">R$ {Number(selectedParcela.saldo_devedor).toFixed(2)}</strong></p>
                     {paymentFormError && <p className="text-danger">{paymentFormError}</p>}
                     <form onSubmit={handlePaymentSubmit}>
                         <div className="form-group">
-                            <label htmlFor="dataPagamento">Data do Pagamento:</label> {/* NOVO CAMPO */}
+                            <label htmlFor="dataPagamento">Data do Pagamento:</label>
                             <input
                                 type="date"
                                 id="dataPagamento"
@@ -357,7 +320,6 @@ function CarneDetailsPage() {
                                 required
                                 className="form-input"
                                 min="0.01"
-                                // max para garantir que não pague mais que o devido, mas com a precisão correta
                                 max={Number(selectedParcela.saldo_devedor + 0.01).toFixed(2)} 
                             />
                         </div>
@@ -384,7 +346,7 @@ function CarneDetailsPage() {
                 </div>
             )}
 
-            {/* NOVO: Modal de Renegociação */}
+            {/* Modal de Renegociação */}
             <ConfirmationModal
                 isOpen={showRenegotiateModal}
                 title="Renegociar Parcela"

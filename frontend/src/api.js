@@ -41,7 +41,7 @@ export const clients = {
     getSummary: (id) => api.get(`/clients/${id}/summary`),
     create: (clientData) => api.post('/clients/', clientData),
     update: (id, clientData) => api.put(`/clients/${id}`, clientData),
-    delete: (id) => api.delete(`/clients/${id}`),
+    delete: (id) => api.delete('/clients/${id}'),
 };
 
 export const carnes = {
@@ -64,7 +64,7 @@ export const parcelas = {
     getByCarneId: (carneId) => api.get(`/carnes/${carneId}/parcelas`),
     getById: (id) => api.get(`/carnes/parcelas/${id}`),
     update: (id, parcelaData) => api.put(`/carnes/parcelas/${id}`, parcelaData),
-    renegotiate: (id, renegotiationData) => api.post(`/carnes/parcelas/${id}/renegotiate`, renegotiationData), // NOVO
+    renegotiate: (id, renegotiationData) => api.post(`/carnes/parcelas/${id}/renegotiate`, renegotiationData),
     delete: (id) => api.delete(`/carnes/parcelas/${id}`),
 };
 

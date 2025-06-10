@@ -998,7 +998,6 @@ def update_pagamento(db: Session, pagamento_id: int, pagamento_update: schemas.P
 
     return db_pagamento
 
-
 def delete_pagamento(db: Session, pagamento_id: int):
     db_pagamento = get_pagamento(db, pagamento_id)
     if not db_pagamento:
