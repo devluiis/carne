@@ -33,7 +33,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY ./app /app/app
 COPY ./alembic /app/alembic
 COPY alembic.ini .
-COPY .env . # Se você usa .env no deploy, copie-o (com cuidado para não expor segredos)
 
 # Cria a pasta static para os assets
 RUN mkdir -p /app/app/static
