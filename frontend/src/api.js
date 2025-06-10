@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = "https://carne.onrender.com"; // Certifique-se que esta URL é a do seu backend no Render
+const API_BASE_URL = "https://carnebios.onrender.com"; // Certifique-se que esta URL é a do seu backend no Render
 
 export const api = axios.create({
     baseURL: API_BASE_URL,
