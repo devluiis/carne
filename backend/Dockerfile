@@ -39,7 +39,7 @@ COPY .env . # Se você usa .env no deploy, copie-o (com cuidado para não expor 
 RUN mkdir -p /app/app/static
 
 # Copia os arquivos estáticos (logo e qrcode)
-COPY ./app/static/logo.png /app/app/static/
+COPY ./app/static/logobios.jpeg /app/app/static/
 COPY ./app/static/meu_qrcode_pix.jpeg /app/app/static/
 
 # Expõe a porta que a aplicação FastAPI vai usar (Render usa $PORT)
