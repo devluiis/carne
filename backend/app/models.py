@@ -65,13 +65,13 @@ class Parcela(Base):
     juros_multa_anterior_aplicada = Column(DECIMAL(10, 2), default=0.00, nullable=False)
 
     carne = relationship("Carne", back_populates="parcelas")
-    pagamentos = relationship("Pagamento", back_populates="parcela", cascade="all, delete-orphan")
+    pagamentos = relationship("Pagamento", back_pop_populates="parcela", cascade="all, delete-orphan")
 
 class Pagamento(Base):
     __tablename__ = "pagamento"
     id_pagamento = Column(Integer, primary_key=True, index=True)
     id_parcela = Column(Integer, ForeignKey("parcela.id_parcela"), nullable=False)
-    data_pagamento = Column(DateTime, default=func.now())
+    data_pagamento = Column(DateTime, nullable=False) # ALTERADO: Removido default=func.now() para permitir data_pagamento
     valor_pago = Column(DECIMAL(10, 2), nullable=False)
     forma_pagamento = Column(String(50), nullable=False)
     observacoes = Column(String)

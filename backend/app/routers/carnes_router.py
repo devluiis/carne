@@ -89,6 +89,13 @@ def update_parcela(parcela_id: int, parcela_update: schemas.ParcelaBase, db: Ses
         raise HTTPException(status_code=404, detail="Parcela não encontrada")
     return db_parcela
 
+# NOVA ROTA: Renegociar Parcela
+@router.post("/parcelas/{parcela_id}/renegotiate", response_model=schemas.ParcelaResponse)
+def renegotiate_parcela_route(parcela_id: int, renegotiation_data: schemas.ParcelaRenegotiate, db: Session = Depends(get_db), current_user: models.Usuario = Depends(get_current_active_user)):
+    db_parcela = crud.renegotiate_parcela(db, parcela_id, renegotiation_data)
+    # A função crud.renegotiate_parcela já levanta HTTPException se não encontrar a parcela ou houver erro
+    return db_parcela
+
 @router.delete("/parcelas/{parcela_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_parcela(parcela_id: int, db: Session = Depends(get_db), current_user: models.Usuario = Depends(get_current_admin_user)):
     result = crud.delete_parcela(db, parcela_id=parcela_id) # crud.delete_parcela agora retorna um dict

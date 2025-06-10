@@ -120,12 +120,19 @@ class ParcelaResponse(ParcelaBase):
     class Config:
         from_attributes = True
 
+# NOVO SCHEMA PARA RENEGOCIAÇÃO DE PARCELA
+class ParcelaRenegotiate(BaseModel):
+    new_data_vencimento: date
+    new_valor_devido: Optional[float] = None # Para permitir ajuste de valor, se aplicável
+    status_parcela_apos_renegociacao: Optional[str] = "Renegociada" # Ou "Pendente"
+
 # --- Pagamento (Schemas completos para CRUD) ---
 class PagamentoCreate(BaseModel):
     id_parcela: int
     valor_pago: float
     forma_pagamento: str = Field(..., description="Forma de pagamento (e.g., 'Dinheiro', 'PIX', 'Cartão')")
     observacoes: Optional[str] = None
+    data_pagamento: Optional[datetime] = None # ALTERADO: Campo opcional para a data do pagamento
 
 class PagamentoResponse(PagamentoCreate):
     id_pagamento: int

@@ -4,17 +4,21 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../components/AuthProvider.jsx';
 import { useGlobalAlert } from '../App.jsx';
 import LoadingSpinner from '../components/LoadingSpinner.jsx';
+import ConfirmationModal from '../components/ConfirmationModal.jsx'; // Importar ConfirmationModal
 
 // Função auxiliar para estilos de status
 const getStatusStyle = (status) => {
     switch (status) {
         case 'Paga':
-        case 'Paga com Atraso':
             return { color: 'green', fontWeight: 'bold' };
+        case 'Paga com Atraso':
+            return { color: 'darkgreen', fontWeight: 'bold' }; // Cor ligeiramente diferente
         case 'Atrasada':
             return { color: 'red', fontWeight: 'bold' };
         case 'Parcialmente Paga':
             return { color: 'orange', fontWeight: 'bold' };
+        case 'Renegociada': // NOVO STATUS
+            return { color: 'purple', fontWeight: 'bold' };
         default: // Pendente
             return { color: 'blue', fontWeight: 'bold' };
     }
@@ -34,8 +38,15 @@ function CarneDetailsPage() {
     const [valorPago, setValorPago] = useState('');
     const [formaPagamento, setFormaPagamento] = useState('Dinheiro');
     const [observacoesPagamento, setObservacoesPagamento] = useState('');
+    const [dataPagamento, setDataPagamento] = useState(''); // NOVO ESTADO para data do pagamento
     const [paymentFormError, setPaymentFormError] = useState('');
     const [paymentLoading, setPaymentLoading] = useState(false);
+
+    const [showRenegotiateModal, setShowRenegotiateModal] = useState(false); // NOVO
+    const [renegotiateParcelaId, setRenegotiateParcelaId] = useState(null); // NOVO
+    const [newRenegotiateDueDate, setNewRenegotiateDueDate] = useState(''); // NOVO
+    const [newRenegotiateValue, setNewRenegotiateValue] = useState(''); // NOVO
+    const [renegotiateLoading, setRenegotiateLoading] = useState(false); // NOVO
     
     const { user } = useAuth();
     const { setGlobalAlert } = useGlobalAlert();
@@ -64,6 +75,7 @@ function CarneDetailsPage() {
         setValorPago(parcela.saldo_devedor.toFixed(2));
         setFormaPagamento('Dinheiro');
         setObservacoesPagamento('');
+        setDataPagamento(new Date().toISOString().split('T')[0]); // Preenche com a data atual
         setPaymentFormError('');
         setShowPaymentForm(true);
     };
@@ -77,7 +89,8 @@ function CarneDetailsPage() {
             id_parcela: selectedParcela.id_parcela,
             valor_pago: parseFloat(valorPago),
             forma_pagamento: formaPagamento,
-            observacoes: observacoesPagamento
+            observacoes: observacoesPagamento,
+            data_pagamento: new Date(dataPagamento).toISOString() // Envia como ISO string (datetime)
         };
 
         try {
@@ -112,6 +125,7 @@ function CarneDetailsPage() {
         setPdfLoading(true);
         setGlobalAlert({message: "Gerando PDF do carnê...", type: "info"});
 
+        // Usar a variável de ambiente VITE_API_BASE_URL para compatibilidade com build
         const apiUrl = import.meta.env.VITE_API_BASE_URL || 'https://carne.onrender.com';
         const pdfUrl = `${apiUrl}/carnes/${carne.id_carne}/pdf`;
 
@@ -138,6 +152,42 @@ function CarneDetailsPage() {
             setPdfLoading(false);
         }
     };
+
+    // --- Funções de Renegociação ---
+    const handleOpenRenegotiateModal = (parcela) => {
+        setRenegotiateParcelaId(parcela.id_parcela);
+        setNewRenegotiateDueDate(parcela.data_vencimento); // Preenche com a data atual de vencimento
+        setNewRenegotiateValue(parcela.saldo_devedor.toFixed(2)); // Sugere o saldo devedor atual
+        setShowRenegotiateModal(true);
+    };
+
+    const handleConfirmRenegotiate = async () => {
+        setRenegotiateLoading(true);
+        try {
+            const renegotiationData = {
+                new_data_vencimento: newRenegotiateDueDate,
+                new_valor_devido: parseFloat(newRenegotiateValue),
+                status_parcela_apos_renegociacao: 'Renegociada' // Ou 'Pendente'
+            };
+            await parcelas.renegotiate(renegotiateParcelaId, renegotiationData);
+            setGlobalAlert({ message: 'Parcela renegociada com sucesso!', type: 'success' });
+            setShowRenegotiateModal(false);
+            fetchCarneDetails(); // Recarrega os detalhes do carnê para ver as mudanças
+        } catch (err) {
+            const errorDetail = err.response?.data?.detail || err.message;
+            setGlobalAlert({ message: `Erro ao renegociar parcela: ${errorDetail}`, type: 'error' });
+        } finally {
+            setRenegotiateLoading(false);
+        }
+    };
+
+    const handleCancelRenegotiate = () => {
+        setShowRenegotiateModal(false);
+        setRenegotiateParcelaId(null);
+        setNewRenegotiateDueDate('');
+        setNewRenegotiateValue('');
+    };
+
 
     if (loading) {
         return <LoadingSpinner message="Carregando detalhes do carnê..." />;
@@ -201,6 +251,7 @@ function CarneDetailsPage() {
                                     <td>{parcela.numero_parcela}</td>
                                     <td>R$ {Number(parcela.valor_devido).toFixed(2)}</td>
                                     <td>R$ {Number(parcela.juros_multa).toFixed(2)}</td>
+                                    <td>R$ {Number(parcela.juros_multa_anterior_aplicada).toFixed(2)}</td> {/* Exibir valor anterior */}
                                     <td>R$ {Number(parcela.valor_pago).toFixed(2)}</td>
                                     <td>R$ {Number(parcela.saldo_devedor).toFixed(2)}</td>
                                     <td>{new Date(parcela.data_vencimento).toLocaleDateString()}</td>
@@ -210,6 +261,7 @@ function CarneDetailsPage() {
                                         </span>
                                     </td>
                                     <td>
+                                        <div className="table-actions">
                                         {parcela.status_parcela !== 'Paga' && parcela.status_parcela !== 'Paga com Atraso' && Number(parcela.saldo_devedor) > 0.009 && (
                                             <button
                                                 onClick={() => handleRegisterPaymentClick(parcela)}
@@ -218,18 +270,27 @@ function CarneDetailsPage() {
                                                 Registrar Pagamento
                                             </button>
                                         )}
+                                        {user?.perfil === 'admin' && parcela.status_parcela !== 'Paga' && parcela.status_parcela !== 'Paga com Atraso' && parcela.status_parcela !== 'Cancelada' && (
+                                            <button
+                                                onClick={() => handleOpenRenegotiateModal(parcela)}
+                                                className="btn btn-secondary btn-sm"
+                                            >
+                                                Renegociar
+                                            </button>
+                                        )}
+                                        </div>
                                     </td>
                                 </tr>
                                 {parcela.pagamentos && parcela.pagamentos.length > 0 && (
                                     <tr>
-                                        <td colSpan="8" className="sub-table-cell"> {/* Classe para a célula que contém a sub-tabela */}
+                                        <td colSpan="9" className="sub-table-cell"> {/* Colspan ajustado para novas colunas */}
                                             <div className="payments-sub-table-container">
                                                 <h4 className="payments-sub-table-title">Pagamentos Registrados:</h4>
                                                 <table className="styled-table sub-table">
                                                     <thead>
                                                         <tr>
                                                             <th>ID</th>
-                                                            <th>Data</th>
+                                                            <th>Data Pgto</th> {/* Nome da coluna ajustado */}
                                                             <th>Valor Pago</th>
                                                             <th>Forma</th>
                                                             <th>Obs.</th>
@@ -275,6 +336,17 @@ function CarneDetailsPage() {
                     {paymentFormError && <p className="text-danger">{paymentFormError}</p>}
                     <form onSubmit={handlePaymentSubmit}>
                         <div className="form-group">
+                            <label htmlFor="dataPagamento">Data do Pagamento:</label> {/* NOVO CAMPO */}
+                            <input
+                                type="date"
+                                id="dataPagamento"
+                                value={dataPagamento}
+                                onChange={(e) => setDataPagamento(e.target.value)}
+                                required
+                                className="form-input"
+                            />
+                        </div>
+                        <div className="form-group">
                             <label htmlFor="valorPago">Valor Pago:</label>
                             <input
                                 type="number"
@@ -311,6 +383,47 @@ function CarneDetailsPage() {
                     </form>
                 </div>
             )}
+
+            {/* NOVO: Modal de Renegociação */}
+            <ConfirmationModal
+                isOpen={showRenegotiateModal}
+                title="Renegociar Parcela"
+                message={
+                    <form className="form-content-in-modal" onSubmit={(e) => e.preventDefault()}>
+                        <p>Renegociando Parcela ID: {renegotiateParcelaId}</p>
+                        <div className="form-group">
+                            <label htmlFor="newDueDate">Nova Data de Vencimento:</label>
+                            <input
+                                type="date"
+                                id="newDueDate"
+                                value={newRenegotiateDueDate}
+                                onChange={(e) => setNewRenegotiateDueDate(e.target.value)}
+                                required
+                                className="form-input"
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label htmlFor="newRenegotiateValue">Novo Valor Devido (Opcional, ou saldo atual):</label>
+                            <input
+                                type="number"
+                                id="newRenegotiateValue"
+                                step="0.01"
+                                value={newRenegotiateValue}
+                                onChange={(e) => setNewRenegotiateValue(e.target.value)}
+                                className="form-input"
+                                min="0.00"
+                            />
+                            <small className="form-text-muted">Se não preenchido, o saldo devedor atual será mantido, mas os juros/multa serão zerados.</small>
+                        </div>
+                    </form>
+                }
+                onConfirm={handleConfirmRenegotiate}
+                onCancel={handleCancelRenegotiate}
+                confirmText={renegotiateLoading ? 'Renegociando...' : 'Confirmar Renegociação'}
+                cancelText="Cancelar"
+                confirmButtonClass="btn-success"
+                isConfirmDisabled={renegotiateLoading || !newRenegotiateDueDate}
+            />
 
             <button onClick={() => navigate('/carnes')} className="btn btn-secondary mt-2">
                 Voltar para Lista de Carnês

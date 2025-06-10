@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = "https://carne.onrender.com";
+const API_BASE_URL = "https://carne.onrender.com"; // Certifique-se que esta URL é a do seu backend no Render
 
 export const api = axios.create({
     baseURL: API_BASE_URL,
@@ -64,6 +64,7 @@ export const parcelas = {
     getByCarneId: (carneId) => api.get(`/carnes/${carneId}/parcelas`),
     getById: (id) => api.get(`/carnes/parcelas/${id}`),
     update: (id, parcelaData) => api.put(`/carnes/parcelas/${id}`, parcelaData),
+    renegotiate: (id, renegotiationData) => api.post(`/carnes/parcelas/${id}/renegotiate`, renegotiationData), // NOVO
     delete: (id) => api.delete(`/carnes/parcelas/${id}`),
 };
 

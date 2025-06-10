@@ -12,31 +12,66 @@ from sqlalchemy import func
 # --- Funções Auxiliares (RF017/RF018) ---
 def _apply_interest_and_fine_if_due(db: Session, parcela: models.Parcela):
     today = date.today()
-    if parcela.status_parcela not in ['Paga', 'Paga com Atraso', 'Cancelada'] and parcela.data_vencimento < today:
+    
+    # NÃO recalcular juros/multas se a parcela já está paga ou cancelada.
+    if parcela.status_parcela in ['Paga', 'Paga com Atraso', 'Cancelada']:
+        # Garante que, se já está paga, saldo e juros/multa sejam zero.
+        # Isso evita que juros/multa apareçam em parcelas já quitadas
+        if parcela.juros_multa > Decimal('0.00') and parcela.saldo_devedor <= Decimal('0.00'):
+            parcela.juros_multa = Decimal('0.00')
+            parcela.juros_multa_anterior_aplicada = Decimal('0.00')
+            db.add(parcela)
+            # Não faz commit aqui, deixa para o caller
+        return 
+
+    # Se a parcela está vencida e não paga, recalcula juros/multas
+    if parcela.data_vencimento < today:
         dias_atraso = (today - parcela.data_vencimento).days
-        valor_base_para_calculo = parcela.valor_devido - (parcela.valor_pago - parcela.juros_multa_anterior_aplicada)
+        
+        # O valor base para cálculo de juros/multa deve ser o saldo original que falta
+        # Não sobre o valor já aplicado de juros/multas, para evitar juros sobre juros sem controle.
+        valor_base_para_calculo = parcela.valor_devido - parcela.valor_pago
         if valor_base_para_calculo < Decimal('0.00'):
-            valor_base_para_calculo = Decimal('0.00')
+            valor_base_para_calculo = Decimal('0.00') # Não calcular juros sobre valor negativo
 
         multa = (valor_base_para_calculo * Decimal(str(MULTA_ATRASO_PERCENTUAL))) / Decimal('100')
         juros_diario_percentual = Decimal(str(JUROS_MORA_PERCENTUAL_AO_MES)) / Decimal('30') / Decimal('100')
         juros_mora = (valor_base_para_calculo * juros_diario_percentual * Decimal(str(dias_atraso)))
+        
         total_novos_juros_multa = multa + juros_mora
-        current_saldo_excluding_old_juros = parcela.valor_devido - parcela.valor_pago # Base para recalcular saldo com novos juros
 
-        parcela.juros_multa = total_novos_juros_multa
-        # Saldo devedor é o que falta do principal + novos juros/multas
-        parcela.saldo_devedor = (parcela.valor_devido - parcela.valor_pago) + total_novos_juros_multa
-        parcela.juros_multa_anterior_aplicada = total_novos_juros_multa
+        # Atualiza o campo juros_multa APENAS se o valor mudou
+        # Isso é importante para não "sujar" o histórico se não houve alteração.
+        if total_novos_juros_multa != parcela.juros_multa_anterior_aplicada:
+            parcela.juros_multa = total_novos_juros_multa
+            parcela.juros_multa_anterior_aplicada = total_novos_juros_multa # Guarda o último valor aplicado
 
-        if parcela.saldo_devedor < Decimal('0.01') and parcela.saldo_devedor > Decimal('-0.01'): # Quitado com juros
+        # Recalcula saldo devedor incluindo os juros/multas calculados.
+        # Saldo devedor é o que falta do principal (valor_devido - valor_pago) + juros/multa atual
+        parcela.saldo_devedor = (parcela.valor_devido - parcela.valor_pago) + parcela.juros_multa
+
+        # Ajuste para evitar valores negativos residuais muito pequenos
+        if parcela.saldo_devedor < Decimal('0.01') and parcela.saldo_devedor > Decimal('-0.01'):
             parcela.saldo_devedor = Decimal('0.00')
-            if parcela.status_parcela != 'Paga com Atraso':
-                 parcela.status_parcela = 'Paga'
-        elif parcela.data_vencimento < today and parcela.saldo_devedor > Decimal('0.00'):
-            parcela.status_parcela = 'Atrasada'
 
-        db.add(parcela)
+        # Atualiza status da parcela com base no saldo e vencimento
+        if parcela.saldo_devedor <= Decimal('0.00'):
+            # Se quitada, mesmo que atrasada, o status prioritário é 'Paga'
+            if parcela.data_pagamento_completo and parcela.data_pagamento_completo > parcela.data_vencimento:
+                parcela.status_parcela = 'Paga com Atraso'
+            else:
+                parcela.status_parcela = 'Paga'
+            # Garante que juros/multa sejam zerados se a parcela está efetivamente paga
+            parcela.juros_multa = Decimal('0.00')
+            parcela.juros_multa_anterior_aplicada = Decimal('0.00')
+        elif parcela.data_vencimento < today:
+            parcela.status_parcela = 'Atrasada'
+        elif parcela.valor_pago > Decimal('0.00'):
+            parcela.status_parcela = 'Parcialmente Paga'
+        else:
+            parcela.status_parcela = 'Pendente'
+        
+        db.add(parcela) # Adiciona ao session, mas não faz commit aqui.
 
 def calculate_next_due_date(current_date: date, frequency: str) -> date:
     if frequency == "mensal":
@@ -244,39 +279,50 @@ def get_client_summary(db: Session, client_id: int):
     numero_carnes_cancelados = 0
 
     for carne_obj in db_client.carnes:
+        # Aplica juros/multas e atualiza status das parcelas.
+        # Não faz commit aqui, pois a lógica de update do carnê fará.
         for parcela in carne_obj.parcelas:
             _apply_interest_and_fine_if_due(db, parcela)
 
+        # Recalcula o status do carnê com base no status das parcelas após aplicação de juros
         if carne_obj.status_carne != 'Cancelado':
             all_parcels_paid = all(p.status_parcela in ['Paga', 'Paga com Atraso'] for p in carne_obj.parcelas)
             has_overdue_parcel = any(p.status_parcela == 'Atrasada' for p in carne_obj.parcelas)
-
+            has_partially_paid_parcel = any(p.status_parcela == 'Parcialmente Paga' for p in carne_obj.parcelas)
+            
             if all_parcels_paid and carne_obj.parcelas:
                 carne_obj.status_carne = 'Quitado'
             elif has_overdue_parcel:
                 carne_obj.status_carne = 'Em Atraso'
+            elif has_partially_paid_parcel:
+                carne_obj.status_carne = 'Ativo' # Pode ser 'Parcialmente Ativo' se quiser distinguir
             else:
-                is_partially_paid_carne = any(p.status_parcela == 'Parcialmente Paga' for p in carne_obj.parcelas)
-                if is_partially_paid_carne or not carne_obj.parcelas :
-                    carne_obj.status_carne = 'Ativo'
-        db.add(carne_obj)
-    db.commit()
+                carne_obj.status_carne = 'Ativo' # Se não tem atrasadas e não pagas, mas também não totalmente pagas
+        db.add(carne_obj) # Adiciona ao session, mas não faz commit aqui
 
+    db.commit() # Commit uma vez após o loop de carnês para salvar as mudanças de status e juros/multas
+
+    # Após o commit, re-refresh para garantir que os dados de status e saldos estão atualizados para o resumo
+    db.refresh(db_client)
     for carne_obj in db_client.carnes:
         db.refresh(carne_obj)
+        for parcela in carne_obj.parcelas:
+            db.refresh(parcela)
+
         if carne_obj.status_carne == 'Quitado':
             numero_carnes_quitados += 1
         elif carne_obj.status_carne == 'Cancelado':
             numero_carnes_cancelados += 1
-        else:
+        else: # Inclui Ativo, Em Atraso
             numero_carnes_ativos += 1
             for parcela in carne_obj.parcelas:
-                db.refresh(parcela)
-                if parcela.status_parcela not in ['Paga', 'Paga com Atraso']:
+                # Soma a dívida aberta apenas se o status da parcela indica que há saldo a ser pago
+                if parcela.status_parcela not in ['Paga', 'Paga com Atraso', 'Cancelada']:
                     total_divida_aberta += parcela.saldo_devedor
 
         for parcela in carne_obj.parcelas:
             total_pago_historico += parcela.valor_pago
+
 
     client_data_for_summary = schemas.ClientResponse.model_validate(db_client).model_dump()
     client_summary = schemas.ClientSummaryResponse(
@@ -297,19 +343,44 @@ def get_carne(db: Session, carne_id: int, apply_interest: bool = True):
     ).filter(models.Carne.id_carne == carne_id).first()
 
     if db_carne and apply_interest:
+        needs_commit = False
         for parcela in db_carne.parcelas:
+            original_juros_multa = parcela.juros_multa
+            original_saldo_devedor = parcela.saldo_devedor
+            original_status_parcela = parcela.status_parcela
             _apply_interest_and_fine_if_due(db, parcela)
+            if (parcela.juros_multa != original_juros_multa or 
+                parcela.saldo_devedor != original_saldo_devedor or 
+                parcela.status_parcela != original_status_parcela):
+                needs_commit = True
+                db.add(parcela) # Marca para salvamento
+
+        # Recalcula o status do carnê após aplicar juros às parcelas
         if db_carne.status_carne != 'Cancelado':
             all_parcels_paid = all(p.status_parcela in ['Paga', 'Paga com Atraso'] for p in db_carne.parcelas)
             has_overdue_parcel = any(p.status_parcela == 'Atrasada' for p in db_carne.parcelas)
+            has_partially_paid_parcel = any(p.status_parcela == 'Parcialmente Paga' for p in db_carne.parcelas)
+            
+            new_status_carne = db_carne.status_carne # Manter o status atual se não houver mudança
+
             if all_parcels_paid and db_carne.parcelas:
-                db_carne.status_carne = 'Quitado'
+                new_status_carne = 'Quitado'
             elif has_overdue_parcel:
-                db_carne.status_carne = 'Em Atraso'
+                new_status_carne = 'Em Atraso'
+            elif has_partially_paid_parcel:
+                new_status_carne = 'Ativo' # Pode ser 'Parcialmente Ativo' se quiser distinguir
             else:
-                db_carne.status_carne = 'Ativo'
-        db.commit()
-        db.refresh(db_carne)
+                new_status_carne = 'Ativo'
+            
+            if db_carne.status_carne != new_status_carne:
+                db_carne.status_carne = new_status_carne
+                needs_commit = True
+                db.add(db_carne) # Marca o carnê para salvamento
+
+        if needs_commit:
+            db.commit() # Commit uma vez para todas as parcelas e o carnê
+            db.refresh(db_carne) # Refresha o carnê para ter os dados mais recentes
+
     return db_carne
 
 def get_carnes(
@@ -317,21 +388,25 @@ def get_carnes(
     status_carne: Optional[str] = None, data_vencimento_inicio: Optional[date] = None,
     data_vencimento_fim: Optional[date] = None, search_query: Optional[str] = None
 ):
-    query = db.query(models.Carne).options(joinedload(models.Carne.cliente))
+    query = db.query(models.Carne).options(
+        joinedload(models.Carne.cliente),
+        joinedload(models.Carne.parcelas) # Carrega parcelas para recalcular status
+    )
 
     if id_cliente:
         query = query.filter(models.Carne.id_cliente == id_cliente)
     if status_carne:
         query = query.filter(models.Carne.status_carne == status_carne)
 
+    # Filtragem por data de vencimento precisa juntar com Parcelas
     if data_vencimento_inicio or data_vencimento_fim:
-        query = query.join(models.Carne.parcelas)
+        query = query.join(models.Carne.parcelas) # Garante que estamos filtrando por parcelas do carnê
         if data_vencimento_inicio:
             query = query.filter(models.Parcela.data_vencimento >= data_vencimento_inicio)
         if data_vencimento_fim:
             query = query.filter(models.Parcela.data_vencimento <= data_vencimento_fim)
-        query = query.distinct()
-
+        query = query.distinct(models.Carne.id_carne) # Para evitar carnês duplicados se tiverem várias parcelas no range
+        
     if search_query:
         query = query.filter(
             (models.Carne.descricao.ilike(f"%{search_query}%")) |
@@ -339,48 +414,51 @@ def get_carnes(
             (models.Carne.cliente.has(models.Cliente.cpf_cnpj.ilike(f"%{search_query}%")))
         )
 
+    # Ordenação mais robusta: primeiro por data de venda (mais recente) e depois por data de criação.
     query = query.order_by(models.Carne.data_venda.desc().nullslast(), models.Carne.data_criacao.desc())
 
     db_carnes = query.offset(skip).limit(limit).all()
 
+    needs_overall_commit = False
     for carne_obj in db_carnes:
-        needs_commit = False
+        # Aplicar juros/multas e atualizar status das parcelas individualmente
         for parcela in carne_obj.parcelas:
             original_status = parcela.status_parcela
             original_juros = parcela.juros_multa
             _apply_interest_and_fine_if_due(db, parcela)
             if parcela.status_parcela != original_status or parcela.juros_multa != original_juros:
-                needs_commit = True
-                db.add(parcela)
+                needs_overall_commit = True
+                db.add(parcela) # Marca parcela para commit
 
+        # Recalcular o status do carnê
         if carne_obj.status_carne != 'Cancelado':
             all_parcels_paid = all(p.status_parcela in ['Paga', 'Paga com Atraso'] for p in carne_obj.parcelas)
             has_overdue_parcel = any(p.status_parcela == 'Atrasada' for p in carne_obj.parcelas)
+            has_partially_paid_parcel = any(p.status_parcela == 'Parcialmente Paga' for p in carne_obj.parcelas)
+
             new_status_carne = carne_obj.status_carne
             if all_parcels_paid and carne_obj.parcelas:
                 new_status_carne = 'Quitado'
             elif has_overdue_parcel:
                 new_status_carne = 'Em Atraso'
+            elif has_partially_paid_parcel:
+                new_status_carne = 'Ativo' # Ou 'Parcialmente Ativo'
             else:
-                is_partially_paid_carne = any(p.status_parcela == 'Parcialmente Paga' for p in carne_obj.parcelas)
-                if is_partially_paid_carne or not carne_obj.parcelas:
-                     new_status_carne = 'Ativo'
-                else:
-                     new_status_carne = 'Ativo'
-
+                new_status_carne = 'Ativo' # Se não tem atrasadas e não pagas, mas também não totalmente pagas
+            
             if carne_obj.status_carne != new_status_carne:
                 carne_obj.status_carne = new_status_carne
-                needs_commit = True
+                needs_overall_commit = True
+                db.add(carne_obj) # Marca carnê para commit
 
-        if needs_commit:
-            db.add(carne_obj)
+    if needs_overall_commit:
+        db.commit() # Commit uma vez para todas as mudanças coletadas
 
-    db.commit()
-
+    # Refresha todos os objetos para garantir que os dados retornados estão atualizados
     refreshed_carnes = []
     for carne_obj in db_carnes:
         db.refresh(carne_obj)
-        for parcela in carne_obj.parcelas:
+        for parcela in carne_obj.parcelas: # Refresha também as parcelas carregadas
             db.refresh(parcela)
         refreshed_carnes.append(carne_obj)
 
@@ -399,7 +477,7 @@ def create_carne(db: Session, carne: schemas.CarneCreate):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A data do primeiro vencimento não pode ser anterior à data da venda.")
 
     # --- Lógica para parcela_fixa ---
-    if not carne.parcela_fixa: # Carnê sem parcela fixa
+    if not carne.parcela_fixa: # Carnê sem parcela fixa (flexível)
         db_carne = models.Carne(
             id_cliente=carne.id_cliente,
             data_venda=carne.data_venda,
@@ -433,7 +511,7 @@ def create_carne(db: Session, carne: schemas.CarneCreate):
         )
         db.add(db_parcela)
         db.commit()
-        db.refresh(db_carne)
+        db.refresh(db_carne) # Refresh novamente para carregar as parcelas
         return db_carne
     else: # Carnê com parcela fixa (comportamento anterior)
         if carne.numero_parcelas <= 0:
@@ -499,7 +577,7 @@ def create_carne(db: Session, carne: schemas.CarneCreate):
                 current_due_date = calculate_next_due_date(current_due_date, carne.frequencia_pagamento)
 
             db.commit()
-            db.refresh(db_carne)
+            db.refresh(db_carne) # Refresh novamente para carregar as parcelas
         return db_carne
 
 
@@ -528,14 +606,14 @@ def update_carne(db: Session, carne_id: int, carne_update: schemas.CarneCreate):
     ]
 
     if has_payments:
+        # Se tem pagamentos, só permite alterar descricao, status_carne, observacoes, data_venda
         allowed_keys_with_payments = ['descricao', 'status_carne', 'observacoes', 'data_venda']
         for key_to_update in list(update_data.keys()):
             if key_to_update not in allowed_keys_with_payments:
-                # Se tentar alterar tipo de parcela em carnê com pagamento, ou outros campos financeiros
                 if getattr(db_carne, key_to_update) != update_data[key_to_update]:
                     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                                         detail=f"Não é possível alterar o campo '{key_to_update}' de um carnê que já possui pagamentos.")
-    else:
+    else: # Não tem pagamentos, pode regenerar parcelas
         for key in financial_keys_for_parcel_regeneration:
             if key in update_data:
                 current_val = getattr(db_carne, key)
@@ -547,7 +625,7 @@ def update_carne(db: Session, carne_id: int, carne_update: schemas.CarneCreate):
                     new_val = Decimal(str(new_val)) if new_val is not None else None
                 # Para booleanos, comparar diretamente
                 elif key == 'parcela_fixa':
-                    if current_val != new_val:
+                    if current_val != new_val: # A mudança no tipo de parcela sempre dispara regeneração
                         regenerate_parcels_flag = True
                         break
                 # Para outros tipos, comparação padrão
@@ -597,10 +675,7 @@ def update_carne(db: Session, carne_id: int, carne_update: schemas.CarneCreate):
         else: # Se o carnê é fixo (ou mudou para fixo)
             if db_carne.numero_parcelas <= 0:
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Para carnês com parcela fixa, o número de parcelas deve ser maior que zero.")
-            if valor_a_parcelar <= Decimal('0.00') and db_carne.numero_parcelas > 0: # Evitar divisão por zero se valor a parcelar é zero
-                 # Se não há valor a parcelar e número de parcelas é maior que zero, isso é inconsistente
-                 # ou significa que o valor da parcela deveria ser 0.
-                 # Vamos assumir que, se numero_parcelas > 0, espera-se que valor_a_parcelar > 0 ou valor_parcela_sugerido > 0
+            if valor_a_parcelar <= Decimal('0.00') and db_carne.numero_parcelas > 0:
                  pass # A validação já é feita no frontend ou no esquema
 
             valor_parcela_sugerido_decimal = Decimal(str(update_data.get('valor_parcela_sugerido') or 0)).quantize(Decimal('0.01'))
@@ -709,9 +784,52 @@ def update_parcela(db: Session, parcela_id: int, parcela_update_data: schemas.Pa
     db.refresh(db_parcela)
 
     if db_parcela.carne:
+        # A chamada de get_carne com apply_interest=True garantirá que o status do carnê seja atualizado
         get_carne(db, db_parcela.id_carne, apply_interest=True)
 
     return db_parcela
+
+# NOVO: Função para renegociar uma parcela
+def renegotiate_parcela(db: Session, parcela_id: int, renegotiation_data: schemas.ParcelaRenegotiate):
+    db_parcela = db.query(models.Parcela).filter(models.Parcela.id_parcela == parcela_id).first()
+    if not db_parcela:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Parcela não encontrada.")
+    
+    if db_parcela.status_parcela in ['Paga', 'Paga com Atraso', 'Cancelada']:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Não é possível renegociar uma parcela já paga ou cancelada.")
+
+    # Verifica se há pagamentos já associados. Se houver, o valor devido pode ser ajustado
+    # de forma diferente, ou podemos restringir a renegociação de valor.
+    # Por enquanto, permite renegociar data e valor.
+    if renegotiation_data.new_valor_devido is not None:
+        new_valor_devido_decimal = Decimal(str(renegotiation_data.new_valor_devido)).quantize(Decimal('0.01'))
+        if new_valor_devido_decimal < Decimal('0.00'):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Novo valor devido não pode ser negativo.")
+        db_parcela.valor_devido = new_valor_devido_decimal
+    
+    db_parcela.data_vencimento = renegotiation_data.new_data_vencimento
+    db_parcela.juros_multa = Decimal('0.00') # Zera juros/multa na renegociação
+    db_parcela.juros_multa_anterior_aplicada = Decimal('0.00')
+    
+    # Recalcula saldo devedor com o novo valor devido (se aplicável) e zera juros/multa
+    db_parcela.saldo_devedor = db_parcela.valor_devido - db_parcela.valor_pago
+    
+    # Define o status da parcela após a renegociação
+    if db_parcela.saldo_devedor <= Decimal('0.00'):
+        db_parcela.status_parcela = 'Paga' # Se o saldo já é zero após a renegociação
+        db_parcela.data_pagamento_completo = date.today() # Marca como paga na data da renegociação
+    else:
+        db_parcela.status_parcela = renegotiation_data.status_parcela_apos_renegociacao # Geralmente 'Renegociada' ou 'Pendente'
+
+    db.add(db_parcela)
+    db.commit()
+    db.refresh(db_parcela)
+
+    if db_parcela.carne:
+        get_carne(db, db_parcela.id_carne, apply_interest=True) # Atualiza status do carnê
+    
+    return db_parcela
+
 
 def delete_parcela(db: Session, parcela_id: int):
     db_parcela = db.query(models.Parcela).filter(models.Parcela.id_parcela == parcela_id).first()
@@ -737,24 +855,28 @@ def create_pagamento(db: Session, pagamento: schemas.PagamentoCreate, usuario_id
     db_parcela = db.query(models.Parcela).filter(models.Parcela.id_parcela == pagamento.id_parcela).first()
     if not db_parcela:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Parcela não encontrada.")
+    
+    # Aplica juros/multas antes de processar o pagamento para ter o saldo mais atualizado
+    _apply_interest_and_fine_if_due(db, db_parcela)
+    db.refresh(db_parcela) # Refresha a parcela para garantir que os juros/multas foram aplicados
+
+    # Validação do status após atualização de juros/multas
     if db_parcela.status_parcela in ['Paga', 'Paga com Atraso']:
          raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Esta parcela já está totalmente paga.")
-
-    _apply_interest_and_fine_if_due(db, db_parcela)
-    db.refresh(db_parcela)
 
     valor_pago_decimal = Decimal(str(pagamento.valor_pago))
     if valor_pago_decimal <= 0:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Valor pago deve ser maior que zero.")
-    if valor_pago_decimal > db_parcela.saldo_devedor + Decimal('0.01'):
+    if valor_pago_decimal > db_parcela.saldo_devedor + Decimal('0.01'): # Permite uma pequena margem para floating point
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail=f"Valor pago (R${valor_pago_decimal:.2f}) excede saldo devedor (R${db_parcela.saldo_devedor:.2f}).")
 
-    data_atual_pagamento = datetime.utcnow()
+    # Usa a data de pagamento fornecida, ou a data/hora atual se não for fornecida
+    data_pagamento_registro = pagamento.data_pagamento if pagamento.data_pagamento else datetime.utcnow()
 
     db_pagamento_obj = models.Pagamento(
         id_parcela=pagamento.id_parcela,
-        data_pagamento=data_atual_pagamento,
+        data_pagamento=data_pagamento_registro, # ALTERADO: Usa a data fornecida ou atual
         valor_pago=valor_pago_decimal,
         forma_pagamento=pagamento.forma_pagamento,
         observacoes=pagamento.observacoes,
@@ -771,13 +893,18 @@ def create_pagamento(db: Session, pagamento: schemas.PagamentoCreate, usuario_id
     if db_parcela.saldo_devedor <= Decimal('0.00'):
         db_parcela.status_parcela = 'Paga'
         db_parcela.data_pagamento_completo = db_pagamento_obj.data_pagamento.date()
+        # Se o pagamento foi feito com data posterior ao vencimento, marca como 'Paga com Atraso'
         if db_pagamento_obj.data_pagamento.date() > db_parcela.data_vencimento:
             db_parcela.status_parcela = 'Paga com Atraso'
+        # Zera juros/multa uma vez que a parcela está totalmente paga
+        db_parcela.juros_multa = Decimal('0.00')
+        db_parcela.juros_multa_anterior_aplicada = Decimal('0.00')
     elif db_parcela.valor_pago > Decimal('0.00'):
         db_parcela.status_parcela = 'Parcialmente Paga'
         if db_parcela.data_vencimento < date.today():
             db_parcela.status_parcela = 'Atrasada'
 
+    # Se a parcela está pendente e vencida, marca como atrasada (mesmo que tenha tido juros/multa aplicado antes)
     if db_parcela.status_parcela == 'Pendente' and db_parcela.data_vencimento < date.today():
         db_parcela.status_parcela = 'Atrasada'
 
@@ -786,7 +913,8 @@ def create_pagamento(db: Session, pagamento: schemas.PagamentoCreate, usuario_id
     db.refresh(db_pagamento_obj)
     db.refresh(db_parcela)
 
-    get_carne(db, db_parcela.id_carne, apply_interest=False)
+    # Atualiza o status do carnê pai após a alteração da parcela
+    get_carne(db, db_parcela.id_carne, apply_interest=True) # Apply interest to update status correctly
 
     return db_pagamento_obj
 
@@ -799,10 +927,14 @@ def update_pagamento(db: Session, pagamento_id: int, pagamento_update: schemas.P
     if not db_parcela_original:
          raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Parcela original do pagamento não encontrada.")
 
+    # Remove o valor do pagamento original da parcela antes de aplicar as mudanças
     db_parcela_original.valor_pago -= db_pagamento.valor_pago
+    
+    # Recalcula juros/multas e saldo devedor para a parcela original sem este pagamento
     _apply_interest_and_fine_if_due(db, db_parcela_original)
-    db_parcela_original.saldo_devedor = (db_parcela_original.valor_devido + db_parcela_original.juros_multa) - db_parcela_original.valor_pago
-    db_parcela_original.data_pagamento_completo = None
+    db_parcela_original.data_pagamento_completo = None # Invalida a data de pagamento completo se o pagamento está sendo alterado
+
+    # Atualiza status da parcela original após remover o valor
     if db_parcela_original.valor_pago <= Decimal('0.00'):
         db_parcela_original.valor_pago = Decimal('0.00')
         db_parcela_original.status_parcela = 'Pendente'
@@ -814,23 +946,27 @@ def update_pagamento(db: Session, pagamento_id: int, pagamento_update: schemas.P
             db_parcela_original.status_parcela = 'Atrasada'
     db.add(db_parcela_original)
 
+    # Aplica as atualizações ao objeto pagamento
     update_data_dict = pagamento_update.model_dump(exclude_unset=True)
     for key, value in update_data_dict.items():
         if key == 'valor_pago' and value is not None:
             setattr(db_pagamento, key, Decimal(str(value)))
+        elif key == 'data_pagamento' and value is not None: # ALTERADO: Atualiza data_pagamento se fornecida
+            setattr(db_pagamento, key, value)
         else:
             setattr(db_pagamento, key, value)
 
+    # Processa o pagamento atualizado na parcela (pode ser a mesma ou uma nova)
     db_parcela_nova = db.query(models.Parcela).filter(models.Parcela.id_parcela == db_pagamento.id_parcela).first()
     if not db_parcela_nova:
         db.rollback()
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Nova parcela associada ao pagamento não encontrada.")
 
     _apply_interest_and_fine_if_due(db, db_parcela_nova)
-    db.refresh(db_parcela_nova)
+    db.refresh(db_parcela_nova) # Refresha a parcela para garantir juros/multas atualizados
 
     db_parcela_nova.valor_pago += db_pagamento.valor_pago
-    db_parcela_nova.saldo_devedor = (db_parcela_nova.valor_devido + db_parcela_nova.juros_multa) - db_parcela_nova.valor_pago
+    db_parcela_nova.saldo_devedor = (db_parcela_nova.valor_devido + db_parcela_nova.juros_multa_anterior_aplicada) - db_parcela_nova.valor_pago
 
     if db_parcela_nova.saldo_devedor < Decimal('0.01') and db_parcela_nova.saldo_devedor > Decimal('-0.01'):
         db_parcela_nova.saldo_devedor = Decimal('0.00')
@@ -840,6 +976,8 @@ def update_pagamento(db: Session, pagamento_id: int, pagamento_update: schemas.P
         db_parcela_nova.data_pagamento_completo = db_pagamento.data_pagamento.date()
         if db_pagamento.data_pagamento.date() > db_parcela_nova.data_vencimento:
             db_parcela_nova.status_parcela = 'Paga com Atraso'
+        db_parcela_nova.juros_multa = Decimal('0.00') # Zera juros/multa uma vez que a parcela está totalmente paga
+        db_parcela_nova.juros_multa_anterior_aplicada = Decimal('0.00')
     elif db_parcela_nova.valor_pago > Decimal('0.00'):
         db_parcela_nova.status_parcela = 'Parcialmente Paga'
         if db_parcela_nova.data_vencimento < date.today():
@@ -853,9 +991,10 @@ def update_pagamento(db: Session, pagamento_id: int, pagamento_update: schemas.P
     if db_parcela_original.id_parcela != db_parcela_nova.id_parcela:
         db.refresh(db_parcela_nova)
 
-    get_carne(db, db_parcela_original.id_carne, apply_interest=False)
-    if db_parcela_original.id_carne != db_parcela_nova.id_carne:
-        get_carne(db, db_parcela_nova.id_carne, apply_interest=False)
+    # Atualiza o status do(s) carnê(s) envolvido(s)
+    get_carne(db, db_parcela_original.id_carne, apply_interest=True)
+    if db_parcela_original.id_carne != db_parcela_nova.id_carne: # Se o pagamento mudou de parcela/carnê
+        get_carne(db, db_parcela_nova.id_carne, apply_interest=True)
 
     return db_pagamento
 
@@ -868,20 +1007,20 @@ def delete_pagamento(db: Session, pagamento_id: int):
     db_parcela = db.query(models.Parcela).filter(models.Parcela.id_parcela == db_pagamento.id_parcela).first()
     if db_parcela:
         db_parcela.valor_pago -= db_pagamento.valor_pago
+        
+        # Recalcula juros/multas e saldo_devedor após estorno
         _apply_interest_and_fine_if_due(db, db_parcela)
-        db_parcela.saldo_devedor = (db_parcela.valor_devido + db_parcela.juros_multa) - db_parcela.valor_pago
-
+        
+        # Ajusta o status da parcela após o estorno
         if db_parcela.valor_pago <= Decimal('0.00'):
             db_parcela.valor_pago = Decimal('0.00')
             db_parcela.status_parcela = 'Pendente'
             db_parcela.data_pagamento_completo = None
             if db_parcela.data_vencimento < date.today():
                 db_parcela.status_parcela = 'Atrasada'
-        else:
+        else: # Ainda tem valor pago, mas não está totalmente paga
             db_parcela.status_parcela = 'Parcialmente Paga'
-            if db_parcela.status_parcela != 'Paga' and db_parcela.status_parcela != 'Paga com Atraso':
-                db_parcela.data_pagamento_completo = None
-
+            db_parcela.data_pagamento_completo = None # Invalida data de pagamento completo
             if db_parcela.data_vencimento < date.today():
                  db_parcela.status_parcela = 'Atrasada'
 
@@ -892,7 +1031,7 @@ def delete_pagamento(db: Session, pagamento_id: int):
     db.commit()
 
     if id_carne_pai:
-        get_carne(db, id_carne_pai, apply_interest=False)
+        get_carne(db, id_carne_pai, apply_interest=True) # Atualiza status do carnê
 
     return {"ok": True}
 
@@ -943,7 +1082,7 @@ def get_pending_debts_by_client(db: Session, client_id: int):
     pending_parcelas = db.query(models.Parcela)\
         .join(models.Carne)\
         .filter(models.Carne.id_cliente == client_id)\
-        .filter(models.Parcela.status_parcela.in_(['Pendente', 'Atrasada', 'Parcialmente Paga']))\
+        .filter(models.Parcela.status_parcela.in_(['Pendente', 'Atrasada', 'Parcialmente Paga', 'Renegociada']))\
         .options(joinedload(models.Parcela.carne))\
         .order_by(models.Parcela.data_vencimento)\
         .all()
@@ -964,7 +1103,7 @@ def get_pending_debts_by_client(db: Session, client_id: int):
         db.commit()
 
     for parcela in pending_parcelas:
-        db.refresh(parcela)
+        db.refresh(parcela) # Refresha para ter os dados após o commit
         total_divida_pendente += parcela.saldo_devedor
         report_item = schemas.PendingDebtItem(
             id_parcela=parcela.id_parcela,
@@ -990,6 +1129,46 @@ def get_pending_debts_by_client(db: Session, client_id: int):
     )
 
 def get_dashboard_summary(db: Session):
+    # Atualiza o status de todos os carnês e parcelas antes de calcular o resumo
+    # Isso pode ser custoso para muitos dados, mas garante a precisão
+    all_carnes = db.query(models.Carne).options(joinedload(models.Carne.parcelas)).all()
+    needs_overall_commit = False
+    for carne_obj in all_carnes:
+        for parcela in carne_obj.parcelas:
+            original_status = parcela.status_parcela
+            original_juros = parcela.juros_multa
+            _apply_interest_and_fine_if_due(db, parcela)
+            if parcela.status_parcela != original_status or parcela.juros_multa != original_juros:
+                needs_overall_commit = True
+                db.add(parcela)
+        
+        if carne_obj.status_carne != 'Cancelado':
+            all_parcels_paid = all(p.status_parcela in ['Paga', 'Paga com Atraso'] for p in carne_obj.parcelas)
+            has_overdue_parcel = any(p.status_parcela == 'Atrasada' for p in carne_obj.parcelas)
+            has_partially_paid_parcel = any(p.status_parcela == 'Parcialmente Paga' for p in carne_obj.parcelas)
+
+            new_status_carne = carne_obj.status_carne
+            if all_parcels_paid and carne_obj.parcelas:
+                new_status_carne = 'Quitado'
+            elif has_overdue_parcel:
+                new_status_carne = 'Em Atraso'
+            elif has_partially_paid_parcel:
+                new_status_carne = 'Ativo'
+            else:
+                new_status_carne = 'Ativo' # Se não tem atrasadas e não pagas, mas também não totalmente pagas
+            
+            if carne_obj.status_carne != new_status_carne:
+                carne_obj.status_carne = new_status_carne
+                needs_overall_commit = True
+                db.add(carne_obj)
+    
+    if needs_overall_commit:
+        db.commit() # Commit uma vez para todas as mudanças coletadas
+
+    # Refresha o estado da sessão após o commit para ter certeza que os scalars abaixo pegarão os valores corretos
+    db.expire_all()
+
+
     total_clientes = db.query(func.count(models.Cliente.id_cliente)).scalar()
     total_carnes = db.query(func.count(models.Carne.id_carne)).scalar()
 
@@ -998,7 +1177,7 @@ def get_dashboard_summary(db: Session):
     total_carnes_atrasados = db.query(func.count(models.Carne.id_carne)).filter(models.Carne.status_carne == 'Em Atraso').scalar()
 
     total_divida_geral_aberta = db.query(func.sum(models.Parcela.saldo_devedor))\
-        .filter(models.Parcela.status_parcela.in_(['Pendente', 'Atrasada', 'Parcialmente Paga']))\
+        .filter(models.Parcela.status_parcela.in_(['Pendente', 'Atrasada', 'Parcialmente Paga', 'Renegociada']))\
         .scalar() or Decimal('0.00')
 
     today = date.today()
@@ -1020,7 +1199,7 @@ def get_dashboard_summary(db: Session):
     parcelas_a_vencer_7dias = db.query(func.count(models.Parcela.id_parcela)).filter(
         models.Parcela.data_vencimento > today,
         models.Parcela.data_vencimento <= next_7_days_end,
-        models.Parcela.status_parcela.in_(['Pendente', 'Parcialmente Paga'])
+        models.Parcela.status_parcela.in_(['Pendente', 'Parcialmente Paga', 'Renegociada'])
     ).scalar()
 
     parcelas_atrasadas = db.query(func.count(models.Parcela.id_parcela)).filter(
