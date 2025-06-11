@@ -1,6 +1,7 @@
 import os
 from dotenv import load_dotenv
 from typing import Optional
+from decimal import Decimal # <--- ADICIONADO: Importe Decimal
 
 load_dotenv()
 
@@ -38,8 +39,10 @@ try:
     DATABASE_URL = get_required_env("DATABASE_URL")
     
     # Configurações financeiras
-    MULTA_ATRASO_PERCENTUAL = float(get_required_env("MULTA_ATRASO_PERCENTUAL", "0"))
-    JUROS_MORA_PERCENTUAL_AO_MES = float(get_required_env("JUROS_MORA_PERCENTUAL_AO_MES", "0"))
+    # --- MODIFICADO: Agora converte para Decimal diretamente ---
+    MULTA_ATRASO_PERCENTUAL = Decimal(get_required_env("MULTA_ATRASO_PERCENTUAL", "0"))
+    JUROS_MORA_PERCENTUAL_AO_MES = Decimal(get_required_env("JUROS_MORA_PERCENTUAL_AO_MES", "0"))
+    # --- FIM DA MODIFICAÇÃO ---
 
 except (ValueError, ConfigError) as e:
     raise ConfigError(f"Erro na configuração: {str(e)}") from e
