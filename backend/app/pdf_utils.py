@@ -1,201 +1,238 @@
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.enums import TA_CENTER, TA_RIGHT, TA_LEFT
-from reportlab.lib.units import cm
-from reportlab.platypus import SimpleDocTemplate, TableStyle, Table, PageBreak, Spacer, Image, KeepTogether
-from reportlab.lib import colors
-from reportlab.lib.colors import black, blue, red, HexColor
-from reportlab.lib.pagesizes import A4, portrait
-from io import BytesIO
-from reportlab.graphics.barcode import qr
-from reportlab.graphics.shapes import Drawing
-from reportlab.graphics import renderPDF
-from decimal import Decimal
-from datetime import date, timedelta
+import io
 import base64
 import os
+from datetime import datetime
+import logging
+from weasyprint import HTML
 
-# --- Funções Auxiliares de Formatação ---
+logger = logging.getLogger(__name__)
+
+# Configurações para PIX (ajuste conforme necessário)
+# Idealmente, estas informações deveriam vir do banco de dados ou variáveis de ambiente.
+# Para este exemplo, manteremos como hardcoded, mas considere a parametrização.
+beneficiario_nome = "BIOS STORE COMERCIO E SERVICOS LTDA"
+beneficiario_cnpj_cpf = "23.888.763/0001-16" # CNPJ ou CPF do beneficiário
+pix_key = "23.888.763/0001-16" # Chave PIX (esta chave será apenas texto, não usada para gerar o QR code se ele for estático)
+pix_city = "Xambioá - TO" # Cidade do beneficiário
+
+# Obtenha o diretório base do aplicativo para caminhos estáticos
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+STATIC_DIR = os.path.join(BASE_DIR, "static")
+
+logo_path = os.path.join(STATIC_DIR, "logobios.jpg")
+# Caminho para a imagem estática do QR Code
+qrcode_static_path = os.path.join(STATIC_DIR, "meu_qrcode_pix.jpeg")
 
 def format_currency(value):
-    if value is None:
-        return "R$ 0,00"
-    return f"R$ {Decimal(value):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    return f"R$ {value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
-def format_date_br(date_obj):
-    if date_obj is None:
-        return "N/A"
-    return date_obj.strftime("%d/%m/%Y")
-
-def get_base64_image_data(image_path):
-    try:
-        with open(image_path, "rb") as image_file:
-            encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
-            return f"data:image/jpeg;base64,{encoded_string}"
-    except FileNotFoundError:
-        print(f"Erro: Imagem não encontrada em {image_path}")
-        return None
-    except Exception as e:
-        print(f"Erro ao carregar imagem {image_path}: {e}")
-        return None
-
-def _get_single_parcela_receipt_flowable(parcela, cliente_info, carne_info, styles, logo_data, qrcode_image):
-    slip_elements = []
-    slip_elements.append(Paragraph("------------------------------------------------------------------------------------------------", styles['DashLine']))
-    slip_elements.append(Spacer(1, 0.01*cm))
-
-    recibo_pagador_content = [
-        Paragraph("<b>RECIBO DO PAGADOR</b>", styles['SmallBold']),
-        Spacer(1, 0.01*cm),
-        Table([
-            [Paragraph("<b>Nº do Documento</b>", styles['Tiny']), Paragraph(str(parcela['id_parcela']), styles['Tiny'])],
-            [Paragraph("<b>Vencimento</b>", styles['Tiny']), Paragraph(format_date_br(parcela['data_vencimento']), styles['Tiny'])],
-            [Paragraph("<b>Valor</b>", styles['Tiny']), Paragraph(format_currency(parcela['valor_devido']), styles['Tiny'])],
-            [Paragraph("<b>Valor Cobrado</b>", styles['Tiny']), Paragraph(format_currency(parcela['saldo_devedor']), styles['Tiny'])]
-        ], colWidths=[2.5*cm, 3.5*cm],
-        style=TableStyle([
-            ('ALIGN', (0,0), (-1,-1), 'LEFT'),
-            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-            ('GRID', (0,0), (-1,-1), 0.25, colors.grey),
-            ('LEFTPADDING', (0,0), (-1,-1), 0.5),
-            ('RIGHTPADDING', (0,0), (-1,-1), 0.5),
-            ('TOPPADDING', (0,0), (-1,-1), 0.5),
-            ('BOTTOMPADDING', (0,0), (-1,-1), 0.5),
-        ])),
-        Spacer(1, 0.02*cm),
-        Paragraph("<b>Pagador</b>", styles['SmallBold']),
-        Paragraph(cliente_info['nome'], styles['Tiny']),
-        Paragraph(cliente_info.get('endereco', ''), styles['Tiny']),
-        Paragraph(f"{cliente_info.get('cidade', '')}, {cliente_info.get('estado', '')}", styles['Tiny']),
-        Spacer(1, 0.03*cm)
-    ]
-
-    main_boleto_content = [
-        Table([
-            [Image(logo_data, width=0.8*cm, height=0.8*cm) if logo_data else "",
-             Paragraph("<b>Bios Store</b>", styles['ReceiptHeader']),
-             Paragraph("Pague sua cobrança usando o Pix", styles['Small'])]
-        ], colWidths=[1.0*cm, 6*cm, 5*cm],
-        style=TableStyle([
-            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-            ('ALIGN', (0,0), (0,0), 'LEFT'),
-            ('ALIGN', (1,0), (1,0), 'CENTER'),
-            ('ALIGN', (2,0), (2,0), 'RIGHT'),
-        ])),
-        Spacer(1, 0.01*cm),
-        Table([
-            [Paragraph("<b>Beneficiário</b>", styles['Small']), Paragraph("<b>Vencimento</b>", styles['SmallBold']), Paragraph("<b>Valor</b>", styles['SmallBold'])],
-            [Paragraph(carne_info['beneficiario_nome'], styles['Small']),
-             Paragraph(format_date_br(parcela['data_vencimento']), styles['ReceiptValue']),
-             Paragraph(format_currency(parcela['valor_devido']), styles['ReceiptValue'])],
-            [Paragraph(f"<b>CNPJ do Beneficiário:</b> {carne_info['beneficiario_cnpj_cpf']}", styles['Small']), "", ""]
-        ], colWidths=[6.5*cm, 3.5*cm, 3.5*cm],
-        style=TableStyle([
-            ('VALIGN', (0,0), (-1,-1), 'TOP'),
-            ('ALIGN', (1,1), (2,1), 'CENTER'),
-            ('LEFTPADDING', (0,0), (-1,-1), 0),
-            ('RIGHTPADDING', (0,0), (-1,-1), 0),
-        ])),
-        Spacer(1, 0.01*cm),
-        Paragraph(f"<b>Instruções Adicionais:</b> Multa {float(parcela['juros_multa_percentual']):.2f}%, Juros {float(parcela['juros_mora_percentual_ao_dia']):.4f}% a.d.", styles['Tiny']),
-        Spacer(1, 0.02*cm),
-        Table([
-            [qrcode_image if qrcode_image else Paragraph("QR Code não disponível.", styles['Tiny']),
-             Paragraph("1. Abra o aplicativo do seu banco ou instituição financeira.<br/>"
-                       "2. Entre no ambiente Pix.<br/>"
-                       "3. Escolha a opção <b>Pagar com QRcode</b>.<br/>"
-                       "4. Aponte a câmera para o QRcode acima.<br/>"
-                       "5. <b>DIGITE O VALOR MANUALMENTE.</b>", styles['Tiny'])]
-        ], colWidths=[2.2*cm, 10.8*cm],
-        style=TableStyle([
-            ('VALIGN', (0,0), (-1,-1), 'TOP'),
-            ('LEFTPADDING', (0,0), (-1,-1), 0),
-            ('RIGHTPADDING', (0,0), (-1,-1), 0),
-            ('TOPPADDING', (0,0), (-1,-1), 0),
-            ('BOTTOMPADDING', (0,0), (-1,-1), 0),
-        ])),
-        Spacer(1, 0.01*cm),
-        Paragraph(f"<b>Chave PIX:</b> {carne_info['pix_key']}", styles['Small']),
-        Spacer(1, 0.02*cm),
-        Paragraph("<b>Pagador</b>", styles['SmallBold']),
-        Paragraph(f"{cliente_info['nome']} (CPF/CNPJ: {cliente_info['cpf_cnpj']})", styles['Tiny']),
-        Paragraph(f"Endereço: {cliente_info.get('endereco', '')}, {cliente_info.get('cidade', '')} - {cliente_info.get('estado', '')}", styles['Tiny']),
-        Spacer(1, 0.01*cm),
-        Paragraph(f"<i>Telefone: {cliente_info.get('telefone', '')} | Email: {cliente_info.get('email', '')}</i>", styles['Tiny']),
-        Spacer(1, 0.02*cm),
-        Paragraph(f"<i>Gerado em {format_date_br(date.today())} - Parcela {parcela['numero_parcela']} de {carne_info['numero_parcelas']}</i>", styles['Tiny'])
-    ]
-
-    main_receipt_table = Table([[recibo_pagador_content, main_boleto_content]], colWidths=[6.0*cm, 13.0*cm])
-    main_receipt_table.setStyle(TableStyle([
-        ('VALIGN', (0,0), (-1,-1), 'TOP'),
-        ('LEFTPADDING', (0,0), (-1,-1), 0),
-        ('RIGHTPADDING', (0,0), (-1,-1), 0),
-        ('TOPPADDING', (0,0), (-1,-1), 0),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 0),
-        ('LINEAFTER', (0,0), (0,0), 0.5, HexColor('#808080'))
-    ]))
-
-    return KeepTogether(main_receipt_table)
-
-
-def generate_carne_parcelas_pdf(parcelas_data, cliente_info, carne_info, buffer):
-    doc = SimpleDocTemplate(buffer, pagesize=portrait(A4), rightMargin=cm, leftMargin=cm, topMargin=cm, bottomMargin=cm)
-    styles = getSampleStyleSheet()
-
-    styles.add(ParagraphStyle(name='SmallBold', parent=styles['Normal'], fontSize=7, fontName='Helvetica-Bold', alignment=TA_LEFT, textColor=colors.black))
-    styles.add(ParagraphStyle(name='Small', parent=styles['Normal'], fontSize=6, fontName='Helvetica', textColor=colors.black))
-    styles.add(ParagraphStyle(name='Tiny', parent=styles['Normal'], fontSize=4, fontName='Helvetica', textColor=colors.black))
-    styles.add(ParagraphStyle(name='ReceiptHeader', parent=styles['Normal'], fontSize=7.5, fontName='Helvetica-Bold', alignment=TA_CENTER, textColor=colors.black))
-    styles.add(ParagraphStyle(name='ReceiptValue', parent=styles['Normal'], fontSize=8, fontName='Helvetica-Bold', alignment=TA_CENTER, textColor=colors.black))
-    styles.add(ParagraphStyle(name='DashLine', parent=styles['Normal'], fontSize=6, fontName='Helvetica', alignment=TA_CENTER, textColor=HexColor('#A9A9A9')))
-
-    elements = []
-
-    logo_path = "/app/app/static/logobios.jpg"
-    qrcode_static_path = "/app/app/static/meu_qrcode_pix.jpeg"
-
-    logo_data = get_base64_image_data(logo_path)
-    if not logo_data:
-        print(f"AVISO: Logo não carregada em {logo_path}. O PDF pode ter problemas de layout ou ausência da logo.")
-
-    qrcode_image_data = get_base64_image_data(qrcode_static_path)
-    qrcode_for_pdf = None
-    if qrcode_image_data:
-        qrcode_for_pdf = Image(qrcode_image_data, width=2.0*cm, height=2.0*cm)
+def format_date(date_str):
+    if not date_str:
+        return ""
+    # Assume date_str is in 'YYYY-MM-DD' format or datetime object
+    if isinstance(date_str, str):
+        date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
+    elif isinstance(date_str, datetime):
+        date_obj = date_str.date()
     else:
-        print(f"AVISO: QR Code estático não carregado em {qrcode_static_path}. O PDF pode ter problemas de layout ou ausência do QR Code.")
+        date_obj = date_str # Assume it's already a date object
+    return date_obj.strftime('%d/%m/%Y')
 
-    sorted_parcelas = sorted(parcelas_data, key=lambda x: x['numero_parcela'])
+def generate_carne_pdf_weasyprint(carne_data: dict, parcels_data: list):
+    """
+    Gera um PDF de carnê com múltiplas parcelas por página,
+    cada uma usando o QR Code estático, usando WeasyPrint.
+    """
+    nome_cliente = carne_data.get("nome_cliente", "Cliente Não Informado")
+    cpf_cnpj_cliente = carne_data.get("cpf_cnpj_cliente", "Não Informado")
+    endereco_cliente = carne_data.get("endereco_cliente", "Não Informado")
+    descricao_carne = carne_data.get("descricao", "Carnê de Pagamento")
+    
+    html_parts = []
+    carnes_per_page = 2 # Definir quantos carnês por página A4
 
-    page_width, page_height = A4
-    usable_width = page_width - (2 * cm)
-    usable_height = page_height - (2 * cm)
+    for i, parcela in enumerate(parcels_data):
+        parcel_id = parcela.get('id_parcela', f'parcela-{i+1}')
+        valor_devido = parcela.get('valor_devido', 0.0)
+        data_vencimento = format_date(parcela.get('data_vencimento'))
+        numero_parcela = parcela.get('numero_parcela')
+        
+        # Construção do HTML para um carnê individual
+        carne_html = f"""
+        <div class="carne-item">
+            <div class="header-carne">
+                <img src="file://{logo_path}" alt="Logo" class="logo">
+                <div class="beneficiario-info">
+                    <strong>{beneficiario_nome}</strong><br/>
+                    CNPJ/CPF: {beneficiario_cnpj_cpf}<br/>
+                </div>
+            </div>
+            <div class="divider"></div>
+            <div class="info-block">
+                <strong>Cliente:</strong> {nome_cliente}<br/>
+                <strong>CPF/CNPJ:</strong> {cpf_cnpj_cliente}<br/>
+                <strong>Endereço:</strong> {endereco_cliente}<br/>
+                <strong>Descrição do Carnê:</strong> {descricao_carne}
+            </div>
+            <div class="divider"></div>
+            <div class="parcela-details">
+                <div class="parcela-main-info">
+                    <div class="parcela-box">
+                        <span class="label">Parcela</span>
+                        <span class="value">{numero_parcela}/{carne_data.get('numero_parcelas')}</span>
+                    </div>
+                    <div class="parcela-box">
+                        <span class="label">Vencimento</span>
+                        <span class="value">{data_vencimento}</span>
+                    </div>
+                    <div class="parcela-box">
+                        <span class="label">Valor</span>
+                        <span class="value">{format_currency(valor_devido)}</span>
+                    </div>
+                </div>
+                <div class="qr-code-area">
+                    <img src="file://{qrcode_static_path}" class="qr-code-img" alt="QR Code Pix">
+                    <p class="pix-key-info">Chave Pix: {pix_key}</p>
+                    <p class="pix-key-info">Valor da Parcela: {format_currency(valor_devido)}</p>
+                    <p class="pix-key-info">Vencimento: {data_vencimento}</p>
+                </div>
+            </div>
+            <div class="divider"></div>
+            <div class="footer-carne">
+                <p>Corte aqui</p>
+                <div class="dashed-line"></div>
+            </div>
+        </div>
+        """
+        html_parts.append(carne_html)
 
-    for i in range(0, len(sorted_parcelas), 2):
-        receipts_for_current_page = []
-        current_batch_parcelas = sorted_parcelas[i: i + 2]
+    full_html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Carnê de Pagamento</title>
+        <style>
+            @page {{
+                size: A4;
+                margin: 10mm; /* Margens da página */
+            }}
+            body {{
+                font-family: 'Arial', sans-serif;
+                margin: 0;
+                padding: 0;
+            }}
+            .carne-container-wrapper {{
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: space-around; /* Distribui os carnês na página */
+                align-content: flex-start; /* Alinha o conteúdo ao topo */
+                width: 190mm; /* A4 width - 2*margin */
+                margin: 0 auto;
+            }}
+            .carne-item {{
+                width: 100%; /* Para 2 carnês por página */
+                height: calc((297mm - 20mm - 5mm) / {carnes_per_page}); /* A4 height - 2*margin - spacing / num_carnes */
+                border: 1px solid #000;
+                padding: 5mm;
+                margin-bottom: 5mm; /* Espaçamento entre os carnês */
+                box-sizing: border-box;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+                font-size: 10pt;
+                position: relative;
+                page-break-inside: avoid; /* Evita quebras de página dentro de um carnê */
+            }}
+            /* Se for para 3 carnês por página, ajuste width e height */
+            /*
+            .carne-item {{
+                width: calc( (190mm - 10mm) / 1); Ajuste se precisar de mais colunas
+                height: calc((297mm - 20mm - 10mm) / 3);
+            }}
+            */
+            .header-carne {{
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 5mm;
+            }}
+            .logo {{
+                max-width: 80px;
+                height: auto;
+            }}
+            .beneficiario-info {{
+                text-align: right;
+            }}
+            .divider {{
+                border-bottom: 1px solid #ccc;
+                margin: 5mm 0;
+            }}
+            .info-block {{
+                margin-bottom: 5mm;
+            }}
+            .parcela-details {{
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                margin-bottom: 5mm;
+            }}
+            .parcela-main-info {{
+                display: flex;
+                flex-grow: 1;
+                justify-content: space-around;
+            }}
+            .parcela-box {{
+                border: 1px solid #eee;
+                padding: 3mm;
+                text-align: center;
+                margin: 0 2mm;
+                flex-basis: 30%; /* Ajuste para espaçamento */
+            }}
+            .parcela-box .label {{
+                display: block;
+                font-size: 8pt;
+                color: #555;
+            }}
+            .parcela-box .value {{
+                display: block;
+                font-size: 12pt;
+                font-weight: bold;
+            }}
+            .qr-code-area {{
+                text-align: center;
+                margin-left: 10mm;
+            }}
+            .qr-code-img {{
+                width: 70px;
+                height: 70px;
+                border: 1px solid #eee;
+                padding: 2px;
+            }}
+            .pix-key-info {{
+                font-size: 8pt;
+                margin-top: 2mm;
+                line-height: 1.2;
+            }}
+            .footer-carne {{
+                text-align: center;
+                margin-top: auto; /* Empurra para o final do container */
+            }}
+            .dashed-line {{
+                border-top: 1px dashed #000;
+                margin-top: 2mm;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="carne-container-wrapper">
+            {''.join(html_parts)}
+        </div>
+    </body>
+    </html>
+    """
 
-        for parcela in current_batch_parcelas:
-            receipt_flowable = _get_single_parcela_receipt_flowable(parcela, cliente_info, carne_info, styles, logo_data, qrcode_for_pdf)
-            receipts_for_current_page.append(receipt_flowable)
-
-        while len(receipts_for_current_page) < 2:
-            receipts_for_current_page.append(Spacer(1, (usable_height - 2 * 7.5 * cm)))
-
-        table_for_page = Table([[r] for r in receipts_for_current_page], colWidths=[usable_width])
-        table_for_page.setStyle(TableStyle([
-            ('LEFTPADDING', (0, 0), (-1, -1), 0),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 0),
-            ('TOPPADDING', (0, 0), (-1, -1), 0),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
-            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-            ('LINEBELOW', (0, 0), (0, 0), 0.5, HexColor('#A9A9A9')),
-        ]))
-
-        elements.append(table_for_page)
-        if i + 2 < len(sorted_parcelas):
-            elements.append(PageBreak())
-
-    doc.build(elements)
-    buffer.seek(0)
-    return buffer
+    output_buffer = io.BytesIO()
+    # Usamos o `base_url` para que o WeasyPrint possa encontrar as imagens referenciadas por `file://`
+    HTML(string=full_html_content, base_url=STATIC_DIR).write_pdf(output_buffer)
+    output_buffer.seek(0)
+    return output_buffer
