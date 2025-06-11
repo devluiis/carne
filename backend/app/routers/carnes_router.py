@@ -7,7 +7,7 @@ from app import schemas, crud, models
 from app.database import get_db
 from app.auth import get_current_active_user, get_current_admin_user
 from fastapi.responses import Response, StreamingResponse
-from app.pdf_utils import generate_carne_parcelas_pdf # NOVA IMPORTAÇÃO
+from app.pdf_utils import generate_carne_pdf_weasyprint
 from io import BytesIO # Necessário para o buffer do PDF
 
 router = APIRouter(prefix="/carnes", tags=["Carnês"])
