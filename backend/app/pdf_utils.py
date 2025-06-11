@@ -1,182 +1,177 @@
-# backend/app/pdf_utils.py
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.units import mm
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image, KeepInFrame, PageBreak
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
-from reportlab.lib.colors import black
+from reportlab.lib.enums import TA_CENTER
+from reportlab.lib.units import cm
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image, Table, TableStyle
+from reportlab.lib.colors import black, blue, red
+from reportlab.lib import colors
 from io import BytesIO
-from datetime import date
+from reportlab.graphics.barcode import qr
+from reportlab.graphics.shapes import Drawing
+from reportlab.graphics import renderPDF
 from decimal import Decimal
-import os
-from typing import Optional, List
+from datetime import date, timedelta
+import base64 # para a imagem do QR code
+from reportlab.lib.pagesizes import A4 # Importar A4 para definição de tamanho
 
-# Caminho para o logo (ajuste conforme a sua estrutura de arquivos)
-# Assumindo que o logo está em backend/app/static/logo.png
-LOGO_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "logobios.jpeg")
-if not os.path.exists(LOGO_PATH):
-    print(f"AVISO: Logo da empresa não encontrado em {LOGO_PATH}. O PDF será gerado sem logo da empresa.")
-    LOGO_PATH = None
+# --- Funções Auxiliares de Formatação ---
 
-# NOVO: Caminho para a imagem do QR Code Pix estático
-# Substitua 'qrcode_pix_picpay.png' pelo nome real do seu arquivo de imagem QR Code.
-QRCODE_STATIC_IMAGE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "meu_qrcode_pix.jpeg")
-if not os.path.exists(QRCODE_STATIC_IMAGE_PATH):
-    print(f"ERRO CRÍTICO: Imagem do QR Code Pix estático não encontrada em {QRCODE_STATIC_IMAGE_PATH}. O PDF será gerado sem o QR Code.")
-    QRCODE_STATIC_IMAGE_PATH = None
+def format_currency(value):
+    """Formata um valor Decimal para string de moeda brasileira."""
+    if value is None:
+        return "R$ 0,00"
+    return f"R$ {value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
+def format_date_br(date_obj):
+    """Formata um objeto date para string no formato DD/MM/AAAA."""
+    if date_obj is None:
+        return "N/A"
+    return date_obj.strftime("%d/%m/%Y")
 
-# Stylesheets
-styles = getSampleStyleSheet()
-styles.add(ParagraphStyle(name='Center', alignment=TA_CENTER))
-styles.add(ParagraphStyle(name='Right', alignment=TA_RIGHT))
-styles.add(ParagraphStyle(name='Left', alignment=TA_LEFT))
-styles.add(ParagraphStyle(name='Small', fontSize=8, leading=10, alignment=TA_LEFT))
-styles.add(ParagraphStyle(name='SmallCenter', fontSize=8, leading=10, alignment=TA_CENTER))
-styles.add(ParagraphStyle(name='Bold', fontName='Helvetica-Bold', fontSize=10, leading=12))
-styles.add(ParagraphStyle(name='BoldLarge', fontName='Helvetica-Bold', fontSize=12, leading=14))
+def get_base64_image_data(image_path):
+    """Lê uma imagem e retorna seus dados em base64."""
+    try:
+        with open(image_path, "rb") as image_file:
+            encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
+            return f"data:image/jpeg;base64,{encoded_string}"
+    except FileNotFoundError:
+        print(f"Erro: Imagem não encontrada em {image_path}")
+        return None
+    except Exception as e:
+        print(f"Erro ao carregar imagem {image_path}: {e}")
+        return None
 
-# --- CONFIGURAÇÕES PIX (APENAS PARA TEXTO NO PDF, JÁ QUE O QR CODE É ESTÁTICO) ---
-# **ESTES SÃO DADOS DE EXEMPLO. VOCÊ PRECISA SUBSTITUÍ-LOS PELOS DADOS REAIS DA SUA EMPRESA/NEGÓCIO.**
-PIX_BENEFICIARIO_NOME = "BIOS STORE" # Ex: "BIOS STORE LTDA"
-PIX_BENEFICIARIO_CNPJ = "23.888.763/0001-16" # Ex: "12.345.678/0001-90" (pode ser CPF também)
-PIX_CHAVE_FIXA = "sua_chave_pix@dominio.com" # Ex: "contato@biosstore.com" ou seu CPF/CNPJ/telefone
-PIX_LOCALIDADE = "SUA CIDADE/UF" # Ex: "SAO PAULO/SP"
-# --- FIM CONFIGURAÇÕES PIX ---
+# --- Geração do PDF ---
 
-# Não precisamos mais de generate_pix_qrcode_image ou create_pix_payload_string
-# pois estamos usando uma imagem estática.
+def generate_carne_parcelas_pdf(parcelas_data, cliente_info, carne_info, buffer):
+    doc = SimpleDocTemplate(buffer, pagesize=A4)
+    styles = getSampleStyleSheet()
 
-def generate_carne_parcelas_pdf(
-    parcelas_data: List[dict],
-    cliente_info: dict,
-    carne_info: dict,
-    output_buffer: BytesIO
-):
-    """
-    Gera um PDF contendo múltiplos recibos de parcela de carnê, cada um com QR Code Pix estático.
-    A intenção é que caibam aproximadamente 3 recibos por página A4.
-    """
-    doc = SimpleDocTemplate(
-        output_buffer,
-        pagesize=A4,
-        rightMargin=10 * mm,
-        leftMargin=10 * mm,
-        topMargin=10 * mm,
-        bottomMargin=10 * mm
-    )
-    
+    # --- ADICIONADO: Definição do estilo 'SmallBold' ---
+    styles.add(ParagraphStyle(name='SmallBold',
+                              parent=styles['Normal'], # Baseado no estilo 'Normal'
+                              fontSize=7,
+                              fontName='Helvetica-Bold', # Define a fonte como negrito
+                              alignment=TA_CENTER # Centraliza o texto
+                             ))
+    # --- FIM DA ADIÇÃO ---
+
     elements = []
-    
-    # Estilo para linha divisória
-    hr_style = ParagraphStyle(name='HR', spaceBefore=0, spaceAfter=0, borderPadding=0, leading=0)
-    
-    for i, parcela in enumerate(parcelas_data):
-        story_for_parcela = []
-        
-        # Bloco Superior do Recibo (informações do beneficiário e vencimento)
-        header_table_data = []
-        # Logo e "Recibo do Pagador"
-        if LOGO_PATH:
-            logo_img = Image(LOGO_PATH, width=25*mm, height=12*mm) # Ajuste o tamanho do logo
-            header_table_data.append([logo_img, Paragraph(f"<font size=10><b>Recibo do Pagador</b></font>", styles['Right'])])
-        else:
-            header_table_data.append(["", Paragraph(f"<font size=10><b>Recibo do Pagador</b></font>", styles['Right'])])
-        
-        # Adicionar informações de documento e vencimento/valor (similar ao modelo)
-        header_table_data.append([Paragraph(f"<font size=9><b>Beneficiário:</b> {PIX_BENEFICIARIO_NOME}</font>", styles['Left']),
-                                  Paragraph(f"<font size=9><b>Vencimento:</b> {parcela['data_vencimento'].strftime('%d/%m/%Y')}</font>", styles['Right'])])
-        header_table_data.append([Paragraph(f"<font size=9><b>CNPJ/CPF:</b> {PIX_BENEFICIARIO_CNPJ}</font>", styles['Left']),
-                                  Paragraph(f"<font size=9><b>Valor:</b> R$ {parcela['saldo_devedor']:.2f}</font>", styles['Right'])])
-        header_table_data.append([Paragraph(f"<font size=9><b>Parcela Nº:</b> {parcela['numero_parcela']} de {carne_info['numero_parcelas']}</font>", styles['Left']), ""])
-        
-        from reportlab.platypus import Table, TableStyle
-        from reportlab.lib import colors
-        
-        header_table = Table(header_table_data, colWidths=[doc.width/2.0, doc.width/2.0])
-        header_table.setStyle(TableStyle([
-            ('ALIGN', (0,0), (-1,-1), 'LEFT'),
-            ('VALIGN', (0,0), (-1,-1), 'TOP'),
-            ('BOTTOMPADDING', (0,0), (-1,-1), 1*mm),
-            ('LEFTPADDING', (0,0), (-1,-1), 0),
-            ('RIGHTPADDING', (0,0), (-1,-1), 0),
-            ('SPAN',(0,0),(0,0)), # Logo takes first column (adjust if you change structure)
-            ('SPAN',(1,0),(1,0)), # Title takes second column (adjust if you change structure)
-        ]))
-        story_for_parcela.append(header_table)
-        story_for_parcela.append(Spacer(0, 3*mm))
-        
-        # Linha para separar o cabeçalho das instruções
-        story_for_parcela.append(Paragraph('<hr color="#000000" size="1" noshade />', hr_style))
-        story_for_parcela.append(Spacer(0, 3*mm))
 
-        # Informações de Pagamento (Instruções Adicionais e Pagador) e QR Code
-        main_content_table_data = []
-        
-        # Coluna da esquerda: Instruções Adicionais e Pagador
-        instructions_text = []
-        instructions_text.append(Paragraph(f"<font size=9><b>Instruções Adicionais:</b></font>", styles['Left']))
-        
-        # Formata os percentuais para exibição
-        multa_percentual_formatado = f"{parcela['juros_multa_percentual']:.2f}".replace('.', ',')
-        juros_diario_percentual_formatado = f"{parcela['juros_mora_percentual_ao_dia']:.4f}".replace('.', ',')
+    # Caminhos para as imagens (ajuste se necessário, /app/app/static é o WORKDIR do Dockerfile)
+    logo_path = "/app/app/static/logobios.jpg"
+    qrcode_path = "/app/app/static/meu_qrcode_pix.jpeg"
 
-        instructions_text.append(Paragraph(f"<font size=8>Após vencimento: Multa {multa_percentual_formatado}% Juros {juros_diario_percentual_formatado}% a.d.</font>", styles['Left']))
-        instructions_text.append(Paragraph(f"<font size=8><b>Descrição Carnê:</b> {carne_info['descricao'] or 'N/A'}</font>", styles['Left']))
-        if parcela['observacoes']:
-            instructions_text.append(Paragraph(f"<font size=8><b>Obs. Parcela:</b> {parcela['observacoes']}</font>", styles['Left']))
-        instructions_text.append(Spacer(0, 5*mm))
+    # Cabeçalho (Logo e Dados da Empresa - ajustar conforme necessário)
+    logo_data = get_base64_image_data(logo_path)
+    if logo_data:
+        logo = Image(logo_data, width=2*cm, height=2*cm)
+        elements.append(logo)
+        elements.append(Spacer(1, 0.2*cm))
 
-        instructions_text.append(Paragraph(f"<font size=9><b>Pagador:</b> {cliente_info['nome']}</font>", styles['Left']))
-        instructions_text.append(Paragraph(f"<font size=9><b>CPF/CNPJ:</b> {cliente_info['cpf_cnpj']}</font>", styles['Left']))
-        instructions_text.append(Paragraph(f"<font size=9><b>Endereço:</b> {cliente_info['endereco'] or 'N/A'}</font>", styles['Left']))
-        
-        # Coluna da direita: QR Code Pix e instruções para pagamento
-        qr_code_elements = []
-        
-        # Inserir a imagem do QR Code estático
-        if QRCODE_STATIC_IMAGE_PATH:
-            qr_image = Image(QRCODE_STATIC_IMAGE_PATH, width=40*mm, height=40*mm) # Tamanho da imagem do QR Code
-            qr_code_elements.append(qr_image)
-            qr_code_elements.append(Paragraph(f"<font size=8><b>Chave PIX:</b> {PIX_CHAVE_FIXA}</font>", styles['Small']))
-            qr_code_elements.append(Paragraph(f"<font size=8>Pague sua cobrança usando o Pix:</font>", styles['Small']))
-            qr_code_elements.append(Paragraph(f"<font size=7>1. Abra o aplicativo do seu banco ou instituição financeira</font>", styles['Small']))
-            qr_code_elements.append(Paragraph(f"<font size=7>2. Escolha a opção 'Pagar com QR Code Pix' ou 'Pix Copia e Cola'</font>", styles['Small']))
-            qr_code_elements.append(Paragraph(f"<font size=7>3. Aponte a câmera para o QR Code acima (se aplicável)</font>", styles['Small']))
-            qr_code_elements.append(Paragraph(f"<font size=7>4. Confirme as informações e DIGITE O VALOR R$ {parcela['saldo_devedor']:.2f}</font>", styles['Small']))
-            qr_code_elements.append(Paragraph(f"<font size=7>5. Finalize o pagamento.</font>", styles['Small']))
-            qr_code_elements.append(Paragraph(f"<font size=7><b>ATENÇÃO: Digite o valor manualmente!</b></font>", styles['SmallBold']))
-        else:
-            qr_code_elements.append(Paragraph("<i>Imagem do QR Code não disponível.</i>", styles['SmallCenter']))
-            qr_code_elements.append(Paragraph(f"<font size=8><b>Chave PIX:</b> {PIX_CHAVE_FIXA}</font>", styles['Small']))
-            qr_code_elements.append(Paragraph(f"<font size=8><b>Valor para pagamento: R$ {parcela['saldo_devedor']:.2f}</b></font>", styles['Small']))
-            qr_code_elements.append(Paragraph(f"<font size=8>Use o Pix Copia e Cola com a chave acima e digite o valor.</font>", styles['Small']))
+    elements.append(Paragraph("<b>Empresa de Vendas</b>", styles['h2']))
+    elements.append(Paragraph("Rua Exemplo, 123 - Centro", styles['Normal']))
+    elements.append(Paragraph("Cidade, Estado - CEP 12345-678", styles['Normal']))
+    elements.append(Paragraph("Telefone: (XX) XXXX-XXXX | Email: contato@empresa.com", styles['Normal']))
+    elements.append(Spacer(1, 0.5*cm))
 
-        main_content_table_data.append([instructions_text, qr_code_elements])
+    # Título do Carnê
+    elements.append(Paragraph(f"<b>CARNÊ DE PAGAMENTO - ID: {carne_info['id_carne']}</b>", styles['h2']))
+    elements.append(Spacer(1, 0.5*cm))
 
-        main_content_table = Table(main_content_table_data, colWidths=[doc.width - 45*mm, 45*mm]) # Ajuste largura para o QR Code
-        main_content_table.setStyle(TableStyle([
-            ('ALIGN', (0,0), (-1,-1), 'LEFT'),
-            ('VALIGN', (0,0), (0,0), 'TOP'), # Left column top aligned
-            ('VALIGN', (1,0), (1,0), 'MIDDLE'), # Right column middle aligned (for QR)
-            ('BOTTOMPADDING', (0,0), (-1,-1), 1*mm),
-            ('LEFTPADDING', (0,0), (-1,-1), 0),
-            ('RIGHTPADDING', (0,0), (-1,-1), 0),
-        ]))
-        story_for_parcela.append(main_content_table)
-        
-        elements.extend(story_for_parcela)
-        
-        # Adicionar uma linha divisória para separar os recibos no PDF
-        if (i + 1) % len(parcelas_data) != 0: # Não adiciona divisória após o último recibo
-            elements.append(Spacer(0, 5*mm))
-            elements.append(Paragraph('<hr color="#333333" size="1" noshade />', hr_style)) # Linha sólida cinza escuro
-            elements.append(Spacer(0, 5*mm))
+    # Dados do Cliente
+    elements.append(Paragraph("<b>DADOS DO CLIENTE:</b>", styles['h3']))
+    elements.append(Paragraph(f"<b>Nome:</b> {cliente_info['nome']}", styles['Normal']))
+    elements.append(Paragraph(f"<b>CPF/CNPJ:</b> {cliente_info['cpf_cnpj']}", styles['Normal']))
+    elements.append(Paragraph(f"<b>Endereço:</b> {cliente_info['endereco']}", styles['Normal']))
+    elements.append(Paragraph(f"<b>Telefone:</b> {cliente_info['telefone']}", styles['Normal']))
+    elements.append(Paragraph(f"<b>Email:</b> {cliente_info['email']}", styles['Normal']))
+    elements.append(Spacer(1, 0.5*cm))
 
-        # Quebra de página após cada 3 recibos
-        if (i + 1) % 3 == 0 and (i + 1) < len(parcelas_data):
-            elements.append(PageBreak())
+    # Dados Gerais do Carnê
+    elements.append(Paragraph("<b>DETALHES DO CARNÊ:</b>", styles['h3']))
+    elements.append(Paragraph(f"<b>Descrição:</b> {carne_info['descricao']}", styles['Normal']))
+    elements.append(Paragraph(f"<b>Valor Total Original:</b> {format_currency(carne_info['valor_total_original'])}", styles['Normal']))
+    elements.append(Paragraph(f"<b>Número de Parcelas:</b> {carne_info['numero_parcelas']}", styles['Normal']))
+    elements.append(Spacer(1, 1*cm))
+
+    # Tabela de Parcelas
+    elements.append(Paragraph("<b>DETALHES DAS PARCELAS:</b>", styles['h3']))
+    elements.append(Spacer(1, 0.2*cm))
+
+    # Definir colunas da tabela
+    data = [
+        ["#", "Vencimento", "Valor Devido", "Multa (%)", "Juros Diário (%)", "Saldo Devedor", "Status"]
+    ]
+    for p in sorted(parcelas_data, key=lambda x: x['numero_parcela']):
+        data.append([
+            p['numero_parcela'],
+            format_date_br(p['data_vencimento']),
+            format_currency(p['valor_devido']),
+            f"{float(p['juros_multa_percentual']):.2f}%",
+            f"{float(p['juros_mora_percentual_ao_dia']):.4f}%",
+            format_currency(p['saldo_devedor']),
+            p['status_parcela']
+        ])
+
+    # Definir estilos da tabela
+    table_style = TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), colors.grey),
+        ('TEXTCOLOR', (0,0), (-1,0), colors.whitesmoke),
+        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+        ('BOTTOMPADDING', (0,0), (-1,0), 12),
+        ('BACKGROUND', (0,1), (-1,-1), colors.beige),
+        ('GRID', (0,0), (-1,-1), 1, colors.black),
+        ('BOX', (0,0), (-1,-1), 1, colors.black),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('FONTSIZE', (0,0), (-1,-1), 8),
+    ])
+
+    # Ajustar a largura das colunas
+    col_widths = [0.8*cm, 2.5*cm, 2.5*cm, 1.8*cm, 2.0*cm, 2.5*cm, 2.0*cm] # Total A4 aprox 18.5cm
+
+    table = Table(data, colWidths=col_widths)
+    table.setStyle(table_style)
+    elements.append(table)
+    elements.append(Spacer(1, 1*cm))
+
+    # Seções de Observações (opcional, se você quiser incluir observações do carnê no PDF)
+    if carne_info.get('observacoes'):
+        elements.append(Paragraph("<b>OBSERVAÇÕES GERAIS DO CARNÊ:</b>", styles['h3']))
+        elements.append(Paragraph(carne_info['observacoes'], styles['Normal']))
+        elements.append(Spacer(1, 0.5*cm))
+
+    # Seção de QR Code para Pagamento PIX (exemplo)
+    elements.append(Paragraph("<b>PAGAMENTO VIA PIX (CÓPIA E COLA OU QR CODE):</b>", styles['h3']))
+    elements.append(Spacer(1, 0.2*cm))
+
+    qr_code_elements = []
+    # Assumindo que você tem um QR code estático ou dinâmico
+    # Para este exemplo, estamos usando um QR code de imagem estática
+    qrcode_data = get_base64_image_data(qrcode_path)
+    if qrcode_data:
+        img_qr = Image(qrcode_data, width=3*cm, height=3*cm)
+        qr_code_elements.append(img_qr)
+        qr_code_elements.append(Spacer(1, 0.1*cm))
+        
+        # O ReportLab pode ter dificuldade com texto muito pequeno e negrito.
+        # Ajustei para usar o estilo SmallBold que definimos.
+        #
+        qr_code_elements.append(Paragraph(f"<font size=7><b>ATENÇÃO: Digite o valor manualmente!</b></font>", styles['SmallBold']))
+        qr_code_elements.append(Spacer(1, 0.2*cm))
+        qr_code_elements.append(Paragraph("<i>Escaneie para detalhes ou use a chave PIX: seu.email@pix.com</i>", styles['Small']))
+        
+        # Você pode adicionar um campo para a chave PIX ou o código copia e cola
+        qr_code_elements.append(Paragraph("<b>Chave PIX:</b> (XX) XXXXX-XXXX ou CPF/CNPJ", styles['Normal']))
+        qr_code_elements.append(Spacer(1, 0.5*cm))
+
+    # Adiciona os elementos do QR code ao documento principal
+    elements.extend(qr_code_elements)
+
+    # Nota de rodapé (opcional)
+    elements.append(Spacer(1, 1*cm))
+    elements.append(Paragraph(f"<i>Documento gerado em {format_date_br(date.today())}</i>", styles['Small']))
 
     doc.build(elements)
-
-    return output_buffer
+    buffer.seek(0)
+    return buffer
