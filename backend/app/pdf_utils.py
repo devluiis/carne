@@ -1,7 +1,7 @@
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.enums import TA_CENTER, TA_RIGHT, TA_LEFT
+from reportlab.lib.enums import TA_CENTER
 from reportlab.lib.units import cm
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image, Table, TableStyle, PageBreak, Flowables # Importar Flowables para o container
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image, Table, TableStyle, PageBreak # Removido 'Flowables'
 from reportlab.lib.colors import black, blue, red
 from reportlab.lib import colors
 from io import BytesIO
@@ -10,8 +10,8 @@ from reportlab.graphics.shapes import Drawing
 from reportlab.graphics import renderPDF
 from decimal import Decimal
 from datetime import date, timedelta
-import base64
-from reportlab.lib.pagesizes import A4, portrait
+import base64 # para a imagem do QR code
+from reportlab.lib.pagesizes import A4 # Importar A4 para definição de tamanho
 
 # --- Funções Auxiliares de Formatação ---
 
@@ -19,7 +19,7 @@ def format_currency(value):
     """Formata um valor Decimal para string de moeda brasileira."""
     if value is None:
         return "R$ 0,00"
-    return f"R$ {Decimal(value):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    return f"R$ {value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 def format_date_br(date_obj):
     """Formata um objeto date para string no formato DD/MM/AAAA."""
@@ -40,235 +40,139 @@ def get_base64_image_data(image_path):
         print(f"Erro ao carregar imagem {image_path}: {e}")
         return None
 
-def _get_parcela_slip_elements(parcela, cliente_info, carne_info, styles, logo_data, qrcode_image):
-    """
-    Gera os elementos para um único recibo de parcela como uma lista de flowables.
-    """
-    slip_elements = []
-
-    # Linha tracejada de corte superior
-    slip_elements.append(Paragraph("<font size=8>--------------------------------------------------------------------------------------------------------------------------------</font>", styles['Tiny']))
-    slip_elements.append(Spacer(1, 0.1*cm))
-
-    # RECIBO DO PAGADOR (Topo Esquerdo)
-    # Usaremos uma tabela para organizar o "recibo do pagador" e a seção principal do boleto lado a lado
-    # dentro de cada slip, como na imagem de referência.
-
-    # Conteúdo do Recibo do Pagador (parte esquerda)
-    recibo_pagador_content = [
-        Paragraph("<b>RECIBO DO PAGADOR</b>", styles['SmallBold']),
-        Spacer(1, 0.1*cm),
-        Table([
-            [Paragraph(f"<b>Nº do Documento</b>", styles['Tiny']), Paragraph(str(parcela['id_parcela']), styles['Tiny'])],
-            [Paragraph(f"<b>Vencimento</b>", styles['Tiny']), Paragraph(format_date_br(parcela['data_vencimento']), styles['Tiny'])],
-            [Paragraph(f"<b>Valor</b>", styles['Tiny']), Paragraph(format_currency(parcela['valor_devido']), styles['Tiny'])],
-            [Paragraph(f"<b>Valor Cobrado</b>", styles['Tiny']), Paragraph(format_currency(parcela['saldo_devedor']), styles['Tiny'])]
-        ], colWidths=[2.5*cm, 3.5*cm],
-        style=TableStyle([
-            ('ALIGN', (0,0), (-1,-1), 'LEFT'),
-            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-            ('GRID', (0,0), (-1,-1), 0.25, colors.grey),
-            ('LEFTPADDING', (0,0), (-1,-1), 1),
-            ('RIGHTPADDING', (0,0), (-1,-1), 1),
-            ('TOPPADDING', (0,0), (-1,-1), 1),
-            ('BOTTOMPADDING', (0,0), (-1,-1), 1),
-        ])),
-        Spacer(1, 0.2*cm),
-        Paragraph("<b>Pagador</b>", styles['SmallBold']),
-        Paragraph(cliente_info['nome'], styles['Tiny']),
-        Paragraph(f"{cliente_info.get('endereco', '')}", styles['Tiny']),
-        Paragraph(f"{cliente_info.get('cidade', '')}, {cliente_info.get('estado', '')}", styles['Tiny']),
-        Spacer(1, 0.5*cm) # Espaço final para o recibo do pagador
-    ]
-
-    # Conteúdo da Seção Principal do Boleto (parte direita)
-    main_boleto_content = [
-        # Cabeçalho do Boleto (Logo, Nome da Empresa, "Pague usando PIX")
-        Table([
-            [Image(logo_data, width=1.5*cm, height=1.5*cm) if logo_data else "",
-             Paragraph("<b>Bios Store</b>", styles['ReceiptHeader']),
-             Paragraph("Pague sua cobrança usando o Pix", styles['Small'])]
-        ], colWidths=[2*cm, 7*cm, 4*cm],
-        style=TableStyle([
-            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-            ('ALIGN', (0,0), (0,0), 'LEFT'),
-            ('ALIGN', (1,0), (1,0), 'CENTER'),
-            ('ALIGN', (2,0), (2,0), 'RIGHT'),
-        ])),
-        Spacer(1, 0.2*cm),
-        # Informações do Beneficiário, Vencimento e Valor
-        Table([
-            [Paragraph("<b>Beneficiário</b>", styles['Small']), Paragraph("<b>Vencimento</b>", styles['SmallBold']), Paragraph("<b>Valor</b>", styles['SmallBold'])],
-            [
-                Paragraph(carne_info['beneficiario_nome'], styles['Small']),
-                Paragraph(format_date_br(parcela['data_vencimento']), styles['ReceiptValue']),
-                Paragraph(format_currency(parcela['valor_devido']), styles['ReceiptValue'])
-            ],
-            [Paragraph(f"<b>CNPJ do Beneficiário:</b> {carne_info['beneficiario_cnpj_cpf']}", styles['Small']), "", ""]
-        ], colWidths=[6.5*cm, 3.5*cm, 3.5*cm],
-        style=TableStyle([
-            ('VALIGN', (0,0), (-1,-1), 'TOP'),
-            ('ALIGN', (1,0), (1,0), 'CENTER'),
-            ('ALIGN', (2,0), (2,0), 'CENTER'),
-            ('ALIGN', (1,1), (1,1), 'CENTER'),
-            ('ALIGN', (2,1), (2,1), 'CENTER'),
-            ('LEFTPADDING', (0,0), (-1,-1), 0),
-            ('RIGHTPADDING', (0,0), (-1,-1), 0),
-        ])),
-        Spacer(1, 0.2*cm),
-        # Instruções Adicionais
-        Paragraph(f"<b>Instruções Adicionais:</b> Multa {float(parcela['juros_multa_percentual']):.2f}% e Juros {float(parcela['juros_mora_percentual_ao_dia']):.4f}% a.d. após vencimento.", styles['Small']),
-        Spacer(1, 0.5*cm),
-        # QR Code e Instruções de Pagamento PIX
-        Table([
-            [qrcode_image if qrcode_image else Paragraph("QR Code não disponível.", styles['Tiny']),
-             Paragraph("1. Abra o aplicativo do seu banco ou instituição financeira.<br/>"
-                       "2. Entre no ambiente Pix.<br/>"
-                       "3. Escolha a opção <b>Pagar com QRcode</b>.<br/>"
-                       "4. Aponte a câmera para o QRcode acima.<br/>"
-                       "5. <b>DIGITE O VALOR MANUALMENTE.</b> Confirme as informações e finalize o pagamento.", styles['Tiny'])]
-        ], colWidths=[3.5*cm, 10*cm],
-        style=TableStyle([
-            ('VALIGN', (0,0), (-1,-1), 'TOP'),
-            ('LEFTPADDING', (0,0), (-1,-1), 0),
-            ('RIGHTPADDING', (0,0), (-1,-1), 0),
-            ('TOPPADDING', (0,0), (-1,-1), 0),
-            ('BOTTOMPADDING', (0,0), (-1,-1), 0),
-        ])),
-        Spacer(1, 0.2*cm),
-        Paragraph(f"<b>Chave PIX:</b> {carne_info['pix_key']}", styles['Small']),
-        Spacer(1, 0.5*cm),
-        # Informações do Pagador (Parte inferior do boleto)
-        Paragraph("<b>Pagador</b>", styles['SmallBold']),
-        Paragraph(f"{cliente_info['nome']} (CPF/CNPJ: {cliente_info['cpf_cnpj']})", styles['Tiny']),
-        Paragraph(f"Endereço: {cliente_info.get('endereco', '')}, {cliente_info.get('cidade', '')} - {cliente_info.get('estado', '')}", styles['Tiny']),
-        Spacer(1, 0.2*cm),
-        Paragraph(f"<i>Telefone: {cliente_info.get('telefone', '')} | Email: {cliente_info.get('email', '')}</i>", styles['Tiny']),
-        Spacer(1, 0.5*cm),
-        # Rodapé da Parcela
-        Paragraph(f"<i>Gerado em {format_date_br(date.today())} - Parcela {parcela['numero_parcela']} de {carne_info['numero_parcelas']}</i>", styles['Tiny'])
-    ]
-    
-    # Combinar as duas seções em uma única tabela (Recibo do Pagador e Seção Principal do Boleto)
-    # A largura total da página é ~19cm (A4 menos margens). Recibo do Pagador (6cm) + Principal (13cm)
-    combined_slip_table = Table([
-        [recibo_pagador_content, main_boleto_content]
-    ], colWidths=[6.5*cm, 13.5*cm]) # Ajustar larguras para caber na página, total ~20cm
-
-    combined_slip_table.setStyle(TableStyle([
-        ('VALIGN', (0,0), (-1,-1), 'TOP'),
-        ('LEFTPADDING', (0,0), (-1,-1), 0),
-        ('RIGHTPADDING', (0,0), (-1,-1), 0),
-        ('TOPPADDING', (0,0), (-1,-1), 0),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 0),
-    ]))
-
-    slip_elements.append(combined_slip_table)
-
-    return slip_elements
+# --- Geração do PDF ---
 
 def generate_carne_parcelas_pdf(parcelas_data, cliente_info, carne_info, buffer):
-    doc = SimpleDocTemplate(buffer, pagesize=portrait(A4), rightMargin=cm, leftMargin=cm, topMargin=cm, bottomMargin=cm)
+    doc = SimpleDocTemplate(buffer, pagesize=A4)
     styles = getSampleStyleSheet()
 
-    # --- Definição dos estilos de texto ---
+    # --- ADICIONADO: Definição do estilo 'SmallBold' ---
     styles.add(ParagraphStyle(name='SmallBold',
-                              parent=styles['Normal'],
-                              fontSize=8,
-                              fontName='Helvetica-Bold',
-                              alignment=TA_LEFT
+                              parent=styles['Normal'], # Baseado no estilo 'Normal'
+                              fontSize=7,
+                              fontName='Helvetica-Bold', # Define a fonte como negrito
+                              alignment=TA_CENTER # Centraliza o texto
                              ))
+    # --- NOVO: Definição do estilo 'Small' ---
     styles.add(ParagraphStyle(name='Small',
-                              parent=styles['Normal'],
-                              fontSize=8,
-                              fontName='Helvetica'
+                              parent=styles['Normal'], # Baseado no estilo 'Normal'
+                              fontSize=7,
+                              fontName='Helvetica' # Fonte normal para texto pequeno
                              ))
-    styles.add(ParagraphStyle(name='Tiny',
-                              parent=styles['Normal'],
-                              fontSize=6,
-                              fontName='Helvetica'
-                             ))
-    styles.add(ParagraphStyle(name='ReceiptHeader',
-                              parent=styles['Normal'],
-                              fontSize=10,
-                              fontName='Helvetica-Bold',
-                              alignment=TA_CENTER
-                             ))
-    styles.add(ParagraphStyle(name='ReceiptValue',
-                              parent=styles['Normal'],
-                              fontSize=12,
-                              fontName='Helvetica-Bold',
-                              alignment=TA_CENTER
-                             ))
-    # --- FIM DA DEFINIÇÃO DOS ESTILOS ---
+    # --- FIM DAS ADIÇÕES ---
 
     elements = []
 
-    # Caminhos para as imagens
+    # Caminhos para as imagens (ajuste se necessário, /app/app/static é o WORKDIR do Dockerfile)
     logo_path = "/app/app/static/logobios.jpg"
-    qrcode_static_path = "/app/app/static/meu_qrcode_pix.jpeg" # QR Code estático
+    qrcode_path = "/app/app/static/meu_qrcode_pix.jpeg"
 
+    # Cabeçalho (Logo e Dados da Empresa - ajustar conforme necessário)
     logo_data = get_base64_image_data(logo_path)
-    qrcode_image_data = get_base64_image_data(qrcode_static_path)
-    
-    # Prepara a imagem do QR code se existir
-    qrcode_for_pdf = None
-    if qrcode_image_data:
-        qrcode_for_pdf = Image(qrcode_image_data, width=3*cm, height=3*cm)
+    if logo_data:
+        logo = Image(logo_data, width=2*cm, height=2*cm)
+        elements.append(logo)
+        elements.append(Spacer(1, 0.2*cm))
 
+    elements.append(Paragraph("<b>Empresa de Vendas</b>", styles['h2']))
+    elements.append(Paragraph("Rua Exemplo, 123 - Centro", styles['Normal']))
+    elements.append(Paragraph("Cidade, Estado - CEP 12345-678", styles['Normal']))
+    elements.append(Paragraph("Telefone: (XX) XXXX-XXXX | Email: contato@empresa.com", styles['Normal']))
+    elements.append(Spacer(1, 0.5*cm))
 
-    sorted_parcelas = sorted(parcelas_data, key=lambda x: x['numero_parcela'])
-    
-    # Altura de cada "slot" para o recibo na página (1/3 da altura utilizável)
-    page_width, page_height = A4
-    usable_height = page_height - (2 * cm) # Top and bottom margins are 1cm each
-    
-    # Largura da coluna para a tabela que conterá 3 recibos por página
-    table_col_width = page_width - (2 * cm) # Page width minus left and right margins
+    # Título do Carnê
+    elements.append(Paragraph(f"<b>CARNÊ DE PAGAMENTO - ID: {carne_info['id_carne']}</b>", styles['h2']))
+    elements.append(Spacer(1, 0.5*cm))
 
-    # Loop para processar 3 parcelas por vez
-    for i in range(0, len(sorted_parcelas), 3):
-        # Lista para armazenar os "slips" da página atual (cada slip é uma lista de flowables)
-        slips_on_current_page_data = []
+    # Dados do Cliente
+    elements.append(Paragraph("<b>DADOS DO CLIENTE:</b>", styles['h3']))
+    elements.append(Paragraph(f"<b>Nome:</b> {cliente_info['nome']}", styles['Normal']))
+    elements.append(Paragraph(f"<b>CPF/CNPJ:</b> {cliente_info['cpf_cnpj']}", styles['Normal']))
+    elements.append(Paragraph(f"<b>Endereço:</b> {cliente_info['endereco']}", styles['Normal']))
+    elements.append(Paragraph(f"<b>Telefone:</b> {cliente_info['telefone']}", styles['Normal']))
+    elements.append(Paragraph(f"<b>Email:</b> {cliente_info['email']}", styles['Normal']))
+    elements.append(Spacer(1, 0.5*cm))
 
-        # Pega as próximas 3 parcelas ou menos, se for o final
-        current_batch_parcelas = sorted_parcelas[i : i + 3]
+    # Dados Gerais do Carnê
+    elements.append(Paragraph("<b>DETALHES DO CARNÊ:</b>", styles['h3']))
+    elements.append(Paragraph(f"<b>Descrição:</b> {carne_info['descricao']}", styles['Normal']))
+    elements.append(Paragraph(f"<b>Valor Total Original:</b> {format_currency(carne_info['valor_total_original'])}", styles['Normal']))
+    elements.append(Paragraph(f"<b>Número de Parcelas:</b> {carne_info['numero_parcelas']}", styles['Normal']))
+    elements.append(Spacer(1, 1*cm))
 
-        for parcela in current_batch_parcelas:
-            # Chama a função auxiliar para obter os elementos de um único slip
-            slip_elements = _get_parcela_slip_elements(
-                parcela, cliente_info, carne_info, styles, logo_data, qrcode_for_pdf
-            )
-            slips_on_current_page_data.append(slip_elements)
+    # Tabela de Parcelas
+    elements.append(Paragraph("<b>DETALHES DAS PARCELAS:</b>", styles['h3']))
+    elements.append(Spacer(1, 0.2*cm))
+
+    # Definir colunas da tabela
+    data = [
+        ["#", "Vencimento", "Valor Devido", "Multa (%)", "Juros Diário (%)", "Saldo Devedor", "Status"]
+    ]
+    for p in sorted(parcelas_data, key=lambda x: x['numero_parcela']):
+        data.append([
+            p['numero_parcela'],
+            format_date_br(p['data_vencimento']),
+            format_currency(p['valor_devido']),
+            f"{float(p['juros_multa_percentual']):.2f}%",
+            f"{float(p['juros_mora_percentual_ao_dia']):.4f}%",
+            format_currency(p['saldo_devedor']),
+            p['status_parcela']
+        ])
+
+    # Definir estilos da tabela
+    table_style = TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), colors.grey),
+        ('TEXTCOLOR', (0,0), (-1,0), colors.whitesmoke),
+        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+        ('BOTTOMPADDING', (0,0), (-1,0), 12),
+        ('BACKGROUND', (0,1), (-1,-1), colors.beige),
+        ('GRID', (0,0), (-1,-1), 1, colors.black),
+        ('BOX', (0,0), (-1,-1), 1, colors.black),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('FONTSIZE', (0,0), (-1,-1), 8),
+    ])
+
+    # Ajustar a largura das colunas
+    col_widths = [0.8*cm, 2.5*cm, 2.5*cm, 1.8*cm, 2.0*cm, 2.5*cm, 2.0*cm] # Total A4 aprox 18.5cm
+
+    table = Table(data, colWidths=col_widths)
+    table.setStyle(table_style)
+    elements.append(table)
+    elements.append(Spacer(1, 1*cm))
+
+    # Seções de Observações (opcional, se você quiser incluir observações do carnê no PDF)
+    if carne_info.get('observacoes'):
+        elements.append(Paragraph("<b>OBSERVAÇÕES GERAIS DO CARNÊ:</b>", styles['h3']))
+        elements.append(Paragraph(carne_info['observacoes'], styles['Normal']))
+        elements.append(Spacer(1, 0.5*cm))
+
+    # Seção de QR Code para Pagamento PIX (exemplo)
+    elements.append(Paragraph("<b>PAGAMENTO VIA PIX (CÓPIA E COLA OU QR CODE):</b>", styles['h3']))
+    elements.append(Spacer(1, 0.2*cm))
+
+    qr_code_elements = []
+    # Assumindo que você tem um QR code estático ou dinâmico
+    # Para este exemplo, estamos usando um QR code de imagem estática
+    qrcode_data = get_base64_image_data(qrcode_path)
+    if qrcode_data:
+        img_qr = Image(qrcode_data, width=3*cm, height=3*cm)
+        qr_code_elements.append(img_qr)
+        qr_code_elements.append(Spacer(1, 0.1*cm))
         
-        # Se houver menos de 3 parcelas na última página, preenche com listas vazias
-        while len(slips_on_current_page_data) < 3:
-            slips_on_current_page_data.append([])
+        qr_code_elements.append(Paragraph(f"<font size=7><b>ATENÇÃO: Digite o valor manualmente!</b></font>", styles['SmallBold']))
+        qr_code_elements.append(Spacer(1, 0.2*cm))
+        qr_code_elements.append(Paragraph("<i>Escaneie para detalhes ou use a chave PIX: seu.email@pix.com</i>", styles['Small'])) 
+        qr_code_elements.append(Spacer(1, 0.2*cm)) # Adicionei um Spacer para melhor espaçamento
+        qr_code_elements.append(Paragraph("<b>Chave PIX:</b> (XX) XXXXX-XXXX ou CPF/CNPJ", styles['Normal']))
+        qr_code_elements.append(Spacer(1, 0.5*cm))
 
-        # Cria uma tabela para a página atual, com 3 linhas (para 3 recibos) e 1 coluna
-        # Cada célula da tabela conterá os flowables de um recibo.
-        table_for_page = Table(
-            [[s] for s in slips_on_current_page_data], # Cada slip_elements é uma lista, colocamos em uma lista de uma lista para a célula
-            colWidths=[table_col_width]
-        )
-        
-        # Estilos da tabela principal da página
-        table_for_page.setStyle(TableStyle([
-            ('LEFTPADDING', (0,0), (-1,-1), 0),
-            ('RIGHTPADDING', (0,0), (-1,-1), 0),
-            ('TOPPADDING', (0,0), (-1,-1), 0),
-            ('BOTTOMPADDING', (0,0), (-1,-1), 0),
-            ('VALIGN', (0,0), (-1,-1), 'TOP'),
-            # Linhas entre os recibos, se desejar (remova se a linha tracejada no slip for suficiente)
-            # ('LINEBELOW', (0,0), (-1,0), 0.5, colors.black),
-            # ('LINEBELOW', (0,1), (-1,1), 0.5, colors.black),
-        ]))
-        
-        elements.append(table_for_page)
-        
-        # Adiciona uma quebra de página se houver mais parcelas a serem processadas
-        if i + 3 < len(sorted_parcelas):
-            elements.append(PageBreak())
+    # Adiciona os elementos do QR code ao documento principal
+    elements.extend(qr_code_elements)
+
+    # Nota de rodapé (opcional)
+    elements.append(Spacer(1, 1*cm))
+    elements.append(Paragraph(f"<i>Documento gerado em {format_date_br(date.today())}</i>", styles['Small']))
 
     doc.build(elements)
     buffer.seek(0)
