@@ -1,7 +1,8 @@
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER, TA_RIGHT, TA_LEFT
 from reportlab.lib.units import cm
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image, Table, TableStyle, PageBreak, KeepTogether
+from reportlab.platypus import SimpleDocTemplate, TableStyle, Table, PageBreak, Spacer, Image
+from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib import colors # Importa o módulo colors inteiro
 from reportlab.lib.colors import black, blue, red, HexColor # Importar HexColor e cores específicas
 from io import BytesIO
