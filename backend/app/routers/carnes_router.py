@@ -79,7 +79,7 @@ async def get_carne_pdf_route(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dados do carnê ou cliente não encontrados para gerar o PDF.")
 
     buffer = BytesIO()
-    generate_carne_parcelas_pdf(parcelas_data, cliente_info, carne_info, buffer)
+    pdf_buffer = generate_carne_pdf_weasyprint(carne_data, parcelas_data)
     buffer.seek(0)
 
     filename = f"carne_parcelas_{carne_id}_{cliente_info['nome']}.pdf"
