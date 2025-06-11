@@ -2,7 +2,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER, TA_RIGHT, TA_LEFT
 from reportlab.lib.units import cm
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image, Table, TableStyle, PageBreak, KeepTogether
-from reportlab.lib.colors import black, blue, red, HexColor
+from reportlab.lib.colors import black, blue, red, HexColor # Importar HexColor
 from io import BytesIO
 from reportlab.graphics.barcode import qr
 from reportlab.graphics.shapes import Drawing
@@ -46,18 +46,7 @@ def _get_single_parcela_receipt_flowable(parcela, cliente_info, carne_info, styl
     """
     slip_elements = []
 
-    # Estilo para as linhas de corte (tracejado)
-    styles.add(ParagraphStyle(name='DashLine',
-                              parent=styles['Normal'],
-                              fontSize=6,
-                              fontName='Helvetica',
-                              alignment=TA_CENTER,
-                              textColor=colors.grey)) # Use um cinza claro para o tracejado
-
     # 1. Linha tracejada de corte (acima de cada recibo, exceto o primeiro da página)
-    # A linha tracejada será adicionada pela tabela principal no generate_carne_parcelas_pdf
-    # ou diretamente aqui se o espaçamento interno for o suficiente.
-    # Vou adicionar aqui para controle mais fino dentro do recibo.
     slip_elements.append(Paragraph("------------------------------------------------------------------------------------------------", styles['DashLine']))
     slip_elements.append(Spacer(1, 0.1*cm))
 
@@ -73,7 +62,7 @@ def _get_single_parcela_receipt_flowable(parcela, cliente_info, carne_info, styl
             [Paragraph(f"<b>Vencimento</b>", styles['Tiny']), Paragraph(format_date_br(parcela['data_vencimento']), styles['Tiny'])],
             [Paragraph(f"<b>Valor</b>", styles['Tiny']), Paragraph(format_currency(parcela['valor_devido']), styles['Tiny'])],
             [Paragraph(f"<b>Valor Cobrado</b>", styles['Tiny']), Paragraph(format_currency(parcela['saldo_devedor']), styles['Tiny'])]
-        ], colWidths=[2.5*cm, 3.5*cm],
+        ], colWidths=[2.5*cm, 3.5*cm], # Total 6.0cm
         style=TableStyle([
             ('ALIGN', (0,0), (-1,-1), 'LEFT'),
             ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
@@ -98,7 +87,7 @@ def _get_single_parcela_receipt_flowable(parcela, cliente_info, carne_info, styl
             [Image(logo_data, width=1.2*cm, height=1.2*cm) if logo_data else "", # Logo menor
              Paragraph("<b>Bios Store</b>", styles['ReceiptHeader']),
              Paragraph("Pague sua cobrança usando o Pix", styles['Small'])]
-        ], colWidths=[1.5*cm, 6*cm, 5*cm], # Ajustei as larguras para um total de ~12.5cm
+        ], colWidths=[1.5*cm, 6*cm, 5*cm], # Total 12.5cm
         style=TableStyle([
             ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
             ('ALIGN', (0,0), (0,0), 'LEFT'),
@@ -115,7 +104,7 @@ def _get_single_parcela_receipt_flowable(parcela, cliente_info, carne_info, styl
                 Paragraph(format_currency(parcela['valor_devido']), styles['ReceiptValue'])
             ],
             [Paragraph(f"<b>CNPJ do Beneficiário:</b> {carne_info['beneficiario_cnpj_cpf']}", styles['Small']), "", ""]
-        ], colWidths=[6.5*cm, 3.5*cm, 3.5*cm], # Largura total ~13.5cm
+        ], colWidths=[6.5*cm, 3.5*cm, 3.5*cm], # Total 13.5cm
         style=TableStyle([
             ('VALIGN', (0,0), (-1,-1), 'TOP'),
             ('ALIGN', (1,0), (1,0), 'CENTER'),
@@ -137,7 +126,7 @@ def _get_single_parcela_receipt_flowable(parcela, cliente_info, carne_info, styl
                        "3. Escolha a opção <b>Pagar com QRcode</b>.<br/>"
                        "4. Aponte a câmera para o QRcode acima.<br/>"
                        "5. <b>DIGITE O VALOR MANUALMENTE.</b> Confirme as informações e finalize o pagamento.", styles['Tiny'])]
-        ], colWidths=[3.5*cm, 9.5*cm], # Ajustei para caber no espaço da coluna direita
+        ], colWidths=[3.5*cm, 9.5*cm], # Total 13.0cm
         style=TableStyle([
             ('VALIGN', (0,0), (-1,-1), 'TOP'),
             ('LEFTPADDING', (0,0), (-1,-1), 0),
@@ -148,7 +137,7 @@ def _get_single_parcela_receipt_flowable(parcela, cliente_info, carne_info, styl
         Spacer(1, 0.1*cm),
         Paragraph(f"<b>Chave PIX:</b> {carne_info['pix_key']}", styles['Small']),
         Spacer(1, 0.2*cm),
-        # Informações do Pagador (Parte inferior do boleto - repetido)
+        # Informações do Pagador (Parte inferior do boleto - repetido, mais compacto)
         Paragraph("<b>Pagador</b>", styles['SmallBold']),
         Paragraph(f"{cliente_info['nome']} (CPF/CNPJ: {cliente_info['cpf_cnpj']})", styles['Tiny']),
         Paragraph(f"Endereço: {cliente_info.get('endereco', '')}, {cliente_info.get('cidade', '')} - {cliente_info.get('estado', '')}", styles['Tiny']),
@@ -160,12 +149,11 @@ def _get_single_parcela_receipt_flowable(parcela, cliente_info, carne_info, styl
     ]
 
     # Tabela principal de 2 colunas para o layout do recibo (Recibo Pagador | Boleto Principal)
-    # A largura total da área útil da página é 21cm - 2*1cm = 19cm.
-    # 6.5cm para o recibo do pagador + 13.5cm para o boleto principal = 20cm (excede um pouco, ajuste)
-    # Vamos usar 6.0cm e 13.0cm para um total de 19.0cm.
+    # A largura total da área útil da página é 21cm - 2*1cm (margens) = 19cm.
+    # colWidths=[6.0*cm, 13.0*cm] soma 19.0cm, o que deve caber.
     main_receipt_table = Table([
         [recibo_pagador_content, main_boleto_content]
-    ], colWidths=[6.0*cm, 13.0*cm]) # Ajustei as larguras para caber
+    ], colWidths=[6.0*cm, 13.0*cm]) 
 
     main_receipt_table.setStyle(TableStyle([
         ('VALIGN', (0,0), (-1,-1), 'TOP'),
@@ -173,11 +161,10 @@ def _get_single_parcela_receipt_flowable(parcela, cliente_info, carne_info, styl
         ('RIGHTPADDING', (0,0), (-1,-1), 0),
         ('TOPPADDING', (0,0), (-1,-1), 0),
         ('BOTTOMPADDING', (0,0), (-1,-1), 0),
-        ('LINEAFTER', (0,0), (0,0), 0.5, colors.black), # Linha vertical entre as duas seções
-        ('GRID', (0,0), (-1,-1), 0.25, colors.grey) # Adiciona um grid ao redor do recibo inteiro
+        ('LINEAFTER', (0,0), (0,0), 0.5, HexColor('#808080')), # Linha vertical entre as duas seções (cinza)
+        ('GRID', (0,0), (-1,-1), 0.25, HexColor('#D3D3D3')) # Grid leve ao redor do recibo inteiro
     ]))
     
-    # Usar KeepTogether para manter todo o recibo como um bloco único
     return KeepTogether(main_receipt_table)
 
 
@@ -185,35 +172,46 @@ def generate_carne_parcelas_pdf(parcelas_data, cliente_info, carne_info, buffer)
     doc = SimpleDocTemplate(buffer, pagesize=portrait(A4), rightMargin=cm, leftMargin=cm, topMargin=cm, bottomMargin=cm)
     styles = getSampleStyleSheet()
 
-    # --- Definição dos estilos de texto (seções mais compactas) ---
+    # --- Definição dos estilos de texto (reforçando cores e tamanhos) ---
     styles.add(ParagraphStyle(name='SmallBold',
                               parent=styles['Normal'],
                               fontSize=7, # Reduzido para caber mais
                               fontName='Helvetica-Bold',
-                              alignment=TA_LEFT
+                              alignment=TA_LEFT,
+                              textColor=colors.black # Definir cor explicitamente
                              ))
     styles.add(ParagraphStyle(name='Small',
                               parent=styles['Normal'],
                               fontSize=7, # Reduzido para caber mais
-                              fontName='Helvetica'
+                              fontName='Helvetica',
+                              textColor=colors.black
                              ))
     styles.add(ParagraphStyle(name='Tiny',
                               parent=styles['Normal'],
                               fontSize=5, # Muito pequeno para detalhes finos
-                              fontName='Helvetica'
+                              fontName='Helvetica',
+                              textColor=colors.black
                              ))
     styles.add(ParagraphStyle(name='ReceiptHeader',
                               parent=styles['Normal'],
                               fontSize=9, # Cabeçalho da empresa
                               fontName='Helvetica-Bold',
-                              alignment=TA_CENTER
+                              alignment=TA_CENTER,
+                              textColor=colors.black
                              ))
     styles.add(ParagraphStyle(name='ReceiptValue',
                               parent=styles['Normal'],
                               fontSize=10, # Valor e vencimento em destaque
                               fontName='Helvetica-Bold',
-                              alignment=TA_CENTER
+                              alignment=TA_CENTER,
+                              textColor=colors.black
                              ))
+    styles.add(ParagraphStyle(name='DashLine', # Re-definir aqui para garantir o escopo
+                              parent=styles['Normal'],
+                              fontSize=6,
+                              fontName='Helvetica',
+                              alignment=TA_CENTER,
+                              textColor=HexColor('#A9A9A9'))) # Um cinza médio para o tracejado
     # --- FIM DA DEFINIÇÃO DOS ESTILOS ---
 
     elements = []
@@ -253,7 +251,10 @@ def generate_carne_parcelas_pdf(parcelas_data, cliente_info, carne_info, buffer)
         
         # Se houver menos de 3 recibos na última página, preenche com Spacer para manter o layout
         while len(receipts_for_current_page) < 3:
-            receipts_for_current_page.append(Spacer(1, 0.5 * cm)) # Adiciona um pequeno espaço para "preencher" a célula vazia
+            # Adiciona um Spacer com a altura aproximada de um recibo para preencher o espaço
+            # Um recibo tem ~9.2cm de altura.
+            # É importante que o Spacer seja tratado como um Flowable completo.
+            receipts_for_current_page.append(Spacer(1, 9.2 * cm))
 
         # Cria uma tabela para a página atual, com 3 linhas (para 3 recibos) e 1 coluna
         # Cada célula da tabela conterá um Flowable de recibo.
@@ -269,6 +270,9 @@ def generate_carne_parcelas_pdf(parcelas_data, cliente_info, carne_info, buffer)
             ('TOPPADDING', (0,0), (-1,-1), 0),
             ('BOTTOMPADDING', (0,0), (-1,-1), 0),
             ('VALIGN', (0,0), (-1,-1), 'TOP'),
+            # Adicionar bordas visíveis entre os recibos na página, se desejar
+            ('LINEBELOW', (0,0), (0,0), 0.5, HexColor('#A9A9A9')), # Linha após o primeiro recibo
+            ('LINEBELOW', (0,1), (0,1), 0.5, HexColor('#A9A9A9')), # Linha após o segundo recibo
         ]))
         
         elements.append(table_for_page)
