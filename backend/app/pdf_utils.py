@@ -3,7 +3,7 @@ from reportlab.lib.enums import TA_CENTER, TA_RIGHT, TA_LEFT
 from reportlab.lib.units import cm
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image, Table, TableStyle, PageBreak, KeepTogether
 from reportlab.lib import colors # Importa o módulo colors inteiro
-from reportlab.lib.colors import black, blue, red, HexColor
+from reportlab.lib.colors import black, blue, red, HexColor # Importar HexColor e cores específicas
 from io import BytesIO
 from reportlab.graphics.barcode import qr
 from reportlab.graphics.shapes import Drawing
@@ -49,7 +49,7 @@ def _get_single_parcela_receipt_flowable(parcela, cliente_info, carne_info, styl
 
     # 1. Linha tracejada de corte (acima de cada recibo, exceto o primeiro da página)
     slip_elements.append(Paragraph("------------------------------------------------------------------------------------------------", styles['DashLine']))
-    slip_elements.append(Spacer(1, 0.1*cm))
+    slip_elements.append(Spacer(1, 0.05*cm)) # Espaçamento reduzido
 
     # 2. Seção do Recibo do Pagador (Esquerda) e Informações do Boleto (Direita)
     # Colocar tudo dentro de uma única tabela de duas colunas
@@ -57,7 +57,7 @@ def _get_single_parcela_receipt_flowable(parcela, cliente_info, carne_info, styl
     # Conteúdo do Recibo do Pagador (coluna esquerda)
     recibo_pagador_content = [
         Paragraph("<b>RECIBO DO PAGADOR</b>", styles['SmallBold']),
-        Spacer(1, 0.1*cm),
+        Spacer(1, 0.05*cm), # Espaçamento reduzido
         Table([
             [Paragraph(f"<b>Nº do Documento</b>", styles['Tiny']), Paragraph(str(parcela['id_parcela']), styles['Tiny'])],
             [Paragraph(f"<b>Vencimento</b>", styles['Tiny']), Paragraph(format_date_br(parcela['data_vencimento']), styles['Tiny'])],
@@ -73,12 +73,12 @@ def _get_single_parcela_receipt_flowable(parcela, cliente_info, carne_info, styl
             ('TOPPADDING', (0,0), (-1,-1), 1),
             ('BOTTOMPADDING', (0,0), (-1,-1), 1),
         ])),
-        Spacer(1, 0.2*cm),
+        Spacer(1, 0.1*cm), # Espaçamento reduzido
         Paragraph("<b>Pagador</b>", styles['SmallBold']),
         Paragraph(cliente_info['nome'], styles['Tiny']),
         Paragraph(f"{cliente_info.get('endereco', '')}", styles['Tiny']),
         Paragraph(f"{cliente_info.get('cidade', '')}, {cliente_info.get('estado', '')}", styles['Tiny']),
-        Spacer(1, 0.5*cm) # Espaço para o final do recibo do pagador
+        Spacer(1, 0.2*cm) # Espaçamento reduzido
     ]
 
     # Conteúdo da Seção Principal do Boleto (coluna direita)
@@ -95,7 +95,7 @@ def _get_single_parcela_receipt_flowable(parcela, cliente_info, carne_info, styl
             ('ALIGN', (1,0), (1,0), 'CENTER'),
             ('ALIGN', (2,0), (2,0), 'RIGHT'),
         ])),
-        Spacer(1, 0.1*cm),
+        Spacer(1, 0.05*cm), # Espaçamento reduzido
         # Informações do Beneficiário, Vencimento e Valor
         Table([
             [Paragraph("<b>Beneficiário</b>", styles['Small']), Paragraph("<b>Vencimento</b>", styles['SmallBold']), Paragraph("<b>Valor</b>", styles['SmallBold'])],
@@ -115,10 +115,10 @@ def _get_single_parcela_receipt_flowable(parcela, cliente_info, carne_info, styl
             ('LEFTPADDING', (0,0), (-1,-1), 0),
             ('RIGHTPADDING', (0,0), (-1,-1), 0),
         ])),
-        Spacer(1, 0.1*cm),
+        Spacer(1, 0.05*cm), # Espaçamento reduzido
         # Instruções Adicionais
         Paragraph(f"<b>Instruções Adicionais:</b> Multa {float(parcela['juros_multa_percentual']):.2f}%, Juros {float(parcela['juros_mora_percentual_ao_dia']):.4f}% a.d.", styles['Tiny']),
-        Spacer(1, 0.2*cm),
+        Spacer(1, 0.1*cm), # Espaçamento reduzido
         # QR Code e Instruções de Pagamento PIX
         Table([
             [qrcode_image if qrcode_image else Paragraph("QR Code não disponível.", styles['Tiny']), # QR Code estático
@@ -135,16 +135,16 @@ def _get_single_parcela_receipt_flowable(parcela, cliente_info, carne_info, styl
             ('TOPPADDING', (0,0), (-1,-1), 0),
             ('BOTTOMPADDING', (0,0), (-1,-1), 0),
         ])),
-        Spacer(1, 0.1*cm),
+        Spacer(1, 0.05*cm), # Espaçamento reduzido
         Paragraph(f"<b>Chave PIX:</b> {carne_info['pix_key']}", styles['Small']),
-        Spacer(1, 0.2*cm),
+        Spacer(1, 0.1*cm), # Espaçamento reduzido
         # Informações do Pagador (Parte inferior do boleto - repetido, mais compacto)
         Paragraph("<b>Pagador</b>", styles['SmallBold']),
         Paragraph(f"{cliente_info['nome']} (CPF/CNPJ: {cliente_info['cpf_cnpj']})", styles['Tiny']),
         Paragraph(f"Endereço: {cliente_info.get('endereco', '')}, {cliente_info.get('cidade', '')} - {cliente_info.get('estado', '')}", styles['Tiny']),
-        Spacer(1, 0.1*cm),
+        Spacer(1, 0.05*cm), # Espaçamento reduzido
         Paragraph(f"<i>Telefone: {cliente_info.get('telefone', '')} | Email: {cliente_info.get('email', '')}</i>", styles['Tiny']),
-        Spacer(1, 0.2*cm),
+        Spacer(1, 0.1*cm), # Espaçamento reduzido
         # Rodapé da Parcela
         Paragraph(f"<i>Gerado em {format_date_br(date.today())} - Parcela {parcela['numero_parcela']} de {carne_info['numero_parcelas']}</i>", styles['Tiny'])
     ]
@@ -253,9 +253,8 @@ def generate_carne_parcelas_pdf(parcelas_data, cliente_info, carne_info, buffer)
         # Se houver menos de 3 recibos na última página, preenche com Spacer para manter o layout
         while len(receipts_for_current_page) < 3:
             # Adiciona um Spacer com a altura aproximada de um recibo para preencher o espaço
-            # Um recibo tem ~9.2cm de altura.
-            # É importante que o Spacer seja tratado como um Flowable completo.
-            receipts_for_current_page.append(Spacer(1, 9.2 * cm))
+            # Estimativa de altura de recibo após otimizações.
+            receipts_for_current_page.append(Spacer(1, 8.0 * cm)) # Altura ajustada
 
         # Cria uma tabela para a página atual, com 3 linhas (para 3 recibos) e 1 coluna
         # Cada célula da tabela conterá um Flowable de recibo.
