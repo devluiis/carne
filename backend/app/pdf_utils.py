@@ -2,7 +2,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER, TA_RIGHT, TA_LEFT
 from reportlab.lib.units import cm
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image, Table, TableStyle, PageBreak, KeepTogether
-from reportlab.lib.colors import black, blue, red, HexColor # Importar HexColor
+from reportlab.lib.colors import black, blue, red, HexColor, colors # Importar 'colors'
 from io import BytesIO
 from reportlab.graphics.barcode import qr
 from reportlab.graphics.shapes import Drawing
