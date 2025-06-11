@@ -169,112 +169,83 @@ def _get_single_parcela_receipt_flowable(parcela, cliente_info, carne_info, styl
 
 
 def generate_carne_parcelas_pdf(parcelas_data, cliente_info, carne_info, buffer):
+    from reportlab.platypus import SimpleDocTemplate, ParagraphStyle, TableStyle, Table, PageBreak, Spacer, Image
+    from reportlab.lib.styles import getSampleStyleSheet
+    from reportlab.lib.enums import TA_CENTER, TA_LEFT
+    from reportlab.lib import colors
+    from reportlab.lib.colors import HexColor
+    from reportlab.lib.units import cm
+    from reportlab.lib.pagesizes import A4, portrait
+    from datetime import date
+
     doc = SimpleDocTemplate(buffer, pagesize=portrait(A4), rightMargin=cm, leftMargin=cm, topMargin=cm, bottomMargin=cm)
     styles = getSampleStyleSheet()
 
-    # --- Definição dos estilos de texto (reforçando cores e tamanhos) ---
-    styles.add(ParagraphStyle(name='SmallBold',
-                              parent=styles['Normal'],
-                              fontSize=7,
-                              fontName='Helvetica-Bold',
-                              alignment=TA_LEFT,
-                              textColor=colors.black
-                             ))
-    styles.add(ParagraphStyle(name='Small',
-                              parent=styles['Normal'],
-                              fontSize=6, # Fonte reduzida
-                              fontName='Helvetica',
-                              textColor=colors.black
-                             ))
-    styles.add(ParagraphStyle(name='Tiny',
-                              parent=styles['Normal'],
-                              fontSize=4, # Fonte reduzida ao mínimo
-                              fontName='Helvetica',
-                              textColor=colors.black
-                             ))
-    styles.add(ParagraphStyle(name='ReceiptHeader',
-                              parent=styles['Normal'],
-                              fontSize=7.5, # Cabeçalho da empresa reduzido
-                              fontName='Helvetica-Bold',
-                              alignment=TA_CENTER,
-                              textColor=colors.black
-                             ))
-    styles.add(ParagraphStyle(name='ReceiptValue',
-                              parent=styles['Normal'],
-                              fontSize=8, # Valor e vencimento em destaque reduzido
-                              fontName='Helvetica-Bold',
-                              alignment=TA_CENTER,
-                              textColor=colors.black
-                             ))
-    styles.add(ParagraphStyle(name='DashLine',
-                              parent=styles['Normal'],
-                              fontSize=6,
-                              fontName='Helvetica',
-                              alignment=TA_CENTER,
-                              textColor=HexColor('#A9A9A9')))
-    # --- FIM DA DEFINIÇÃO DOS ESTILOS ---
+    # Estilos adicionais
+    styles.add(ParagraphStyle(name='SmallBold', parent=styles['Normal'], fontSize=7, fontName='Helvetica-Bold', alignment=TA_LEFT, textColor=colors.black))
+    styles.add(ParagraphStyle(name='Small', parent=styles['Normal'], fontSize=6, fontName='Helvetica', textColor=colors.black))
+    styles.add(ParagraphStyle(name='Tiny', parent=styles['Normal'], fontSize=4, fontName='Helvetica', textColor=colors.black))
+    styles.add(ParagraphStyle(name='ReceiptHeader', parent=styles['Normal'], fontSize=7.5, fontName='Helvetica-Bold', alignment=TA_CENTER, textColor=colors.black))
+    styles.add(ParagraphStyle(name='ReceiptValue', parent=styles['Normal'], fontSize=8, fontName='Helvetica-Bold', alignment=TA_CENTER, textColor=colors.black))
+    styles.add(ParagraphStyle(name='DashLine', parent=styles['Normal'], fontSize=6, fontName='Helvetica', alignment=TA_CENTER, textColor=HexColor('#A9A9A9')))
 
     elements = []
 
-    logo_path = "/backend/app/static/logobios.jpg"
-    qrcode_static_path = "/backend/app/static/meu_qrcode_pix.jpeg"
+    # Caminhos para logo e QR code
+    logo_path = "/app/app/static/logobios.jpg"
+    qrcode_static_path = "/app/app/static/meu_qrcode_pix.jpeg"
 
+    # Carregar imagens
     logo_data = get_base64_image_data(logo_path)
     if not logo_data:
         print(f"AVISO: Logo não carregada em {logo_path}. O PDF pode ter problemas de layout ou ausência da logo.")
-    
+
     qrcode_image_data = get_base64_image_data(qrcode_static_path)
     qrcode_for_pdf = None
     if qrcode_image_data:
-        qrcode_for_pdf = Image(qrcode_image_data, width=2.0*cm, height=2.0*cm) # QR Code ainda mais reduzido
+        qrcode_for_pdf = Image(qrcode_image_data, width=2.0*cm, height=2.0*cm)
     else:
         print(f"AVISO: QR Code estático não carregado em {qrcode_static_path}. O PDF pode ter problemas de layout ou ausência do QR Code.")
 
+    # Ordenar parcelas
     sorted_parcelas = sorted(parcelas_data, key=lambda x: x['numero_parcela'])
-    
+
+    # Definir dimensões utilizáveis da página
     page_width, page_height = A4
     usable_width = page_width - (2 * cm)
+    usable_height = page_height - (2 * cm)  # <-- Correção aqui
 
-    # --- PROCESSAR 2 RECIBOS POR VEZ ---
-    for i in range(0, len(sorted_parcelas), 2): # Iterar de 2 em 2
+    # Montar recibos 2 por página
+    for i in range(0, len(sorted_parcelas), 2):
         receipts_for_current_page = []
-
-        current_batch_parcelas = sorted_parcelas[i : i + 2] # Pega as próximas 2 parcelas
+        current_batch_parcelas = sorted_parcelas[i: i + 2]
 
         for parcela in current_batch_parcelas:
             receipt_flowable = _get_single_parcela_receipt_flowable(
                 parcela, cliente_info, carne_info, styles, logo_data, qrcode_for_pdf
             )
             receipts_for_current_page.append(receipt_flowable)
-        
-        # Se houver menos de 2 recibos na última página, preenche com Spacer
+
+        # Preencher com espaçador se faltar recibo
         while len(receipts_for_current_page) < 2:
-            # Estimativa de altura para UM recibo.
-            # A altura útil da página é ~27.7cm. Para 2 recibos, cada um pode ter ~13.8cm.
-            # Um recibo altamente compactado pode ficar em torno de 7-8cm.
-            # Então, 2 * (8cm) = 16cm, deixando bastante espaço.
-            # O Spacer aqui preenche a diferença total de altura para a célula.
-            receipts_for_current_page.append(Spacer(1, (usable_height - 2*7.5*cm))) # Ajuste para espaçamento de 2 recibos
-            
+            receipts_for_current_page.append(Spacer(1, (usable_height - 2 * 7.5 * cm)))
+
         table_for_page = Table(
             [[r] for r in receipts_for_current_page],
             colWidths=[usable_width]
         )
-        
+
         table_for_page.setStyle(TableStyle([
-            ('LEFTPADDING', (0,0), (-1,-1), 0),
-            ('RIGHTPADDING', (0,0), (-1,-1), 0),
-            ('TOPPADDING', (0,0), (-1,-1), 0),
-            ('BOTTOMPADDING', (0,0), (-1,-1), 0),
-            ('VALIGN', (0,0), (-1,-1), 'TOP'),
-            # A linha abaixo deve estar apenas após o primeiro recibo, já que agora temos 2.
-            ('LINEBELOW', (0,0), (0,0), 0.5, HexColor('#A9A9A9')),
-            # Não é mais necessário LINEBELOW para a segunda linha, pois ela é a última da tabela
+            ('LEFTPADDING', (0, 0), (-1, -1), 0),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+            ('TOPPADDING', (0, 0), (-1, -1), 0),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('LINEBELOW', (0, 0), (0, 0), 0.5, HexColor('#A9A9A9')),
         ]))
-        
+
         elements.append(table_for_page)
-        
-        # Adiciona uma quebra de página se houver mais parcelas a serem processadas
+
         if i + 2 < len(sorted_parcelas):
             elements.append(PageBreak())
 
