@@ -4,9 +4,9 @@ from sqlalchemy.exc import IntegrityError
 from app import models, schemas
 from fastapi import HTTPException, status
 from datetime import date, timedelta, datetime
-from decimal import Decimal # Importado Decimal
+from decimal import Decimal
 from typing import Optional, List
-from app.config import MULTA_ATRASO_PERCENTUAL, JUROS_MORA_PERCENTUAL_AO_MES # Importa as variáveis, agora como Decimal
+from app.config import MULTA_ATRASO_PERCENTUAL, JUROS_MORA_PERCENTUAL_AO_MES
 from sqlalchemy import func
 
 
@@ -1450,7 +1450,12 @@ def get_carne_data_for_pdf(db: Session, carne_id: int):
         "id_carne": db_carne.id_carne,
         "descricao": db_carne.descricao,
         "numero_parcelas": db_carne.numero_parcelas,
-        "valor_total_original": db_carne.valor_total_original
+        "valor_total_original": db_carne.valor_total_original,
+        # --- ADICIONE ESTAS NOVAS CHAVES AQUI ---
+        "beneficiario_nome": "Bios Store", # Preencha com o nome da sua empresa/beneficiário
+        "beneficiario_cnpj_cpf": "12.345.678/0001-99", # Preencha com o CNPJ/CPF do seu beneficiário
+        "pix_key": "suachavepix@exemplo.com", # Preencha com a sua chave PIX
+        # ----------------------------------------
     }
 
     return parcelas_for_pdf, cliente_for_pdf, carne_for_pdf
