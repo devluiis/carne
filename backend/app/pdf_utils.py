@@ -53,7 +53,13 @@ def generate_carne_parcelas_pdf(parcelas_data, cliente_info, carne_info, buffer)
                               fontName='Helvetica-Bold', # Define a fonte como negrito
                               alignment=TA_CENTER # Centraliza o texto
                              ))
-    # --- FIM DA ADIÇÃO ---
+    # --- NOVO: Definição do estilo 'Small' ---
+    styles.add(ParagraphStyle(name='Small',
+                              parent=styles['Normal'], # Baseado no estilo 'Normal'
+                              fontSize=7,
+                              fontName='Helvetica' # Fonte normal para texto pequeno
+                             ))
+    # --- FIM DAS ADIÇÕES ---
 
     elements = []
 
@@ -154,14 +160,11 @@ def generate_carne_parcelas_pdf(parcelas_data, cliente_info, carne_info, buffer)
         qr_code_elements.append(img_qr)
         qr_code_elements.append(Spacer(1, 0.1*cm))
         
-        # O ReportLab pode ter dificuldade com texto muito pequeno e negrito.
-        # Ajustei para usar o estilo SmallBold que definimos.
-        #
         qr_code_elements.append(Paragraph(f"<font size=7><b>ATENÇÃO: Digite o valor manualmente!</b></font>", styles['SmallBold']))
         qr_code_elements.append(Spacer(1, 0.2*cm))
-        qr_code_elements.append(Paragraph("<i>Escaneie para detalhes ou use a chave PIX: seu.email@pix.com</i>", styles['Small']))
-        
-        # Você pode adicionar um campo para a chave PIX ou o código copia e cola
+        #
+        qr_code_elements.append(Paragraph("<i>Escaneie para detalhes ou use a chave PIX: seu.email@pix.com</i>", styles['Small'])) 
+        qr_code_elements.append(Spacer(1, 0.2*cm)) # Adicionei um Spacer para melhor espaçamento
         qr_code_elements.append(Paragraph("<b>Chave PIX:</b> (XX) XXXXX-XXXX ou CPF/CNPJ", styles['Normal']))
         qr_code_elements.append(Spacer(1, 0.5*cm))
 
