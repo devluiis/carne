@@ -234,10 +234,11 @@ def generate_carne_parcelas_pdf(parcelas_data, cliente_info, carne_info, buffer)
     page_width, page_height = A4
     usable_width = page_width - (2 * cm)
 
-    for i in range(0, len(sorted_parcelas), 3):
+    # --- ALTERAÇÃO PRINCIPAL AQUI: PROCESSAR 2 RECIBOS POR VEZ ---
+    for i in range(0, len(sorted_parcelas), 2): # Mudado de 3 para 2
         receipts_for_current_page = []
 
-        current_batch_parcelas = sorted_parcelas[i : i + 3]
+        current_batch_parcelas = sorted_parcelas[i : i + 2] # Pega as próximas 2 parcelas
 
         for parcela in current_batch_parcelas:
             receipt_flowable = _get_single_parcela_receipt_flowable(
@@ -245,9 +246,12 @@ def generate_carne_parcelas_pdf(parcelas_data, cliente_info, carne_info, buffer)
             )
             receipts_for_current_page.append(receipt_flowable)
         
-        while len(receipts_for_current_page) < 3:
-            # Estimativa de altura de recibo após otimizações ainda mais agressivas
-            receipts_for_current_page.append(Spacer(1, 7.5 * cm)) # Altura ajustada novamente
+        # Se houver menos de 2 recibos na última página, preenche com Spacer
+        while len(receipts_for_current_page) < 2: # Mudado de 3 para 2
+            # Estimativa de altura para UM recibo (agora com apenas 2 por página, cada um terá mais espaço)
+            # A altura útil da página é ~27.7cm. Para 2 recibos, cada um pode ter ~13.8cm.
+            # Um recibo compactado tem ~7.5cm, então 2 deles (15cm) cabem bem.
+            receipts_for_current_page.append(Spacer(1, 13.5 * cm)) # Ajuste para espaçamento de 2 recibos
             
         table_for_page = Table(
             [[r] for r in receipts_for_current_page],
@@ -260,13 +264,16 @@ def generate_carne_parcelas_pdf(parcelas_data, cliente_info, carne_info, buffer)
             ('TOPPADDING', (0,0), (-1,-1), 0),
             ('BOTTOMPADDING', (0,0), (-1,-1), 0),
             ('VALIGN', (0,0), (-1,-1), 'TOP'),
+            # A linha abaixo deve estar apenas após o primeiro recibo, já que agora temos 2.
             ('LINEBELOW', (0,0), (0,0), 0.5, HexColor('#A9A9A9')),
-            ('LINEBELOW', (0,1), (0,1), 0.5, HexColor('#A9A9A9')),
+            # Remover a linha para o segundo recibo se só houver 2
+            # ('LINEBELOW', (0,1), (0,1), 0.5, HexColor('#A9A9A9')), # Removido, pois só haverá 2 linhas no máximo
         ]))
         
         elements.append(table_for_page)
         
-        if i + 3 < len(sorted_parcelas):
+        # Adiciona uma quebra de página se houver mais parcelas a serem processadas
+        if i + 2 < len(sorted_parcelas): # Mudado de 3 para 2
             elements.append(PageBreak())
 
     doc.build(elements)
