@@ -49,7 +49,7 @@ def _get_single_parcela_receipt_flowable(parcela, cliente_info, carne_info, styl
 
     # 1. Linha tracejada de corte (acima de cada recibo, exceto o primeiro da página)
     slip_elements.append(Paragraph("------------------------------------------------------------------------------------------------", styles['DashLine']))
-    slip_elements.append(Spacer(1, 0.03*cm)) # Espaçamento ainda mais reduzido
+    slip_elements.append(Spacer(1, 0.02*cm)) # Espaçamento ainda mais reduzido
 
     # 2. Seção do Recibo do Pagador (Esquerda) e Informações do Boleto (Direita)
     # Colocar tudo dentro de uma única tabela de duas colunas
@@ -57,7 +57,7 @@ def _get_single_parcela_receipt_flowable(parcela, cliente_info, carne_info, styl
     # Conteúdo do Recibo do Pagador (coluna esquerda)
     recibo_pagador_content = [
         Paragraph("<b>RECIBO DO PAGADOR</b>", styles['SmallBold']),
-        Spacer(1, 0.03*cm), # Espaçamento ainda mais reduzido
+        Spacer(1, 0.02*cm), # Espaçamento ainda mais reduzido
         Table([
             [Paragraph(f"<b>Nº do Documento</b>", styles['Tiny']), Paragraph(str(parcela['id_parcela']), styles['Tiny'])],
             [Paragraph(f"<b>Vencimento</b>", styles['Tiny']), Paragraph(format_date_br(parcela['data_vencimento']), styles['Tiny'])],
@@ -68,34 +68,34 @@ def _get_single_parcela_receipt_flowable(parcela, cliente_info, carne_info, styl
             ('ALIGN', (0,0), (-1,-1), 'LEFT'),
             ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
             ('GRID', (0,0), (-1,-1), 0.25, colors.grey),
-            ('LEFTPADDING', (0,0), (-1,-1), 1),
-            ('RIGHTPADDING', (0,0), (-1,-1), 1),
-            ('TOPPADDING', (0,0), (-1,-1), 1),
-            ('BOTTOMPADDING', (0,0), (-1,-1), 1),
+            ('LEFTPADDING', (0,0), (-1,-1), 0.5), # Padding reduzido
+            ('RIGHTPADDING', (0,0), (-1,-1), 0.5), # Padding reduzido
+            ('TOPPADDING', (0,0), (-1,-1), 0.5), # Padding reduzido
+            ('BOTTOMPADDING', (0,0), (-1,-1), 0.5), # Padding reduzido
         ])),
-        Spacer(1, 0.05*cm), # Espaçamento ainda mais reduzido
+        Spacer(1, 0.03*cm), # Espaçamento ainda mais reduzido
         Paragraph("<b>Pagador</b>", styles['SmallBold']),
         Paragraph(cliente_info['nome'], styles['Tiny']),
         Paragraph(f"{cliente_info.get('endereco', '')}", styles['Tiny']),
         Paragraph(f"{cliente_info.get('cidade', '')}, {cliente_info.get('estado', '')}", styles['Tiny']),
-        Spacer(1, 0.1*cm) # Espaçamento ainda mais reduzido
+        Spacer(1, 0.05*cm) # Espaçamento ainda mais reduzido
     ]
 
     # Conteúdo da Seção Principal do Boleto (coluna direita)
     main_boleto_content = [
         # Cabeçalho do Boleto (Logo, Nome da Empresa, "Pague usando PIX")
         Table([
-            [Image(logo_data, width=1.0*cm, height=1.0*cm) if logo_data else "", # Logo menor (reduzido)
+            [Image(logo_data, width=0.9*cm, height=0.9*cm) if logo_data else "", # Logo menor (ainda mais reduzido)
              Paragraph("<b>Bios Store</b>", styles['ReceiptHeader']),
              Paragraph("Pague sua cobrança usando o Pix", styles['Small'])]
-        ], colWidths=[1.2*cm, 6*cm, 5*cm], # Coluna da logo ligeiramente ajustada
+        ], colWidths=[1.0*cm, 6*cm, 5*cm], # Coluna da logo ajustada
         style=TableStyle([
             ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
             ('ALIGN', (0,0), (0,0), 'LEFT'),
             ('ALIGN', (1,0), (1,0), 'CENTER'),
             ('ALIGN', (2,0), (2,0), 'RIGHT'),
         ])),
-        Spacer(1, 0.03*cm), # Espaçamento ainda mais reduzido
+        Spacer(1, 0.02*cm), # Espaçamento ainda mais reduzido
         # Informações do Beneficiário, Vencimento e Valor
         Table([
             [Paragraph("<b>Beneficiário</b>", styles['Small']), Paragraph("<b>Vencimento</b>", styles['SmallBold']), Paragraph("<b>Valor</b>", styles['SmallBold'])],
@@ -115,10 +115,10 @@ def _get_single_parcela_receipt_flowable(parcela, cliente_info, carne_info, styl
             ('LEFTPADDING', (0,0), (-1,-1), 0),
             ('RIGHTPADDING', (0,0), (-1,-1), 0),
         ])),
-        Spacer(1, 0.03*cm), # Espaçamento ainda mais reduzido
+        Spacer(1, 0.02*cm), # Espaçamento ainda mais reduzido
         # Instruções Adicionais
         Paragraph(f"<b>Instruções Adicionais:</b> Multa {float(parcela['juros_multa_percentual']):.2f}%, Juros {float(parcela['juros_mora_percentual_ao_dia']):.4f}% a.d.", styles['Tiny']),
-        Spacer(1, 0.05*cm), # Espaçamento ainda mais reduzido
+        Spacer(1, 0.03*cm), # Espaçamento ainda mais reduzido
         # QR Code e Instruções de Pagamento PIX
         Table([
             [qrcode_image if qrcode_image else Paragraph("QR Code não disponível.", styles['Tiny']), # QR Code estático
@@ -127,7 +127,7 @@ def _get_single_parcela_receipt_flowable(parcela, cliente_info, carne_info, styl
                        "3. Escolha a opção <b>Pagar com QRcode</b>.<br/>"
                        "4. Aponte a câmera para o QRcode acima.<br/>"
                        "5. <b>DIGITE O VALOR MANUALMENTE.</b> Confirme as informações e finalize o pagamento.", styles['Tiny'])]
-        ], colWidths=[3.0*cm, 10.0*cm], # QR Code reduzido e espaço para texto aumentado
+        ], colWidths=[2.5*cm, 10.5*cm], # QR Code reduzido e espaço para texto aumentado
         style=TableStyle([
             ('VALIGN', (0,0), (-1,-1), 'TOP'),
             ('LEFTPADDING', (0,0), (-1,-1), 0),
@@ -135,23 +135,21 @@ def _get_single_parcela_receipt_flowable(parcela, cliente_info, carne_info, styl
             ('TOPPADDING', (0,0), (-1,-1), 0),
             ('BOTTOMPADDING', (0,0), (-1,-1), 0),
         ])),
-        Spacer(1, 0.03*cm), # Espaçamento ainda mais reduzido
+        Spacer(1, 0.02*cm), # Espaçamento ainda mais reduzido
         Paragraph(f"<b>Chave PIX:</b> {carne_info['pix_key']}", styles['Small']),
-        Spacer(1, 0.05*cm), # Espaçamento ainda mais reduzido
+        Spacer(1, 0.03*cm), # Espaçamento ainda mais reduzido
         # Informações do Pagador (Parte inferior do boleto - repetido, mais compacto)
         Paragraph("<b>Pagador</b>", styles['SmallBold']),
         Paragraph(f"{cliente_info['nome']} (CPF/CNPJ: {cliente_info['cpf_cnpj']})", styles['Tiny']),
         Paragraph(f"Endereço: {cliente_info.get('endereco', '')}, {cliente_info.get('cidade', '')} - {cliente_info.get('estado', '')}", styles['Tiny']),
-        Spacer(1, 0.03*cm), # Espaçamento ainda mais reduzido
+        Spacer(1, 0.02*cm), # Espaçamento ainda mais reduzido
         Paragraph(f"<i>Telefone: {cliente_info.get('telefone', '')} | Email: {cliente_info.get('email', '')}</i>", styles['Tiny']),
-        Spacer(1, 0.05*cm), # Espaçamento ainda mais reduzido
+        Spacer(1, 0.03*cm), # Espaçamento ainda mais reduzido
         # Rodapé da Parcela
         Paragraph(f"<i>Gerado em {format_date_br(date.today())} - Parcela {parcela['numero_parcela']} de {carne_info['numero_parcelas']}</i>", styles['Tiny'])
     ]
 
     # Tabela principal de 2 colunas para o layout do recibo (Recibo Pagador | Boleto Principal)
-    # A largura total da área útil da página é 21cm - 2*1cm (margens) = 19cm.
-    # colWidths=[6.0*cm, 13.0*cm] soma 19.0cm, o que deve caber.
     main_receipt_table = Table([
         [recibo_pagador_content, main_boleto_content]
     ], colWidths=[6.0*cm, 13.0*cm]) 
@@ -176,118 +174,98 @@ def generate_carne_parcelas_pdf(parcelas_data, cliente_info, carne_info, buffer)
     # --- Definição dos estilos de texto (reforçando cores e tamanhos) ---
     styles.add(ParagraphStyle(name='SmallBold',
                               parent=styles['Normal'],
-                              fontSize=7, # Reduzido para caber mais
+                              fontSize=7,
                               fontName='Helvetica-Bold',
                               alignment=TA_LEFT,
-                              textColor=colors.black # Definir cor explicitamente
+                              textColor=colors.black
                              ))
     styles.add(ParagraphStyle(name='Small',
                               parent=styles['Normal'],
-                              fontSize=7, # Reduzido para caber mais
+                              fontSize=6.5, # Fonte reduzida
                               fontName='Helvetica',
                               textColor=colors.black
                              ))
     styles.add(ParagraphStyle(name='Tiny',
                               parent=styles['Normal'],
-                              fontSize=5, # Muito pequeno para detalhes finos
+                              fontSize=4.5, # Fonte reduzida
                               fontName='Helvetica',
                               textColor=colors.black
                              ))
     styles.add(ParagraphStyle(name='ReceiptHeader',
                               parent=styles['Normal'],
-                              fontSize=9, # Cabeçalho da empresa
+                              fontSize=8, # Cabeçalho da empresa reduzido
                               fontName='Helvetica-Bold',
                               alignment=TA_CENTER,
                               textColor=colors.black
                              ))
     styles.add(ParagraphStyle(name='ReceiptValue',
                               parent=styles['Normal'],
-                              fontSize=10, # Valor e vencimento em destaque
+                              fontSize=9, # Valor e vencimento em destaque reduzido
                               fontName='Helvetica-Bold',
                               alignment=TA_CENTER,
                               textColor=colors.black
                              ))
-    styles.add(ParagraphStyle(name='DashLine', # Re-definir aqui para garantir o escopo
+    styles.add(ParagraphStyle(name='DashLine',
                               parent=styles['Normal'],
                               fontSize=6,
                               fontName='Helvetica',
                               alignment=TA_CENTER,
-                              textColor=HexColor('#A9A9A9'))) # Um cinza médio para o tracejado
+                              textColor=HexColor('#A9A9A9')))
     # --- FIM DA DEFINIÇÃO DOS ESTILOS ---
 
     elements = []
 
-    # Caminhos para as imagens
     logo_path = "/app/app/static/logobios.jpg"
-    qrcode_static_path = "/app/app/static/meu_qrcode_pix.jpeg" # QR Code estático
+    qrcode_static_path = "/app/app/static/meu_qrcode_pix.jpeg"
 
-    # Adicionando verificação de carregamento de imagem para depuração
     logo_data = get_base64_image_data(logo_path)
     if not logo_data:
-        # Se a imagem não for carregada, use um placeholder ou trate o erro adequadamente.
-        # Por exemplo, pode-se usar uma imagem em branco ou um parágrafo.
-        # Por enquanto, deixaremos como está, mas o print será útil.
         print(f"AVISO: Logo não carregada em {logo_path}. O PDF pode ter problemas de layout ou ausência da logo.")
     
     qrcode_image_data = get_base64_image_data(qrcode_static_path)
     qrcode_for_pdf = None
     if qrcode_image_data:
-        qrcode_for_pdf = Image(qrcode_image_data, width=2.8*cm, height=2.8*cm) # QR Code reduzido
+        qrcode_for_pdf = Image(qrcode_image_data, width=2.5*cm, height=2.5*cm) # QR Code ainda mais reduzido
     else:
         print(f"AVISO: QR Code estático não carregado em {qrcode_static_path}. O PDF pode ter problemas de layout ou ausência do QR Code.")
-        # Se o QR Code não carregar, pode-se colocar um texto informativo na área dele.
-        # qrcode_for_pdf = Paragraph("QR Code não disponível.", styles['Tiny'])
-
 
     sorted_parcelas = sorted(parcelas_data, key=lambda x: x['numero_parcela'])
     
-    # Largura da coluna para a tabela que conterá 3 recibos por página
     page_width, page_height = A4
-    usable_width = page_width - (2 * cm) # Largura da página menos margens laterais
+    usable_width = page_width - (2 * cm)
 
-    # Loop para processar 3 parcelas por vez e gerar uma tabela por página
     for i in range(0, len(sorted_parcelas), 3):
-        # Lista para armazenar os Flowables de recibo para a página atual
         receipts_for_current_page = []
 
-        # Pega as próximas 3 parcelas ou menos, se for o final
         current_batch_parcelas = sorted_parcelas[i : i + 3]
 
         for parcela in current_batch_parcelas:
-            # Chama a função auxiliar para obter o Flowable de um único recibo
             receipt_flowable = _get_single_parcela_receipt_flowable(
                 parcela, cliente_info, carne_info, styles, logo_data, qrcode_for_pdf
             )
             receipts_for_current_page.append(receipt_flowable)
         
-        # Se houver menos de 3 recibos na última página, preenche com Spacer para manter o layout
         while len(receipts_for_current_page) < 3:
-            # Adiciona um Spacer com a altura aproximada de um recibo para preencher o espaço
-            # Estimativa de altura de recibo após otimizações.
-            receipts_for_current_page.append(Spacer(1, 7.8 * cm)) # Altura ajustada
+            # Estimativa de altura de recibo após otimizações ainda mais agressivas
+            receipts_for_current_page.append(Spacer(1, 7.5 * cm)) # Altura ajustada novamente
             
-        # Cria uma tabela para a página atual, com 3 linhas (para 3 recibos) e 1 coluna
-        # Cada célula da tabela conterá um Flowable de recibo.
         table_for_page = Table(
-            [[r] for r in receipts_for_current_page], # Cada Flowable de recibo em sua própria linha
+            [[r] for r in receipts_for_current_page],
             colWidths=[usable_width]
         )
         
-        # Estilos da tabela principal da página
         table_for_page.setStyle(TableStyle([
             ('LEFTPADDING', (0,0), (-1,-1), 0),
             ('RIGHTPADDING', (0,0), (-1,-1), 0),
             ('TOPPADDING', (0,0), (-1,-1), 0),
             ('BOTTOMPADDING', (0,0), (-1,-1), 0),
             ('VALIGN', (0,0), (-1,-1), 'TOP'),
-            # Adicionar bordas visíveis entre os recibos na página, se desejar
-            ('LINEBELOW', (0,0), (0,0), 0.5, HexColor('#A9A9A9')), # Linha após o primeiro recibo
-            ('LINEBELOW', (0,1), (0,1), 0.5, HexColor('#A9A9A9')), # Linha após o segundo recibo
+            ('LINEBELOW', (0,0), (0,0), 0.5, HexColor('#A9A9A9')),
+            ('LINEBELOW', (0,1), (0,1), 0.5, HexColor('#A9A9A9')),
         ]))
         
         elements.append(table_for_page)
         
-        # Adiciona uma quebra de página se houver mais parcelas a serem processadas
         if i + 3 < len(sorted_parcelas):
             elements.append(PageBreak())
 
