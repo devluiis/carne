@@ -1,161 +1,166 @@
-# backend/app/routers/carnes_router.py
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Response
 from sqlalchemy.orm import Session
-from typing import List, Optional
-from datetime import date
-from app import schemas, crud, models
+from app import crud, schemas, models
 from app.database import get_db
-from app.auth import get_current_active_user, get_current_admin_user
-from fastapi.responses import Response, StreamingResponse
+from app.dependencies import get_current_active_user, get_current_admin_user
+from datetime import datetime, timedelta
+from typing import List, Optional
+
+# Importação corrigida para a função de geração de PDF
 from app.pdf_utils import generate_carne_pdf_weasyprint
-from io import BytesIO # Necessário para o buffer do PDF
 
-router = APIRouter(prefix="/carnes", tags=["Carnês"])
+router = APIRouter(
+    prefix="/carnes",
+    tags=["Carnes"],
+)
 
-# --- Rotas de Carnê ---
-@router.post("/", response_model=schemas.CarneResponse, status_code=status.HTTP_201_CREATED)
-def create_carne(carne: schemas.CarneCreate, db: Session = Depends(get_db), current_user: models.Usuario = Depends(get_current_active_user)):
-    db_cliente = crud.get_client(db, client_id=carne.id_cliente)
-    if not db_cliente:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cliente não encontrado para associar o carnê.")
-    return crud.create_carne(db=db, carne=carne)
-
-@router.get("/", response_model=List[schemas.CarneResponse])
-def read_carnes(
-    skip: int = 0,
-    limit: int = 100,
-    id_cliente: Optional[int] = Query(None, description="Filtrar por ID do cliente"),
-    status_carne: Optional[str] = Query(None, description="Filtrar por status do carnê (Ativo, Quitado, Em Atraso, Cancelado)"),
-    data_vencimento_inicio: Optional[date] = Query(None, description="Filtrar carnês com parcelas vencendo a partir desta data (YYYY-MM-DD)"),
-    data_vencimento_fim: Optional[date] = Query(None, description="Filtrar carnês com parcelas vencendo até esta data (YYYY-MM-DD)"),
-    search_query: Optional[str] = Query(None, description="Buscar carnês por descrição, nome ou CPF/CNPJ do cliente"),
+@router.post("/", response_model=schemas.Carne)
+def create_carne_route(
+    carne: schemas.CarneCreate,
     db: Session = Depends(get_db),
     current_user: models.Usuario = Depends(get_current_active_user)
 ):
-    carnes = crud.get_carnes(
-        db,
-        skip=skip,
-        limit=limit,
-        id_cliente=id_cliente,
-        status_carne=status_carne,
-        data_vencimento_inicio=data_vencimento_inicio,
-        data_vencimento_fim=data_vencimento_fim,
-        search_query=search_query
-    )
+    db_carne = crud.create_carne(db=db, carne=carne)
+    return db_carne
+
+@router.get("/", response_model=List[schemas.Carne])
+def read_carnes_route(
+    skip: int = 0,
+    limit: int = 100,
+    status_carne: Optional[str] = None,
+    client_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_active_user)
+):
+    carnes = crud.get_carnes(db, skip=skip, limit=limit, status_carne=status_carne, client_id=client_id)
     return carnes
 
-@router.get("/{carne_id}", response_model=schemas.CarneResponse)
-def read_carne(carne_id: int, db: Session = Depends(get_db), current_user: models.Usuario = Depends(get_current_active_user)):
-    db_carne = crud.get_carne(db, carne_id=carne_id)
+@router.get("/{carne_id}", response_model=schemas.CarneWithDetails)
+def read_carne_route(
+    carne_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_active_user)
+):
+    db_carne = crud.get_carne_with_details(db, carne_id=carne_id)
     if db_carne is None:
         raise HTTPException(status_code=404, detail="Carnê não encontrado")
     return db_carne
 
-@router.put("/{carne_id}", response_model=schemas.CarneResponse)
-def update_carne(carne_id: int, carne_update: schemas.CarneCreate, db: Session = Depends(get_db), current_user: models.Usuario = Depends(get_current_active_user)):
-    db_carne = crud.update_carne(db, carne_id, carne_update)
+@router.put("/{carne_id}", response_model=schemas.Carne)
+def update_carne_route(
+    carne_id: int,
+    carne: schemas.CarneUpdate,
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_admin_user) # Apenas admin pode atualizar
+):
+    db_carne = crud.update_carne(db, carne_id=carne_id, carne=carne)
     if db_carne is None:
         raise HTTPException(status_code=404, detail="Carnê não encontrado")
     return db_carne
 
 @router.delete("/{carne_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_carne(carne_id: int, db: Session = Depends(get_db), current_user: models.Usuario = Depends(get_current_admin_user)):
-    db_carne = crud.delete_carne(db, carne_id=carne_id)
-    if db_carne is None:
-        raise HTTPException(status_code=404, detail="Carnê não encontrado")
+def delete_carne_route(
+    carne_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_admin_user) # Apenas admin pode deletar
+):
+    success = crud.delete_carne(db, carne_id=carne_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Carnê não encontrado ou não pode ser deletado (possui pagamentos).")
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
+@router.post("/{carne_id}/parcelas/{parcela_id}/pagar", response_model=schemas.Pagamento)
+def create_pagamento_route(
+    carne_id: int,
+    parcela_id: int,
+    pagamento: schemas.PagamentoCreate,
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_active_user)
+):
+    db_pagamento = crud.create_pagamento(
+        db=db,
+        parcela_id=parcela_id,
+        pagamento=pagamento,
+        user_id=current_user.id_usuario # Associa o pagamento ao usuário logado
+    )
+    if db_pagamento is None:
+        raise HTTPException(status_code=404, detail="Parcela não encontrada ou pagamento inválido.")
+    return db_pagamento
 
-# --- NOVA ROTA PARA GERAR PDF DO CARNÊ ---
-@router.get("/{carne_id}/pdf", tags=["Carnês PDF"])
+@router.post("/{carne_id}/parcelas/{parcela_id}/renegotiate", response_model=schemas.Parcela)
+def renegotiate_parcela_route(
+    carne_id: int,
+    parcela_id: int,
+    new_due_date: datetime,
+    new_value: Optional[float] = None,
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_admin_user) # Apenas admin pode renegociar
+):
+    db_parcela = crud.renegotiate_parcela(db, parcela_id, new_due_date, new_value)
+    if db_parcela is None:
+        raise HTTPException(status_code=404, detail="Parcela não encontrada ou não pode ser renegociada.")
+    return db_parcela
+
+@router.post("/{carne_id}/parcelas/{parcela_id}/reverse-payment", response_model=schemas.Pagamento)
+def reverse_payment_route(
+    carne_id: int,
+    parcela_id: int,
+    pagamento_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_admin_user) # Apenas admin pode estornar
+):
+    db_pagamento = crud.reverse_payment(db, parcela_id, pagamento_id)
+    if db_pagamento is None:
+        raise HTTPException(status_code=404, detail="Pagamento não encontrado ou não pode ser estornado.")
+    return db_pagamento
+
+@router.get("/carnes/{carne_id}/pdf", response_class=Response)
 async def get_carne_pdf_route(
     carne_id: int,
     db: Session = Depends(get_db),
-    current_user: models.Usuario = Depends(get_current_active_user) # Quem pode gerar PDF? Atendente ou Admin.
+    current_user: models.Usuario = Depends(get_current_active_user)
 ):
-    parcelas_data, cliente_info, carne_info = crud.get_carne_data_for_pdf(db, carne_id)
+    carne = crud.get_carne(db, carne_id)
+    if not carne:
+        raise HTTPException(status_code=404, detail="Carnê não encontrado")
 
-    if not parcelas_data or not cliente_info or not carne_info:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dados do carnê ou cliente não encontrados para gerar o PDF.")
+    cliente = crud.get_client(db, carne.id_cliente)
+    if not cliente:
+        raise HTTPException(status_code=404, detail="Cliente do carnê não encontrado")
 
-    buffer = BytesIO()
-    pdf_buffer = generate_carne_pdf_weasyprint(carne_data, parcelas_data)
-    buffer.seek(0)
-
-    filename = f"carne_parcelas_{carne_id}_{cliente_info['nome']}.pdf"
+    parcelas = crud.get_parcelas_by_carne_id(db, carne_id)
     
-    return StreamingResponse(
-        buffer,
-        media_type="application/pdf",
-        headers={"Content-Disposition": f"attachment; filename={filename}"}
-    )
+    # Preparar os dados do carnê no formato esperado pela função de PDF
+    carne_data = {
+        "id_carne": carne.id_carne,
+        "descricao": carne.descricao,
+        "valor_total_original": carne.valor_total_original,
+        "numero_parcelas": carne.numero_parcelas,
+        "nome_cliente": cliente.nome,
+        "cpf_cnpj_cliente": cliente.cpf_cnpj,
+        "endereco_cliente": cliente.endereco,
+        "data_venda": carne.data_venda.isoformat() if carne.data_venda else None, # Adicionado data_venda
+        "valor_entrada": carne.valor_entrada, # Adicionado valor_entrada
+        "forma_pagamento_entrada": carne.forma_pagamento_entrada, # Adicionado forma_pagamento_entrada
+        "parcela_fixa": carne.parcela_fixa, # Adicionado parcela_fixa
+    }
 
+    parcelas_data = []
+    for parcela in parcelas:
+        parcelas_data.append({
+            "id_parcela": parcela.id_parcela,
+            "numero_parcela": parcela.numero_parcela,
+            "valor_devido": parcela.valor_devido,
+            "data_vencimento": parcela.data_vencimento.isoformat(), # Converter para string ISO
+            "status_parcela": parcela.status_parcela,
+            "observacoes": parcela.observacoes,
+            "valor_pago": parcela.valor_pago,
+            "saldo_devedor": parcela.saldo_devedor,
+            "data_pagamento_completo": parcela.data_pagamento_completo.isoformat() if parcela.data_pagamento_completo else None,
+            "juros_multa": parcela.juros_multa,
+        })
 
-# --- Rotas de Parcela (associadas a um Carnê) ---
-@router.get("/{carne_id}/parcelas", response_model=List[schemas.ParcelaResponse])
-def read_parcelas_by_carne(carne_id: int, skip: int = 0, limit: int = 100, db: Session = Depends(get_db), current_user: models.Usuario = Depends(get_current_active_user)):
-    db_carne = crud.get_carne(db, carne_id=carne_id, apply_interest=False)
-    if not db_carne:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Carnê não encontrado.")
-    parcelas = crud.get_parcelas_by_carne(db, carne_id=carne_id, skip=skip, limit=limit)
-    return parcelas
+    # Chame a função de geração de PDF e receba o buffer de retorno
+    pdf_buffer = generate_carne_pdf_weasyprint(carne_data, parcelas_data)
 
-@router.get("/parcelas/{parcela_id}", response_model=schemas.ParcelaResponse)
-def read_parcela(parcela_id: int, db: Session = Depends(get_db), current_user: models.Usuario = Depends(get_current_active_user)):
-    db_parcela = crud.get_parcela(db, parcela_id=parcela_id)
-    if db_parcela is None:
-        raise HTTPException(status_code=404, detail="Parcela não encontrada")
-    return db_parcela
-
-@router.put("/parcelas/{parcela_id}", response_model=schemas.ParcelaResponse)
-def update_parcela(parcela_id: int, parcela_update: schemas.ParcelaBase, db: Session = Depends(get_db), current_user: models.Usuario = Depends(get_current_active_user)):
-    db_parcela = crud.update_parcela(db, parcela_id, parcela_update)
-    if db_parcela is None:
-        raise HTTPException(status_code=404, detail="Parcela não encontrada")
-    return db_parcela
-
-# Rota: Renegociar Parcela
-@router.post("/parcelas/{parcela_id}/renegotiate", response_model=schemas.ParcelaResponse)
-def renegotiate_parcela_route(parcela_id: int, renegotiation_data: schemas.ParcelaRenegotiate, db: Session = Depends(get_db), current_user: models.Usuario = Depends(get_current_active_user)):
-    db_parcela = crud.renegotiate_parcela(db, parcela_id, renegotiation_data)
-    return db_parcela
-
-@router.delete("/parcelas/{parcela_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_parcela(parcela_id: int, db: Session = Depends(get_db), current_user: models.Usuario = Depends(get_current_admin_user)):
-    result = crud.delete_parcela(db, parcela_id=parcela_id)
-    if not result or not result.get("ok"):
-        raise HTTPException(status_code=404, detail="Parcela não encontrada ou falha ao deletar")
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
-
-
-# --- Rotas de Pagamento ---
-@router.post("/pagamentos/", response_model=schemas.PagamentoResponse, status_code=status.HTTP_201_CREATED)
-def create_pagamento(pagamento: schemas.PagamentoCreate, db: Session = Depends(get_db), current_user: models.Usuario = Depends(get_current_active_user)):
-    return crud.create_pagamento(db=db, pagamento=pagamento, usuario_id=current_user.id_usuario)
-
-@router.get("/pagamentos/{pagamento_id}", response_model=schemas.PagamentoResponse)
-def read_pagamento(pagamento_id: int, db: Session = Depends(get_db), current_user: models.Usuario = Depends(get_current_active_user)):
-    db_pagamento = crud.get_pagamento(db, pagamento_id=pagamento_id)
-    if db_pagamento is None:
-        raise HTTPException(status_code=404, detail="Pagamento não encontrado")
-    return db_pagamento
-
-@router.get("/parcelas/{parcela_id}/pagamentos", response_model=List[schemas.PagamentoResponse])
-def read_pagamentos_by_parcela(parcela_id: int, skip: int = 0, limit: int = 100, db: Session = Depends(get_db), current_user: models.Usuario = Depends(get_current_active_user)):
-    db_parcela = crud.get_parcela(db, parcela_id=parcela_id, apply_interest=False)
-    if not db_parcela:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Parcela não encontrada.")
-    pagamentos = crud.get_pagamentos_by_parcela(db, parcela_id=parcela_id, skip=skip, limit=limit)
-    return pagamentos
-
-@router.put("/pagamentos/{pagamento_id}", response_model=schemas.PagamentoResponse)
-def update_pagamento(pagamento_id: int, pagamento_update: schemas.PagamentoCreate, db: Session = Depends(get_db), current_user: models.Usuario = Depends(get_current_admin_user)):
-    db_pagamento = crud.update_pagamento(db, pagamento_id, pagamento_update)
-    return db_pagamento
-
-@router.delete("/pagamentos/{pagamento_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_pagamento(pagamento_id: int, db: Session = Depends(get_db), current_user: models.Usuario = Depends(get_current_admin_user)):
-    result = crud.delete_pagamento(db, pagamento_id=pagamento_id)
-    if not result or not result.get("ok"):
-        raise HTTPException(status_code=404, detail="Pagamento não encontrado ou falha ao estornar")
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+    return Response(content=pdf_buffer.getvalue(), media_type="application/pdf")
