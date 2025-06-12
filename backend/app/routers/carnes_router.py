@@ -2,11 +2,12 @@ from fastapi import APIRouter, Depends, HTTPException, status, Response
 from sqlalchemy.orm import Session
 from app import crud, schemas, models
 from app.database import get_db
+# A importação agora espera que dependencies.py esteja em app/
 from app.dependencies import get_current_active_user, get_current_admin_user
 from datetime import datetime, timedelta
 from typing import List, Optional
 
-# A importação da função de geração de PDF será removida
+# A importação da função de geração de PDF foi removida
 
 router = APIRouter(
     prefix="/carnes",
@@ -113,4 +114,4 @@ def reverse_payment_route(
         raise HTTPException(status_code=404, detail="Pagamento não encontrado ou não pode ser estornado.")
     return db_pagamento
 
-# A rota para gerar PDF será removida
+# A rota para gerar PDF foi removida

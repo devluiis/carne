@@ -289,7 +289,6 @@ const CarneDetailsPage = () => {
                                     <td>{pagamento.numero_parcela}</td>
                                     <td>{formatCurrency(pagamento.valor_pago)}</td>
                                     <td>{new Date(pagamento.data_pagamento).toLocaleDateString('pt-BR')}</td>
-                                    <td>{pagamento.usuario_nome}</td>
                                     <td>
                                         {user.perfil === 'admin' && (
                                             <button
