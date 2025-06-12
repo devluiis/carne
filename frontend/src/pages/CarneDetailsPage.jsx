@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { api } from '../api';
-import { AuthContext } from '../components/AuthProvider';
+import { useAuth } from '../components/AuthProvider.jsx';
 import { GlobalAlertContext } from '../components/GlobalAlert';
 import ConfirmationModal from '../components/ConfirmationModal';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -9,7 +9,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 const CarneDetailsPage = () => {
     const { id } = useParams();
     const navigate = useNavigate();
-    const { user } = useContext(AuthContext);
+    const { user } = useAuth();
     const { setAlert } = useContext(GlobalAlertContext);
 
     const [carne, setCarne] = useState(null);
