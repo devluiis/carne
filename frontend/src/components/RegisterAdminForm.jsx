@@ -3,94 +3,138 @@ import { useAuth } from '../components/AuthProvider.jsx';
 import { useNavigate } from 'react-router-dom';
 import { useGlobalAlert } from '../App.jsx';
 
+// Importações do Material-UI
+import Button from '@mui/material/Button';
+import TextField from '@mui/material/TextField';
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
+import Container from '@mui/material/Container';
+import CircularProgress from '@mui/material/CircularProgress'; // Para o spinner de loading
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
+import InputLabel from '@mui/material/InputLabel';
+import FormControl from '@mui/material/FormControl';
+
 function RegisterAdminPage() {
     const [email, setEmail] = useState('');
     const [nome, setNome] = useState('');
     const [senha, setSenha] = useState('');
-    const [perfil, setPerfil] = useState('admin');
+    // O perfil é fixo como 'admin' e desabilitado na UI, então não é um estado mutável aqui
     const [loading, setLoading] = useState(false);
     const { registerAdmin } = useAuth();
-    const navigate = useNavigate();
     const { setGlobalAlert } = useGlobalAlert();
+    const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
 
         try {
-            await registerAdmin({ email, nome, senha, perfil });
+            await registerAdmin({ email, nome, senha, perfil: 'admin' }); // Perfil fixo
             setGlobalAlert({ message: 'Usuário administrador registrado com sucesso! Você pode fazer login agora.', type: 'success' });
             setEmail('');
             setNome('');
             setSenha('');
-            // Opcional: Redirecionar após o registro
-            // navigate('/'); 
         } catch (err) {
             console.error('Erro no registro de admin:', err);
-            setGlobalAlert({ message: `Erro ao registrar: ${err.response?.data?.detail || err.message}`, type: 'error' });
+            const errorMsg = `Erro ao registrar administrador: ${err.response?.data?.detail || err.message}`;
+            setGlobalAlert({ message: errorMsg, type: 'error' });
         } finally {
             setLoading(false);
         }
     };
-
+    
     return (
-        <div className="form-container">
-            <h2>Registrar Novo Administrador</h2>
-            <form onSubmit={handleSubmit}>
-                <div className="form-group">
-                    <label htmlFor="adminEmail">Email:</label>
-                    <input
-                        type="email"
+        <Container component="main" maxWidth="xs" className="flex items-center justify-center min-h-screen py-8">
+            <Box
+                sx={{
+                    p: 4, // padding-4
+                    borderRadius: 2, // rounded-lg
+                    boxShadow: 3, // shadow-md
+                    bgcolor: 'background.paper', // bg-white
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                }}
+                className="w-full max-w-md mx-auto" // Tailwind classes
+            >
+                <Typography component="h1" variant="h5" className="mb-6 font-bold text-gray-800">
+                    Registrar Novo Administrador
+                </Typography>
+                
+                <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1 }} className="w-full">
+                    <TextField
+                        margin="normal"
+                        required
+                        fullWidth
                         id="adminEmail"
+                        label="Email"
+                        name="email"
+                        type="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        required
-                        className="form-input"
+                        className="mb-4"
                     />
-                </div>
-                <div className="form-group">
-                    <label htmlFor="adminNome">Nome:</label>
-                    <input
-                        type="text"
+                    <TextField
+                        margin="normal"
+                        required
+                        fullWidth
                         id="adminNome"
+                        label="Nome"
+                        name="nome"
                         value={nome}
                         onChange={(e) => setNome(e.target.value)}
-                        required
-                        className="form-input"
+                        className="mb-4"
                     />
-                </div>
-                <div className="form-group">
-                    <label htmlFor="adminSenha">Senha:</label>
-                    <input
-                        type="password"
+                    <TextField
+                        margin="normal"
+                        required
+                        fullWidth
                         id="adminSenha"
+                        label="Senha (mínimo 6 caracteres)"
+                        name="senha"
+                        type="password"
                         value={senha}
                         onChange={(e) => setSenha(e.target.value)}
-                        required
-                        className="form-input"
+                        inputProps={{ minLength: 6 }}
+                        className="mb-4"
                     />
-                </div>
-                <div className="form-group">
-                    <label htmlFor="perfilAdmin">Perfil:</label>
-                    <select
-                        id="perfilAdmin"
-                        value={perfil}
-                        onChange={(e) => setPerfil(e.target.value)}
-                        required
-                        className="form-select"
-                        disabled={true}
+                    
+                    <FormControl fullWidth margin="normal" className="mb-6">
+                        <InputLabel id="perfilAdmin-label">Perfil</InputLabel>
+                        <Select
+                            labelId="perfilAdmin-label"
+                            id="adminPerfil"
+                            value="admin" // Perfil fixo como 'admin'
+                            label="Perfil"
+                            disabled // Desabilita a seleção para o usuário
+                        >
+                            <MenuItem value="admin">Administrador</MenuItem>
+                        </Select>
+                    </FormControl>
+
+                    <Button
+                        type="submit"
+                        fullWidth
+                        variant="contained"
+                        sx={{ mt: 3, mb: 2 }}
+                        disabled={loading}
+                        className="py-3 text-lg font-semibold"
                     >
-                        <option value="admin">Administrador</option>
-                    </select>
-                </div>
-                <button type="submit" disabled={loading} className="btn btn-success">
-                    {loading ? 'Registrando...' : 'Registrar Administrador'}
-                </button>
-                <button type="button" onClick={() => navigate('/')} className="btn btn-secondary mt-2">
-                    Voltar para Login
-                </button>
-            </form>
-        </div>
+                        {loading ? <CircularProgress size={24} color="inherit" /> : 'Registrar Administrador'}
+                    </Button>
+                    <Button
+                        type="button"
+                        fullWidth
+                        variant="outlined"
+                        onClick={() => navigate('/dashboard')}
+                        className="py-3 text-lg font-semibold"
+                    >
+                        Cancelar
+                    </Button>
+                </Box>
+            </Box>
+        </Container>
     );
 }
 

@@ -3,6 +3,14 @@ import { useAuth } from '../components/AuthProvider.jsx';
 import { useNavigate, Link } from 'react-router-dom';
 import { useGlobalAlert } from '../App.jsx';
 
+// Importações do Material-UI
+import Button from '@mui/material/Button';
+import TextField from '@mui/material/TextField';
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
+import Container from '@mui/material/Container';
+import CircularProgress from '@mui/material/CircularProgress';
+
 function RegisterUserPage() {
     const [email, setEmail] = useState('');
     const [nome, setNome] = useState('');
@@ -31,51 +39,80 @@ function RegisterUserPage() {
     };
 
     return (
-        <div className="form-container login-form-container"> {/* Mantive a classe para max-width */}
-            <h2>Registrar Novo Usuário (Atendente)</h2>
-            <form onSubmit={handleSubmit}>
-                <div className="form-group">
-                    <label htmlFor="userName">Nome:</label>
-                    <input
-                        type="text"
+        <Container component="main" maxWidth="xs" className="flex items-center justify-center min-h-screen py-8">
+            <Box
+                sx={{
+                    p: 4, // padding-4
+                    borderRadius: 2, // rounded-lg
+                    boxShadow: 3, // shadow-md
+                    bgcolor: 'background.paper', // bg-white
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                }}
+                className="w-full max-w-md mx-auto" // Tailwind classes
+            >
+                <Typography component="h1" variant="h5" className="mb-6 font-bold text-gray-800">
+                    Registrar Novo Usuário (Atendente)
+                </Typography>
+                <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1 }} className="w-full">
+                    <TextField
+                        margin="normal"
+                        required
+                        fullWidth
                         id="userName"
+                        label="Nome"
+                        name="nome"
                         value={nome}
                         onChange={(e) => setNome(e.target.value)}
-                        required
-                        className="form-input"
+                        className="mb-4"
                     />
-                </div>
-                <div className="form-group">
-                    <label htmlFor="userEmail">Email:</label>
-                    <input
-                        type="email"
+                    <TextField
+                        margin="normal"
+                        required
+                        fullWidth
                         id="userEmail"
+                        label="Email"
+                        name="email"
+                        type="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        required
-                        className="form-input"
+                        className="mb-4"
                     />
-                </div>
-                <div className="form-group">
-                    <label htmlFor="userPassword">Senha (mínimo 6 caracteres):</label>
-                    <input
-                        type="password"
+                    <TextField
+                        margin="normal"
+                        required
+                        fullWidth
                         id="userPassword"
+                        label="Senha (mínimo 6 caracteres)"
+                        name="senha"
+                        type="password"
                         value={senha}
                         onChange={(e) => setSenha(e.target.value)}
-                        required
-                        minLength="6"
-                        className="form-input"
+                        inputProps={{ minLength: 6 }}
+                        className="mb-4"
                     />
-                </div>
-                <button type="submit" className="btn btn-primary" disabled={loading}>
-                    {loading ? 'Registrando...' : 'Registrar'}
-                </button>
-            </form>
-            <p className="text-center mt-2">
-                Já tem uma conta? <Link to="/" className="link-text">Faça o login</Link>
-            </p>
-        </div>
+                    <Button
+                        type="submit"
+                        fullWidth
+                        variant="contained"
+                        sx={{ mt: 3, mb: 2 }}
+                        disabled={loading}
+                        className="py-3 text-lg font-semibold"
+                    >
+                        {loading ? <CircularProgress size={24} color="inherit" /> : 'Registrar'}
+                    </Button>
+                    <Box className="text-center mt-4">
+                        <Typography variant="body2">
+                            Já tem uma conta?{' '}
+                            <Link to="/" className="text-blue-600 hover:underline font-medium">
+                                Faça o login
+                            </Link>
+                        </Typography>
+                    </Box>
+                </Box>
+            </Box>
+        </Container>
     );
 }
 

@@ -4,6 +4,15 @@ import { produtos } from '../api';
 import { useGlobalAlert } from '../App.jsx';
 import LoadingSpinner from '../components/LoadingSpinner.jsx';
 
+// Importações do Material-UI
+import Button from '@mui/material/Button';
+import TextField from '@mui/material/TextField';
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
+import Container from '@mui/material/Container';
+import CircularProgress from '@mui/material/CircularProgress';
+import Grid from '@mui/material/Grid'; // Para alinhar campos em 2 colunas
+
 function ProdutoFormPage() {
     const navigate = useNavigate();
     const { id: produtoId } = useParams();
@@ -105,75 +114,183 @@ function ProdutoFormPage() {
     }
 
     return (
-        <div className="form-container">
-            <h2>{isEditing ? 'Editar Produto' : 'Cadastrar Novo Produto'}</h2>
-            {formError && <p className="text-center text-danger" style={{marginBottom: '15px'}}>{formError}</p>}
-            
-            <form onSubmit={handleSubmit}>
-                <div className="form-group">
-                    <label htmlFor="nome">Nome do Produto: <span className="required-star">*</span></label>
-                    <input type="text" id="nome" value={nome} onChange={(e) => setNome(e.target.value)} required className="form-input" maxLength={255} />
-                </div>
+        <Container component="main" maxWidth="md" className="flex items-center justify-center min-h-screen py-8">
+            <Box
+                sx={{
+                    p: 4, // padding-4
+                    borderRadius: 2, // rounded-lg
+                    boxShadow: 3, // shadow-md
+                    bgcolor: 'background.paper', // bg-white
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                }}
+                className="w-full max-w-2xl mx-auto" // Tailwind classes (increased max-width for more fields)
+            >
+                <Typography component="h1" variant="h5" className="mb-6 font-bold text-gray-800">
+                    {isEditing ? 'Editar Produto' : 'Cadastrar Novo Produto'}
+                </Typography>
+                {formError && <Typography color="error" className="mb-4 text-center">{formError}</Typography>}
+                
+                <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1 }} className="w-full">
+                    <TextField
+                        margin="normal"
+                        required
+                        fullWidth
+                        id="nome"
+                        label="Nome do Produto"
+                        name="nome"
+                        value={nome}
+                        onChange={(e) => setNome(e.target.value)}
+                        inputProps={{ maxLength: 255 }}
+                        className="mb-4"
+                    />
+                    <TextField
+                        margin="normal"
+                        fullWidth
+                        id="descricao"
+                        label="Descrição"
+                        name="descricao"
+                        multiline
+                        rows={3}
+                        value={descricao}
+                        onChange={(e) => setDescricao(e.target.value)}
+                        className="mb-4"
+                    />
 
-                <div className="form-group">
-                    <label htmlFor="descricao">Descrição:</label>
-                    <textarea id="descricao" value={descricao} onChange={(e) => setDescricao(e.target.value)} className="form-textarea" rows="3"></textarea>
-                </div>
+                    <Grid container spacing={2} className="mb-4"> {/* Replaces form-row */}
+                        <Grid item xs={12} sm={6}>
+                            <TextField
+                                margin="normal"
+                                fullWidth
+                                id="categoria"
+                                label="Categoria"
+                                name="categoria"
+                                value={categoria}
+                                onChange={(e) => setCategoria(e.target.value)}
+                                inputProps={{ maxLength: 100 }}
+                            />
+                        </Grid>
+                        <Grid item xs={12} sm={6}>
+                            <TextField
+                                margin="normal"
+                                fullWidth
+                                id="marca"
+                                label="Marca"
+                                name="marca"
+                                value={marca}
+                                onChange={(e) => setMarca(e.target.value)}
+                                inputProps={{ maxLength: 100 }}
+                            />
+                        </Grid>
+                    </Grid>
 
-                <div className="form-row"> {/* Nova classe para alinhar 2 colunas */}
-                    <div className="form-group">
-                        <label htmlFor="categoria">Categoria:</label>
-                        <input type="text" id="categoria" value={categoria} onChange={(e) => setCategoria(e.target.value)} className="form-input" maxLength={100} />
-                    </div>
-                    <div className="form-group">
-                        <label htmlFor="marca">Marca:</label>
-                        <input type="text" id="marca" value={marca} onChange={(e) => setMarca(e.target.value)} className="form-input" maxLength={100} />
-                    </div>
-                </div>
+                    <Grid container spacing={2} className="mb-4">
+                        <Grid item xs={12} sm={6}>
+                            <TextField
+                                margin="normal"
+                                fullWidth
+                                id="imei"
+                                label="IMEI (para celulares)"
+                                name="imei"
+                                value={imei}
+                                onChange={(e) => setImei(e.target.value)}
+                                inputProps={{ maxLength: 50 }}
+                            />
+                        </Grid>
+                        <Grid item xs={12} sm={6}>
+                            <TextField
+                                margin="normal"
+                                fullWidth
+                                id="codigoSku"
+                                label="Código SKU"
+                                name="codigoSku"
+                                value={codigoSku}
+                                onChange={(e) => setCodigoSku(e.target.value)}
+                                inputProps={{ maxLength: 50 }}
+                            />
+                        </Grid>
+                    </Grid>
 
-                <div className="form-row">
-                    <div className="form-group">
-                        <label htmlFor="imei">IMEI (para celulares):</label>
-                        <input type="text" id="imei" value={imei} onChange={(e) => setImei(e.target.value)} className="form-input" maxLength={50} />
-                    </div>
-                    <div className="form-group">
-                        <label htmlFor="codigoSku">Código SKU:</label>
-                        <input type="text" id="codigoSku" value={codigoSku} onChange={(e) => setCodigoSku(e.target.value)} className="form-input" maxLength={50} />
-                    </div>
-                </div>
+                    <Grid container spacing={2} className="mb-4">
+                        <Grid item xs={12} sm={6}>
+                            <TextField
+                                margin="normal"
+                                fullWidth
+                                id="precoVenda"
+                                label="Preço de Venda (R$)"
+                                name="precoVenda"
+                                type="number"
+                                value={precoVenda}
+                                onChange={(e) => setPrecoVenda(e.target.value)}
+                                inputProps={{ step: "0.01", min: "0" }}
+                            />
+                        </Grid>
+                        <Grid item xs={12} sm={6}>
+                            <TextField
+                                margin="normal"
+                                fullWidth
+                                id="precoCusto"
+                                label="Preço de Custo (R$)"
+                                name="precoCusto"
+                                type="number"
+                                value={precoCusto}
+                                onChange={(e) => setPrecoCusto(e.target.value)}
+                                inputProps={{ step: "0.01", min: "0" }}
+                            />
+                        </Grid>
+                    </Grid>
 
-                <div className="form-row">
-                    <div className="form-group">
-                        <label htmlFor="precoVenda">Preço de Venda (R$):</label>
-                        <input type="number" id="precoVenda" value={precoVenda} onChange={(e) => setPrecoVenda(e.target.value)} step="0.01" min="0" className="form-input" />
-                    </div>
-                    <div className="form-group">
-                        <label htmlFor="precoCusto">Preço de Custo (R$):</label>
-                        <input type="number" id="precoCusto" value={precoCusto} onChange={(e) => setPrecoCusto(e.target.value)} step="0.01" min="0" className="form-input" />
-                    </div>
-                </div>
+                    <Grid container spacing={2} className="mb-6">
+                        <Grid item xs={12} sm={6}>
+                            <TextField
+                                margin="normal"
+                                fullWidth
+                                id="estoqueAtual"
+                                label="Estoque Atual"
+                                name="estoqueAtual"
+                                type="number"
+                                value={estoqueAtual}
+                                onChange={(e) => setEstoqueAtual(e.target.value)}
+                                inputProps={{ step: "1", min: "0" }}
+                            />
+                        </Grid>
+                        <Grid item xs={12} sm={6}>
+                            <TextField
+                                margin="normal"
+                                fullWidth
+                                id="unidadeMedida"
+                                label="Unidade de Medida"
+                                name="unidadeMedida"
+                                value={unidadeMedida}
+                                onChange={(e) => setUnidadeMedida(e.target.value)}
+                                inputProps={{ maxLength: 20 }}
+                                placeholder="Ex: unidade, pç, kg"
+                            />
+                        </Grid>
+                    </Grid>
 
-                <div className="form-row">
-                    <div className="form-group">
-                        <label htmlFor="estoqueAtual">Estoque Atual:</label>
-                        <input type="number" id="estoqueAtual" value={estoqueAtual} onChange={(e) => setEstoqueAtual(e.target.value)} step="1" min="0" className="form-input" />
-                    </div>
-                    <div className="form-group">
-                        <label htmlFor="unidadeMedida">Unidade de Medida:</label>
-                        <input type="text" id="unidadeMedida" value={unidadeMedida} onChange={(e) => setUnidadeMedida(e.target.value)} className="form-input" maxLength={20} placeholder="Ex: unidade, pç, kg" />
-                    </div>
-                </div>
-
-                <div className="form-actions mt-3"> {/* Nova classe para os botões do formulário */}
-                    <button type="submit" className="btn btn-primary" disabled={submitLoading}>
-                        {submitLoading ? 'Salvando...' : (isEditing ? 'Atualizar Produto' : 'Cadastrar Produto')}
-                    </button>
-                    <button type="button" onClick={() => navigate('/produtos')} className="btn btn-secondary mt-2">
-                        Cancelar
-                    </button>
-                </div>
-            </form>
-        </div>
+                    <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mt: 3 }} className="w-full flex-col sm:flex-row">
+                        <Button
+                            type="submit"
+                            variant="contained"
+                            disabled={submitLoading}
+                            className="py-3 text-lg font-semibold flex-grow sm:flex-grow-0"
+                        >
+                            {submitLoading ? <CircularProgress size={24} color="inherit" /> : (isEditing ? 'Atualizar Produto' : 'Cadastrar Produto')}
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="outlined"
+                            onClick={() => navigate('/produtos')}
+                            className="py-3 text-lg font-semibold flex-grow sm:flex-grow-0"
+                        >
+                            Cancelar
+                        </Button>
+                    </Box>
+                </Box>
+            </Box>
+        </Container>
     );
 }
 
