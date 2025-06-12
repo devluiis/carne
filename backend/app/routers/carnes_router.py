@@ -2,12 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException, status, Response
 from sqlalchemy.orm import Session
 from app import crud, schemas, models
 from app.database import get_db
-# A importação agora espera que dependencies.py esteja em app/
-from app.dependencies import get_current_active_user, get_current_admin_user
+# Importações corrigidas: get_current_active_user e get_current_admin_user vêm de app.auth
+from app.auth import get_current_active_user, get_current_admin_user
 from datetime import datetime, timedelta
 from typing import List, Optional
-
-# A importação da função de geração de PDF foi removida
 
 router = APIRouter(
     prefix="/carnes",
@@ -51,7 +49,7 @@ def update_carne_route(
     carne_id: int,
     carne: schemas.CarneUpdate,
     db: Session = Depends(get_db),
-    current_user: models.Usuario = Depends(get_current_admin_user) # Apenas admin pode atualizar
+    current_user: models.Usuario = Depends(get_current_admin_user)
 ):
     db_carne = crud.update_carne(db, carne_id=carne_id, carne=carne)
     if db_carne is None:
@@ -62,7 +60,7 @@ def update_carne_route(
 def delete_carne_route(
     carne_id: int,
     db: Session = Depends(get_db),
-    current_user: models.Usuario = Depends(get_current_admin_user) # Apenas admin pode deletar
+    current_user: models.Usuario = Depends(get_current_admin_user)
 ):
     success = crud.delete_carne(db, carne_id=carne_id)
     if not success:
@@ -81,7 +79,7 @@ def create_pagamento_route(
         db=db,
         parcela_id=parcela_id,
         pagamento=pagamento,
-        user_id=current_user.id_usuario # Associa o pagamento ao usuário logado
+        user_id=current_user.id_usuario
     )
     if db_pagamento is None:
         raise HTTPException(status_code=404, detail="Parcela não encontrada ou pagamento inválido.")
@@ -94,7 +92,7 @@ def renegotiate_parcela_route(
     new_due_date: datetime,
     new_value: Optional[float] = None,
     db: Session = Depends(get_db),
-    current_user: models.Usuario = Depends(get_current_admin_user) # Apenas admin pode renegociar
+    current_user: models.Usuario = Depends(get_current_admin_user)
 ):
     db_parcela = crud.renegotiate_parcela(db, parcela_id, new_due_date, new_value)
     if db_parcela is None:
@@ -107,11 +105,9 @@ def reverse_payment_route(
     parcela_id: int,
     pagamento_id: int,
     db: Session = Depends(get_db),
-    current_user: models.Usuario = Depends(get_current_admin_user) # Apenas admin pode estornar
+    current_user: models.Usuario = Depends(get_current_admin_user)
 ):
     db_pagamento = crud.reverse_payment(db, parcela_id, pagamento_id)
     if db_pagamento is None:
         raise HTTPException(status_code=404, detail="Pagamento não encontrado ou não pode ser estornado.")
     return db_pagamento
-
-# A rota para gerar PDF foi removida
