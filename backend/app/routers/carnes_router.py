@@ -32,7 +32,7 @@ def read_carnes_route(
     carnes = crud.get_carnes(db, skip=skip, limit=limit, status_carne=status_carne, client_id=client_id)
     return carnes
 
-@router.get("/{carne_id}", response_model=schemas.CarneResponse) # CORRIGIDO: Era schemas.CarneWithDetails
+@router.get("/{carne_id}", response_model=schemas.CarneResponse)
 def read_carne_route(
     carne_id: int,
     db: Session = Depends(get_db),
@@ -66,7 +66,7 @@ def delete_carne_route(
         raise HTTPException(status_code=404, detail="Carnê não encontrado ou não pode ser deletado (possui pagamentos).")
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
-@router.post("/{carne_id}/parcelas/{parcela_id}/pagar", response_model=schemas.Pagamento)
+@router.post("/{carne_id}/parcelas/{parcela_id}/pagar", response_model=schemas.PagamentoResponse) # CORRIGIDO: Era schemas.Pagamento
 def create_pagamento_route(
     carne_id: int,
     parcela_id: int,
@@ -98,7 +98,7 @@ def renegotiate_parcela_route(
         raise HTTPException(status_code=404, detail="Parcela não encontrada ou não pode ser renegociada.")
     return db_parcela
 
-@router.post("/{carne_id}/parcelas/{parcela_id}/reverse-payment", response_model=schemas.Pagamento)
+@router.post("/{carne_id}/parcelas/{parcela_id}/reverse-payment", response_model=schemas.PagamentoResponse) # CORRIGIDO: Era schemas.Pagamento
 def reverse_payment_route(
     carne_id: int,
     parcela_id: int,
