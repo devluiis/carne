@@ -1,424 +1,401 @@
-import React, { useState, useEffect } from 'react';
-import { carnes, parcelas, pagamentos } from '../api'; // Removida importação 'api'
-import { useParams, useNavigate } from 'react-router-dom';
-import { useAuth } from '../components/AuthProvider.jsx';
-import { useGlobalAlert } from '../App.jsx';
-import LoadingSpinner from '../components/LoadingSpinner.jsx';
-import ConfirmationModal from '../components/ConfirmationModal.jsx';
+import React, { useState, useEffect, useContext } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { api } from '../api';
+import { AuthContext } from '../components/AuthProvider';
+import { GlobalAlertContext } from '../components/GlobalAlert';
+import ConfirmationModal from '../components/ConfirmationModal';
+import LoadingSpinner from '../components/LoadingSpinner';
 
-// Função auxiliar para estilos de status
-const getStatusStyle = (status) => {
-    switch (status) {
-        case 'Paga':
-            return { color: 'green', fontWeight: 'bold' };
-        case 'Paga com Atraso':
-            return { color: 'darkgreen', fontWeight: 'bold' }; // Cor ligeiramente diferente
-        case 'Atrasada':
-            return { color: 'red', fontWeight: 'bold' };
-        case 'Parcialmente Paga':
-            return { color: 'orange', fontWeight: 'bold' };
-        case 'Renegociada': // NOVO STATUS
-            return { color: 'purple', fontWeight: 'bold' };
-        default: // Pendente
-            return { color: 'blue', fontWeight: 'bold' };
-    }
-};
-
-function CarneDetailsPage() {
+const CarneDetailsPage = () => {
     const { id } = useParams();
     const navigate = useNavigate();
+    const { user } = useContext(AuthContext);
+    const { setAlert } = useContext(GlobalAlertContext);
+
     const [carne, setCarne] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [pdfLoading, setPdfLoading] = useState(false); // NOVO ESTADO para loading do PDF
-    const [error, setError] = useState('');
-    
-    const [showPaymentForm, setShowPaymentForm] = useState(false);
-    const [selectedParcela, setSelectedParcela] = useState(null);
-
-    const [valorPago, setValorPago] = useState('');
-    const [formaPagamento, setFormaPagamento] = useState('Dinheiro');
-    const [observacoesPagamento, setObservacoesPagamento] = useState('');
-    const [dataPagamento, setDataPagamento] = useState('');
-    const [paymentFormError, setPaymentFormError] = useState('');
-    const [paymentLoading, setPaymentLoading] = useState(false);
-
+    const [error, setError] = useState(null);
+    const [parcelaToPay, setParcelaToPay] = useState(null);
+    const [paymentValue, setPaymentValue] = useState('');
+    const [showPaymentModal, setShowPaymentModal] = useState(false);
+    const [showReversePaymentModal, setShowReversePaymentModal] = useState(false);
+    const [parcelaToReverse, setParcelaToReverse] = useState(null);
+    const [paymentToReverse, setPaymentToReverse] = useState(null);
     const [showRenegotiateModal, setShowRenegotiateModal] = useState(false);
-    const [renegotiateParcelaId, setRenegotiateParcelaId] = useState(null);
-    const [newRenegotiateDueDate, setNewRenegotiateDueDate] = useState('');
-    const [newRenegotiateValue, setNewRenegotiateValue] = useState('');
-    const [renegotiateLoading, setRenegotiateLoading] = useState(false);
-    
-    const { user } = useAuth();
-    const { setGlobalAlert } = useGlobalAlert();
+    const [parcelaToRenegotiate, setParcelaToRenegotiate] = useState(null);
+    const [newDueDate, setNewDueDate] = useState('');
+    const [newRenegotiatedValue, setNewRenegotiatedValue] = useState('');
 
-    const fetchCarneDetails = async () => {
-        try {
-            setLoading(true);
-            const response = await carnes.getById(id);
-            setCarne(response.data);
-            setError('');
-        } catch (err) {
-            console.error('Erro ao carregar detalhes do carnê:', err);
-            setError('Falha ao carregar detalhes do carnê.');
-            setGlobalAlert({ message: `Falha ao carregar detalhes do carnê: ${err.response?.data?.detail || err.message}`, type: 'error' });
-        } finally {
-            setLoading(false);
-        }
-    };
-    
+
     useEffect(() => {
-        fetchCarneDetails();
-    }, [id]);
-
-    const handleRegisterPaymentClick = (parcela) => {
-        setSelectedParcela(parcela);
-        setValorPago(parcela.saldo_devedor.toFixed(2));
-        setFormaPagamento('Dinheiro');
-        setObservacoesPagamento('');
-        setDataPagamento(new Date().toISOString().split('T')[0]);
-        setPaymentFormError('');
-        setShowPaymentForm(true);
-    };
-
-    const handlePaymentSubmit = async (e) => {
-        e.preventDefault();
-        setPaymentFormError('');
-        setPaymentLoading(true);
-
-        const paymentData = {
-            id_parcela: selectedParcela.id_parcela,
-            valor_pago: parseFloat(valorPago),
-            forma_pagamento: formaPagamento,
-            observacoes: observacoesPagamento,
-            data_pagamento: new Date(dataPagamento).toISOString()
+        const fetchCarneDetails = async () => {
+            if (!user) {
+                setError("Usuário não autenticado.");
+                setLoading(false);
+                return;
+            }
+            try {
+                const response = await api.get(`/carnes/${id}`, {
+                    headers: {
+                        Authorization: `Bearer ${user.token}`
+                    }
+                });
+                setCarne(response.data);
+            } catch (err) {
+                console.error("Erro ao buscar detalhes do carnê:", err);
+                setError(err.response?.data?.detail || "Erro ao carregar detalhes do carnê.");
+            } finally {
+                setLoading(false);
+            }
         };
 
-        try {
-            await pagamentos.create(paymentData);
-            setGlobalAlert({ message: 'Pagamento registrado com sucesso!', type: 'success' });
-            setShowPaymentForm(false);
-            fetchCarneDetails(); 
-        } catch (err) {
-            const errorDetail = err.response?.data?.detail || err.message;
-            setPaymentFormError(`Erro: ${errorDetail}`);
-            setGlobalAlert({ message: `Erro ao registrar pagamento: ${errorDetail}`, type: 'error' });
-        } finally {
-            setPaymentLoading(false);
-        }
+        fetchCarneDetails();
+    }, [id, user, setAlert]);
+
+    const handlePayClick = (parcela) => {
+        setParcelaToPay(parcela);
+        setPaymentValue(parcela.saldo_devedor.toFixed(2));
+        setShowPaymentModal(true);
     };
 
-    const handleEstornarPagamento = async (pagamentoId) => {
-        if (window.confirm('Tem certeza que deseja estornar este pagamento? Esta ação é irreversível.')) {
-            try {
-                await pagamentos.delete(pagamentoId);
-                setGlobalAlert({ message: 'Pagamento estornado com sucesso!', type: 'success' });
-                fetchCarneDetails();
-            } catch (err) {
-                const errorDetail = err.response?.data?.detail || err.message;
-                setGlobalAlert({ message: `Falha ao estornar pagamento: ${errorDetail}`, type: 'error' });
+    const handlePaymentSubmit = async () => {
+        if (!user || !parcelaToPay) return;
+        try {
+            const parsedPaymentValue = parseFloat(paymentValue);
+            if (isNaN(parsedPaymentValue) || parsedPaymentValue <= 0) {
+                setAlert({ type: 'danger', message: 'Por favor, insira um valor de pagamento válido.' });
+                return;
             }
-        }
-    };
-    
-    // NOVA FUNÇÃO: Gerar PDF
-    const handleGeneratePdf = async () => {
-        setPdfLoading(true);
-        try {
-            const response = await carnes.generatePdf(id);
-            const blob = new Blob([response.data], { type: 'application/pdf' });
-            const url = window.URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.setAttribute('download', `carne_${carne.id_carne}_${carne.cliente?.nome.replace(/\s/g, '_')}.pdf`);
-            document.body.appendChild(link);
-            link.click();
-            link.parentNode.removeChild(link);
-            window.URL.revokeObjectURL(url);
-            setGlobalAlert({ message: 'PDF gerado com sucesso!', type: 'success' });
+            if (parsedPaymentValue > parcelaToPay.saldo_devedor) {
+                setAlert({ type: 'warning', message: 'O valor do pagamento excede o saldo devedor da parcela.' });
+                return;
+            }
+
+            await api.post(`/carnes/${carne.id_carne}/parcelas/${parcelaToPay.id_parcela}/pagar`, {
+                valor_pago: parsedPaymentValue
+            }, {
+                headers: {
+                    Authorization: `Bearer ${user.token}`
+                }
+            });
+            setAlert({ type: 'success', message: 'Pagamento registrado com sucesso!' });
+            setShowPaymentModal(false);
+            // Recarrega os detalhes do carnê para atualizar o status e saldos
+            const response = await api.get(`/carnes/${id}`, {
+                headers: {
+                    Authorization: `Bearer ${user.token}`
+                }
+            });
+            setCarne(response.data);
         } catch (err) {
-            console.error('Erro ao gerar PDF:', err);
-            setGlobalAlert({ message: `Falha ao gerar PDF: ${err.response?.data?.detail || err.message}`, type: 'error' });
-        } finally {
-            setPdfLoading(false);
+            console.error("Erro ao registrar pagamento:", err);
+            setAlert({ type: 'danger', message: err.response?.data?.detail || 'Erro ao registrar pagamento.' });
         }
     };
 
+    const handleReversePaymentClick = (parcela, pagamento) => {
+        setParcelaToReverse(parcela);
+        setPaymentToReverse(pagamento);
+        setShowReversePaymentModal(true);
+    };
 
-    // --- Funções de Renegociação ---
-    const handleOpenRenegotiateModal = (parcela) => {
-        setRenegotiateParcelaId(parcela.id_parcela);
-        setNewRenegotiateDueDate(parcela.data_vencimento);
-        setNewRenegotiateValue(parcela.saldo_devedor.toFixed(2));
+    const handleReversePaymentConfirm = async () => {
+        if (!user || !parcelaToReverse || !paymentToReverse) return;
+        try {
+            await api.post(`/carnes/${carne.id_carne}/parcelas/${parcelaToReverse.id_parcela}/reverse-payment`, {
+                pagamento_id: paymentToReverse.id_pagamento
+            }, {
+                headers: {
+                    Authorization: `Bearer ${user.token}`
+                }
+            });
+            setAlert({ type: 'success', message: 'Pagamento estornado com sucesso!' });
+            setShowReversePaymentModal(false);
+            // Recarrega os detalhes do carnê para atualizar o status e saldos
+            const response = await api.get(`/carnes/${id}`, {
+                headers: {
+                    Authorization: `Bearer ${user.token}`
+                }
+            });
+            setCarne(response.data);
+        } catch (err) {
+            console.error("Erro ao estornar pagamento:", err);
+            setAlert({ type: 'danger', message: err.response?.data?.detail || 'Erro ao estornar pagamento.' });
+        }
+    };
+
+    const handleRenegotiateClick = (parcela) => {
+        setParcelaToRenegotiate(parcela);
+        setNewDueDate(parcela.data_vencimento.split('T')[0]); // Define a data de vencimento atual como padrão
+        setNewRenegotiatedValue(parcela.valor_devido.toFixed(2)); // Define o valor atual como padrão
         setShowRenegotiateModal(true);
     };
 
-    const handleConfirmRenegotiate = async () => {
-        setRenegotiateLoading(true);
+    const handleRenegotiateSubmit = async () => {
+        if (!user || !parcelaToRenegotiate) return;
         try {
-            const renegotiationData = {
-                new_data_vencimento: newRenegotiateDueDate,
-                new_valor_devido: parseFloat(newRenegotiateValue),
-                status_parcela_apos_renegociacao: 'Renegociada'
-            };
-            await parcelas.renegotiate(renegotiateParcelaId, renegotiationData);
-            setGlobalAlert({ message: 'Parcela renegociada com sucesso!', type: 'success' });
+            const parsedNewValue = newRenegotiatedValue ? parseFloat(newRenegotiatedValue) : null;
+            if (newDueDate === '') {
+                setAlert({ type: 'danger', message: 'Por favor, insira a nova data de vencimento.' });
+                return;
+            }
+            if (parsedNewValue !== null && (isNaN(parsedNewValue) || parsedNewValue <= 0)) {
+                setAlert({ type: 'danger', message: 'Por favor, insira um novo valor válido (opcional).' });
+                return;
+            }
+
+            await api.post(`/carnes/${carne.id_carne}/parcelas/${parcelaToRenegotiate.id_parcela}/renegotiate`, null, {
+                params: {
+                    new_due_date: newDueDate,
+                    new_value: parsedNewValue
+                },
+                headers: {
+                    Authorization: `Bearer ${user.token}`
+                }
+            });
+            setAlert({ type: 'success', message: 'Parcela renegociada com sucesso!' });
             setShowRenegotiateModal(false);
-            fetchCarneDetails();
+            // Recarrega os detalhes do carnê para atualizar
+            const response = await api.get(`/carnes/${id}`, {
+                headers: {
+                    Authorization: `Bearer ${user.token}`
+                }
+            });
+            setCarne(response.data);
         } catch (err) {
-            const errorDetail = err.response?.data?.detail || err.message;
-            setGlobalAlert({ message: `Erro ao renegociar parcela: ${errorDetail}`, type: 'error' });
-        } finally {
-            setRenegotiateLoading(false);
+            console.error("Erro ao renegociar parcela:", err);
+            setAlert({ type: 'danger', message: err.response?.data?.detail || 'Erro ao renegociar parcela.' });
         }
     };
 
-    const handleCancelRenegotiate = () => {
-        setShowRenegotiateModal(false);
-        setRenegotiateParcelaId(null);
-        setNewRenegotiateDueDate('');
-        setNewRenegotiateValue('');
-    };
-
+    // A função handleGeneratePdf foi removida
 
     if (loading) {
-        return <LoadingSpinner message="Carregando detalhes do carnê..." />;
+        return <LoadingSpinner />;
     }
-    if (error && !carne) {
-        return <p className="text-center text-danger">{error}</p>;
+
+    if (error) {
+        return <div className="alert alert-danger">{error}</div>;
     }
+
     if (!carne) {
-        return <p className="text-center">Carnê não encontrado.</p>;
+        return <div className="alert alert-info">Carnê não encontrado.</div>;
     }
+
+    // Função auxiliar para formatar moeda
+    const formatCurrency = (value) => {
+        return new Intl.NumberFormat('pt-BR', {
+            style: 'currency',
+            currency: 'BRL',
+        }).format(value);
+    };
 
     return (
-        <div className="form-container large-container">
-            <div className="header-with-button">
-                <h2>Detalhes do Carnê: {carne.descricao || `ID ${carne.id_carne}`}</h2>
-                {/* BOTÃO DE GERAR PDF */}
-                <button 
-                    onClick={handleGeneratePdf} 
-                    className="btn btn-info" 
-                    disabled={pdfLoading}
-                >
-                    {pdfLoading ? 'Gerando PDF...' : 'Gerar PDF do Carnê'}
-                </button>
+        <div className="container mt-4">
+            <h2 className="mb-4">Detalhes do Carnê: {carne.descricao}</h2>
+            <div className="card mb-3">
+                <div className="card-body">
+                    <p><strong>ID do Carnê:</strong> {carne.id_carne}</p>
+                    <p><strong>Cliente:</strong> {carne.cliente.nome} ({carne.cliente.cpf_cnpj})</p>
+                    <p><strong>Valor Total Original:</strong> {formatCurrency(carne.valor_total_original)}</p>
+                    <p><strong>Número de Parcelas:</strong> {carne.numero_parcelas}</p>
+                    {carne.data_venda && <p><strong>Data da Venda:</strong> {new Date(carne.data_venda).toLocaleDateString('pt-BR')}</p>}
+                    {carne.valor_entrada !== null && <p><strong>Valor da Entrada:</strong> {formatCurrency(carne.valor_entrada)}</p>}
+                    {carne.forma_pagamento_entrada && <p><strong>Forma de Pagamento da Entrada:</strong> {carne.forma_pagamento_entrada}</p>}
+                    <p><strong>Status do Carnê:</strong> <span className={`badge bg-${carne.status_carne === 'quitado' ? 'success' : 'warning'}`}>{carne.status_carne.toUpperCase()}</span></p>
+                    <p><strong>Parcela Fixa:</strong> {carne.parcela_fixa ? 'Sim' : 'Não'}</p>
+                    <Link to={`/carnes/edit/${carne.id_carne}`} className="btn btn-warning me-2">Editar Carnê</Link>
+                    {/* Botão de gerar PDF removido */}
+                    <Link to="/carnes" className="btn btn-secondary">Voltar aos Carnês</Link>
+                </div>
             </div>
 
-            <div className="carne-info-box">
-                <p><strong>Cliente:</strong> {carne.cliente ? `${carne.cliente.nome} (${carne.cliente.cpf_cnpj})` : carne.id_cliente}</p>
-                <p><strong>Valor Total Original:</strong> R$ {Number(carne.valor_total_original).toFixed(2)}</p>
-                <p><strong>Valor de Entrada:</strong> R$ {Number(carne.valor_entrada || 0).toFixed(2)}</p>
-                {parseFloat(carne.valor_entrada) > 0 && (
-                    <p><strong>Forma de Pagamento da Entrada:</strong> {carne.forma_pagamento_entrada || 'N/A'}</p> 
-                )}
-                <p><strong>Número de Parcelas:</strong> {carne.numero_parcelas}</p>
-                <p><strong>Valor por Parcela (Original):</strong> R$ {Number(carne.valor_parcela_original).toFixed(2)}</p>
-                <p><strong>Primeiro Vencimento:</strong> {new Date(carne.data_primeiro_vencimento).toLocaleDateString()}</p>
-                <p><strong>Frequência:</strong> {carne.frequencia_pagamento}</p>
-                <p><strong>Status do Carnê:</strong> {carne.status_carne}</p>
-                <p><strong>Observações:</strong> {carne.observacoes || 'N/A'}</p>
-            </div>
-
-            <h3 className="section-title">Parcelas:</h3>
-            {carne.parcelas && carne.parcelas.length === 0 ? (
-                <p className="text-center">Nenhuma parcela para este carnê.</p>
-            ) : (
-                <table className="styled-table">
+            <h3 className="mb-3">Parcelas</h3>
+            <div className="table-responsive">
+                <table className="table table-striped table-hover">
                     <thead>
                         <tr>
                             <th>#</th>
                             <th>Valor Devido</th>
                             <th>Juros/Multa</th>
-                            <th>Valor Pago</th>
                             <th>Saldo Devedor</th>
+                            <th>Valor Pago</th>
                             <th>Vencimento</th>
                             <th>Status</th>
+                            <th>Obs.</th>
                             <th>Ações</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {carne.parcelas.map((parcela) => (
-                            <React.Fragment key={parcela.id_parcela}>
-                                <tr>
-                                    <td>{parcela.numero_parcela}</td>
-                                    <td>R$ {Number(parcela.valor_devido).toFixed(2)}</td>
-                                    <td>R$ {Number(parcela.juros_multa).toFixed(2)}</td>
-                                    <td>R$ {Number(parcela.saldo_devedor).toFixed(2)}</td>
-                                    <td>{new Date(parcela.data_vencimento).toLocaleDateString()}</td>
-                                    <td>
-                                        <span style={getStatusStyle(parcela.status_parcela)}>
-                                            {parcela.status_parcela}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <div className="table-actions">
-                                        {parcela.status_parcela !== 'Paga' && parcela.status_parcela !== 'Paga com Atraso' && Number(parcela.saldo_devedor) > 0.009 && (
-                                            <button
-                                                onClick={() => handleRegisterPaymentClick(parcela)}
-                                                className="btn btn-success btn-sm"
-                                            >
-                                                Registrar Pagamento
-                                            </button>
-                                        )}
-                                        {user?.perfil === 'admin' && parcela.status_parcela !== 'Paga' && parcela.status_parcela !== 'Paga com Atraso' && parcela.status_parcela !== 'Cancelada' && (
-                                            <button
-                                                onClick={() => handleOpenRenegotiateModal(parcela)}
-                                                className="btn btn-secondary btn-sm"
-                                            >
-                                                Renegociar
-                                            </button>
-                                        )}
-                                        </div>
-                                    </td>
-                                </tr>
-                                {parcela.pagamentos && parcela.pagamentos.length > 0 && (
-                                    <tr>
-                                        <td colSpan="8" className="sub-table-cell">
-                                            <div className="payments-sub-table-container">
-                                                <h4 className="payments-sub-table-title">Pagamentos Registrados:</h4>
-                                                <table className="styled-table sub-table">
-                                                    <thead>
-                                                        <tr>
-                                                            <th>ID</th>
-                                                            <th>Data Pgto</th>
-                                                            <th>Valor Pago</th>
-                                                            <th>Forma</th>
-                                                            <th>Obs.</th>
-                                                            {user?.perfil === 'admin' && <th>Ações</th>}
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {parcela.pagamentos.map((pgto) => (
-                                                            <tr key={pgto.id_pagamento}>
-                                                                <td>{pgto.id_pagamento}</td>
-                                                                <td>{new Date(pgto.data_pagamento).toLocaleDateString()}</td>
-                                                                <td>R$ {Number(pgto.valor_pago).toFixed(2)}</td>
-                                                                <td>{pgto.forma_pagamento}</td>
-                                                                <td>{pgto.observacoes || 'N/A'}</td>
-                                                                {user?.perfil === 'admin' && (
-                                                                    <td>
-                                                                        <button
-                                                                            onClick={() => handleEstornarPagamento(pgto.id_pagamento)}
-                                                                            className="btn btn-danger btn-sm"
-                                                                        >
-                                                                            Estornar
-                                                                        </button>
-                                                                    </td>
-                                                                )}
-                                                            </tr>
-                                                        ))}
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                )}
-                            </React.Fragment>
+                        {carne.parcelas.map(parcela => (
+                            <tr key={parcela.id_parcela}>
+                                <td>{parcela.numero_parcela}</td>
+                                <td>{formatCurrency(parcela.valor_devido)}</td>
+                                <td>{formatCurrency(parcela.juros_multa)}</td>
+                                <td>{formatCurrency(parcela.saldo_devedor)}</td>
+                                <td>{formatCurrency(parcela.valor_pago)}</td>
+                                <td>{new Date(parcela.data_vencimento).toLocaleDateString('pt-BR')}</td>
+                                <td>
+                                    <span className={`badge bg-${parcela.status_parcela === 'pago' ? 'success' :
+                                                            parcela.status_parcela === 'pendente' ? 'warning' :
+                                                            'danger'}`}>
+                                        {parcela.status_parcela.toUpperCase()}
+                                    </span>
+                                </td>
+                                <td>{parcela.observacoes || '-'}</td>
+                                <td>
+                                    {parcela.status_parcela !== 'pago' && (
+                                        <button
+                                            className="btn btn-sm btn-success me-2"
+                                            onClick={() => handlePayClick(parcela)}
+                                            disabled={!user || (user.perfil !== 'admin' && user.perfil !== 'atendente')}
+                                        >
+                                            Pagar
+                                        </button>
+                                    )}
+                                    {user.perfil === 'admin' && (
+                                        <button
+                                            className="btn btn-sm btn-info me-2"
+                                            onClick={() => handleRenegotiateClick(parcela)}
+                                        >
+                                            Renegociar
+                                        </button>
+                                    )}
+                                </td>
+                            </tr>
                         ))}
                     </tbody>
                 </table>
+            </div>
+
+            <h3 className="mb-3 mt-4">Histórico de Pagamentos</h3>
+            {carne.pagamentos && carne.pagamentos.length > 0 ? (
+                <div className="table-responsive">
+                    <table className="table table-bordered table-sm">
+                        <thead>
+                            <tr>
+                                <th>ID Pagamento</th>
+                                <th>Parcela Ref.</th>
+                                <th>Valor Pago</th>
+                                <th>Data Pagamento</th>
+                                <th>Usuário</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {carne.pagamentos.map(pagamento => (
+                                <tr key={pagamento.id_pagamento}>
+                                    <td>{pagamento.id_pagamento}</td>
+                                    <td>{pagamento.numero_parcela}</td>
+                                    <td>{formatCurrency(pagamento.valor_pago)}</td>
+                                    <td>{new Date(pagamento.data_pagamento).toLocaleDateString('pt-BR')}</td>
+                                    <td>{pagamento.usuario_nome}</td>
+                                    <td>
+                                        {user.perfil === 'admin' && (
+                                            <button
+                                                className="btn btn-sm btn-danger"
+                                                onClick={() => handleReversePaymentClick(
+                                                    carne.parcelas.find(p => p.id_parcela === pagamento.id_parcela),
+                                                    pagamento
+                                                )}
+                                            >
+                                                Estornar
+                                            </button>
+                                        )}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            ) : (
+                <p>Nenhum pagamento registrado para este carnê.</p>
             )}
 
-            {showPaymentForm && selectedParcela && (
-                <div className="form-container payment-form-section">
-                    <h3>Registrar Pagamento para Parcela #{selectedParcela.numero_parcela}</h3>
-                    <p>Saldo Devedor Atual (incl. Juros/Multas): <strong className="text-danger">R$ {Number(selectedParcela.saldo_devedor).toFixed(2)}</strong></p>
-                    {paymentFormError && <p className="text-danger">{paymentFormError}</p>}
-                    <form onSubmit={handlePaymentSubmit}>
-                        <div className="form-group">
-                            <label htmlFor="dataPagamento">Data do Pagamento:</label>
-                            <input
-                                type="date"
-                                id="dataPagamento"
-                                value={dataPagamento}
-                                onChange={(e) => setDataPagamento(e.target.value)}
-                                required
-                                className="form-input"
-                            />
-                        </div>
-                        <div className="form-group">
-                            <label htmlFor="valorPago">Valor Pago:</label>
+            {/* Modal de Pagamento */}
+            <ConfirmationModal
+                show={showPaymentModal}
+                title="Registrar Pagamento"
+                message={
+                    <div>
+                        <p>Deseja registrar o pagamento para a parcela {parcelaToPay?.numero_parcela}?</p>
+                        <p>Valor Devido: <strong>{formatCurrency(parcelaToPay?.saldo_devedor || 0)}</strong></p>
+                        <div className="mb-3">
+                            <label htmlFor="paymentValue" className="form-label">Valor a Pagar:</label>
                             <input
                                 type="number"
-                                id="valorPago"
+                                className="form-control"
+                                id="paymentValue"
+                                value={paymentValue}
+                                onChange={(e) => setPaymentValue(e.target.value)}
                                 step="0.01"
-                                value={valorPago}
-                                onChange={(e) => setValorPago(e.target.value)}
-                                required
-                                className="form-input"
                                 min="0.01"
-                                max={Number(selectedParcela.saldo_devedor + 0.01).toFixed(2)} 
+                                max={parcelaToPay?.saldo_devedor.toFixed(2)}
                             />
                         </div>
-                        <div className="form-group">
-                            <label htmlFor="formaPagamento">Forma de Pagamento:</label>
-                            <select id="formaPagamento" value={formaPagamento} onChange={(e) => setFormaPagamento(e.target.value)} required className="form-select">
-                                <option value="Dinheiro">Dinheiro</option>
-                                <option value="PIX">PIX</option>
-                                <option value="Cartão de Crédito">Cartão de Crédito</option>
-                                <option value="Débito">Débito</option>
-                            </select>
-                        </div>
-                        <div className="form-group">
-                            <label htmlFor="obsPagamento">Observações (Opcional):</label>
-                            <textarea id="obsPagamento" value={observacoesPagamento} onChange={(e) => setObservacoesPagamento(e.target.value)} rows="2" className="form-textarea"></textarea>
-                        </div>
-                        <button type="submit" className="btn btn-primary" disabled={paymentLoading}>
-                            {paymentLoading ? 'Registrando...' : 'Confirmar Pagamento'}
-                        </button>
-                        <button type="button" onClick={() => setShowPaymentForm(false)} className="btn btn-secondary mt-2">
-                            Cancelar
-                        </button>
-                    </form>
-                </div>
-            )}
+                    </div>
+                }
+                onConfirm={handlePaymentSubmit}
+                onCancel={() => setShowPaymentModal(false)}
+                confirmButtonText="Confirmar Pagamento"
+                cancelButtonText="Cancelar"
+            />
+
+            {/* Modal de Estorno de Pagamento */}
+            <ConfirmationModal
+                show={showReversePaymentModal}
+                title="Estornar Pagamento"
+                message={
+                    <div>
+                        <p>Tem certeza que deseja estornar o pagamento de <strong>{formatCurrency(paymentToReverse?.valor_pago || 0)}</strong> para a parcela {parcelaToReverse?.numero_parcela}?</p>
+                        <p className="text-danger">Esta ação não pode ser desfeita.</p>
+                    </div>
+                }
+                onConfirm={handleReversePaymentConfirm}
+                onCancel={() => setShowReversePaymentModal(false)}
+                confirmButtonText="Sim, Estornar"
+                cancelButtonText="Cancelar"
+            />
 
             {/* Modal de Renegociação */}
             <ConfirmationModal
-                isOpen={showRenegotiateModal}
+                show={showRenegotiateModal}
                 title="Renegociar Parcela"
                 message={
-                    <form className="form-content-in-modal" onSubmit={(e) => e.preventDefault()}>
-                        <p>Renegociando Parcela ID: {renegotiateParcelaId}</p>
-                        <div className="form-group">
-                            <label htmlFor="newDueDate">Nova Data de Vencimento:</label>
+                    <div>
+                        <p>Renegociar a parcela {parcelaToRenegotiate?.numero_parcela}:</p>
+                        <div className="mb-3">
+                            <label htmlFor="newDueDate" className="form-label">Nova Data de Vencimento:</label>
                             <input
                                 type="date"
+                                className="form-control"
                                 id="newDueDate"
-                                value={newRenegotiateDueDate}
-                                onChange={(e) => setNewRenegotiateDueDate(e.target.value)}
-                                required
-                                className="form-input"
+                                value={newDueDate}
+                                onChange={(e) => setNewDueDate(e.target.value)}
                             />
                         </div>
-                        <div className="form-group">
-                            <label htmlFor="newRenegotiateValue">Novo Valor Devido (Opcional, ou saldo atual):</label>
+                        <div className="mb-3">
+                            <label htmlFor="newRenegotiatedValue" className="form-label">Novo Valor (opcional):</label>
                             <input
                                 type="number"
-                                id="newRenegotiateValue"
+                                className="form-control"
+                                id="newRenegotiatedValue"
+                                value={newRenegotiatedValue}
+                                onChange={(e) => setNewRenegotiatedValue(e.target.value)}
                                 step="0.01"
-                                value={newRenegotiateValue}
-                                onChange={(e) => setNewRenegotiateValue(e.target.value)}
-                                className="form-input"
-                                min="0.00"
+                                min="0"
                             />
-                            <small className="form-text-muted">Se não preenchido, o saldo devedor atual será mantido, mas os juros/multa serão zerados.</small>
+                            <small className="form-text text-muted">Deixe em branco para manter o valor original com juros/multa aplicados até a nova data de vencimento.</small>
                         </div>
-                    </form>
+                    </div>
                 }
-                onConfirm={handleConfirmRenegotiate}
-                onCancel={handleCancelRenegotiate}
-                confirmText={renegotiateLoading ? 'Renegociando...' : 'Confirmar Renegociação'}
-                cancelText="Cancelar"
-                confirmButtonClass="btn-success"
-                isConfirmDisabled={renegotiateLoading || !newRenegotiateDueDate}
+                onConfirm={handleRenegotiateSubmit}
+                onCancel={() => setShowRenegotiateModal(false)}
+                confirmButtonText="Confirmar Renegociação"
+                cancelButtonText="Cancelar"
             />
-
-            <button onClick={() => navigate('/carnes')} className="btn btn-secondary mt-2">
-                Voltar para Lista de Carnês
-            </button>
         </div>
     );
-}
+};
 
 export default CarneDetailsPage;

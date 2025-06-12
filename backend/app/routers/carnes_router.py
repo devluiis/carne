@@ -6,8 +6,7 @@ from app.dependencies import get_current_active_user, get_current_admin_user
 from datetime import datetime, timedelta
 from typing import List, Optional
 
-# Importação corrigida para a função de geração de PDF
-from app.pdf_utils import generate_carne_pdf_weasyprint
+# A importação da função de geração de PDF será removida
 
 router = APIRouter(
     prefix="/carnes",
@@ -114,53 +113,4 @@ def reverse_payment_route(
         raise HTTPException(status_code=404, detail="Pagamento não encontrado ou não pode ser estornado.")
     return db_pagamento
 
-@router.get("/carnes/{carne_id}/pdf", response_class=Response)
-async def get_carne_pdf_route(
-    carne_id: int,
-    db: Session = Depends(get_db),
-    current_user: models.Usuario = Depends(get_current_active_user)
-):
-    carne = crud.get_carne(db, carne_id)
-    if not carne:
-        raise HTTPException(status_code=404, detail="Carnê não encontrado")
-
-    cliente = crud.get_client(db, carne.id_cliente)
-    if not cliente:
-        raise HTTPException(status_code=404, detail="Cliente do carnê não encontrado")
-
-    parcelas = crud.get_parcelas_by_carne_id(db, carne_id)
-    
-    # Preparar os dados do carnê no formato esperado pela função de PDF
-    carne_data = {
-        "id_carne": carne.id_carne,
-        "descricao": carne.descricao,
-        "valor_total_original": carne.valor_total_original,
-        "numero_parcelas": carne.numero_parcelas,
-        "nome_cliente": cliente.nome,
-        "cpf_cnpj_cliente": cliente.cpf_cnpj,
-        "endereco_cliente": cliente.endereco,
-        "data_venda": carne.data_venda.isoformat() if carne.data_venda else None, # Adicionado data_venda
-        "valor_entrada": carne.valor_entrada, # Adicionado valor_entrada
-        "forma_pagamento_entrada": carne.forma_pagamento_entrada, # Adicionado forma_pagamento_entrada
-        "parcela_fixa": carne.parcela_fixa, # Adicionado parcela_fixa
-    }
-
-    parcelas_data = []
-    for parcela in parcelas:
-        parcelas_data.append({
-            "id_parcela": parcela.id_parcela,
-            "numero_parcela": parcela.numero_parcela,
-            "valor_devido": parcela.valor_devido,
-            "data_vencimento": parcela.data_vencimento.isoformat(), # Converter para string ISO
-            "status_parcela": parcela.status_parcela,
-            "observacoes": parcela.observacoes,
-            "valor_pago": parcela.valor_pago,
-            "saldo_devedor": parcela.saldo_devedor,
-            "data_pagamento_completo": parcela.data_pagamento_completo.isoformat() if parcela.data_pagamento_completo else None,
-            "juros_multa": parcela.juros_multa,
-        })
-
-    # Chame a função de geração de PDF e receba o buffer de retorno
-    pdf_buffer = generate_carne_pdf_weasyprint(carne_data, parcelas_data)
-
-    return Response(content=pdf_buffer.getvalue(), media_type="application/pdf")
+# A rota para gerar PDF será removida
