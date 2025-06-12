@@ -213,6 +213,22 @@ class CarneBase(BaseModel):
 class CarneCreate(CarneBase):
     pass
 
+# NOVO SCHEMA: CarneUpdate - para atualizar um carnê
+class CarneUpdate(CarneBase):
+    id_cliente: Optional[int] = None # Tornar opcionais para atualização
+    data_venda: Optional[date] = None
+    descricao: Optional[str] = None
+    valor_total_original: Optional[float] = Field(None, gt=0)
+    numero_parcelas: Optional[int] = Field(None, gt=0)
+    valor_parcela_sugerido: Optional[float] = Field(None, gt=0, description="Valor sugerido para cada parcela pelo usuário.")
+    data_primeiro_vencimento: Optional[date] = None
+    frequencia_pagamento: Optional[str] = None
+    status_carne: Optional[str] = None
+    observacoes: Optional[str] = None
+    valor_entrada: Optional[float] = Field(None, ge=0)
+    forma_pagamento_entrada: Optional[str] = None
+    parcela_fixa: Optional[bool] = None
+
 class CarneResponse(CarneBase):
     id_carne: int
     data_criacao: datetime
