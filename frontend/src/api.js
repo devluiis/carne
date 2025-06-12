@@ -41,7 +41,7 @@ export const clients = {
     getSummary: (id) => api.get(`/clients/${id}/summary`),
     create: (clientData) => api.post('/clients/', clientData),
     update: (id, clientData) => api.put(`/clients/${id}`, clientData),
-    delete: (id) => api.delete('/clients/${id}'),
+    delete: (id) => api.delete(`/clients/${id}`),
 };
 
 export const carnes = {
