@@ -25,11 +25,10 @@ def read_carnes_route(
     skip: int = 0,
     limit: int = 100,
     status_carne: Optional[str] = None,
-    client_id: Optional[int] = None, # Este é o parâmetro da rota
+    client_id: Optional[int] = None,
     db: Session = Depends(get_db),
     current_user: models.Usuario = Depends(get_current_active_user)
 ):
-    # CORRIGIDO: Passando client_id para id_cliente na chamada da função crud.get_carnes
     carnes = crud.get_carnes(db, skip=skip, limit=limit, status_carne=status_carne, id_cliente=client_id)
     return carnes
 
@@ -39,7 +38,8 @@ def read_carne_route(
     db: Session = Depends(get_db),
     current_user: models.Usuario = Depends(get_current_active_user)
 ):
-    db_carne = crud.get_carne_with_details(db, carne_id=carne_id)
+    # CORRIGIDO: Chamando crud.get_carne em vez de crud.get_carne_with_details
+    db_carne = crud.get_carne(db, carne_id=carne_id)
     if db_carne is None:
         raise HTTPException(status_code=404, detail="Carnê não encontrado")
     return db_carne
