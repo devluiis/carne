@@ -66,7 +66,7 @@ def delete_carne_route(
         raise HTTPException(status_code=404, detail="Carnê não encontrado ou não pode ser deletado (possui pagamentos).")
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
-@router.post("/{carne_id}/parcelas/{parcela_id}/pagar", response_model=schemas.PagamentoResponse) # CORRIGIDO: Era schemas.Pagamento
+@router.post("/{carne_id}/parcelas/{parcela_id}/pagar", response_model=schemas.PagamentoResponse)
 def create_pagamento_route(
     carne_id: int,
     parcela_id: int,
@@ -84,7 +84,7 @@ def create_pagamento_route(
         raise HTTPException(status_code=404, detail="Parcela não encontrada ou pagamento inválido.")
     return db_pagamento
 
-@router.post("/{carne_id}/parcelas/{parcela_id}/renegotiate", response_model=schemas.Parcela)
+@router.post("/{carne_id}/parcelas/{parcela_id}/renegotiate", response_model=schemas.ParcelaResponse) # CORRIGIDO: Era schemas.Parcela
 def renegotiate_parcela_route(
     carne_id: int,
     parcela_id: int,
@@ -98,7 +98,7 @@ def renegotiate_parcela_route(
         raise HTTPException(status_code=404, detail="Parcela não encontrada ou não pode ser renegociada.")
     return db_parcela
 
-@router.post("/{carne_id}/parcelas/{parcela_id}/reverse-payment", response_model=schemas.PagamentoResponse) # CORRIGIDO: Era schemas.Pagamento
+@router.post("/{carne_id}/parcelas/{parcela_id}/reverse-payment", response_model=schemas.PagamentoResponse)
 def reverse_payment_route(
     carne_id: int,
     parcela_id: int,
