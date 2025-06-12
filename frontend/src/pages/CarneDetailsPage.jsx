@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../components/AuthProvider.jsx';
-import { GlobalAlertContext } from '../components/GlobalAlert';
+import { useGlobalAlert } from '../App.jsx';
 import ConfirmationModal from '../components/ConfirmationModal';
 import LoadingSpinner from '../components/LoadingSpinner';
 
@@ -10,7 +10,7 @@ const CarneDetailsPage = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const { user } = useAuth();
-    const { setAlert } = useContext(GlobalAlertContext);
+    const { setGlobalAlert } = useGlobalAlert();
 
     const [carne, setCarne] = useState(null);
     const [loading, setLoading] = useState(true);
