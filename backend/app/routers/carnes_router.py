@@ -25,11 +25,12 @@ def read_carnes_route(
     skip: int = 0,
     limit: int = 100,
     status_carne: Optional[str] = None,
-    client_id: Optional[int] = None,
+    client_id: Optional[int] = None, # Este é o parâmetro da rota
     db: Session = Depends(get_db),
     current_user: models.Usuario = Depends(get_current_active_user)
 ):
-    carnes = crud.get_carnes(db, skip=skip, limit=limit, status_carne=status_carne, client_id=client_id)
+    # CORRIGIDO: Passando client_id para id_cliente na chamada da função crud.get_carnes
+    carnes = crud.get_carnes(db, skip=skip, limit=limit, status_carne=status_carne, id_cliente=client_id)
     return carnes
 
 @router.get("/{carne_id}", response_model=schemas.CarneResponse)
@@ -84,7 +85,7 @@ def create_pagamento_route(
         raise HTTPException(status_code=404, detail="Parcela não encontrada ou pagamento inválido.")
     return db_pagamento
 
-@router.post("/{carne_id}/parcelas/{parcela_id}/renegotiate", response_model=schemas.ParcelaResponse) # CORRIGIDO: Era schemas.Parcela
+@router.post("/{carne_id}/parcelas/{parcela_id}/renegotiate", response_model=schemas.ParcelaResponse)
 def renegotiate_parcela_route(
     carne_id: int,
     parcela_id: int,
