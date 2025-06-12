@@ -11,7 +11,7 @@ router = APIRouter(
     tags=["Carnes"],
 )
 
-@router.post("/", response_model=schemas.CarneResponse) # CORRIGIDO: Era schemas.Carne
+@router.post("/", response_model=schemas.CarneResponse)
 def create_carne_route(
     carne: schemas.CarneCreate,
     db: Session = Depends(get_db),
@@ -20,7 +20,7 @@ def create_carne_route(
     db_carne = crud.create_carne(db=db, carne=carne)
     return db_carne
 
-@router.get("/", response_model=List[schemas.CarneResponse]) # CORRIGIDO: Era List[schemas.Carne]
+@router.get("/", response_model=List[schemas.CarneResponse])
 def read_carnes_route(
     skip: int = 0,
     limit: int = 100,
@@ -32,7 +32,7 @@ def read_carnes_route(
     carnes = crud.get_carnes(db, skip=skip, limit=limit, status_carne=status_carne, client_id=client_id)
     return carnes
 
-@router.get("/{carne_id}", response_model=schemas.CarneWithDetails)
+@router.get("/{carne_id}", response_model=schemas.CarneResponse) # CORRIGIDO: Era schemas.CarneWithDetails
 def read_carne_route(
     carne_id: int,
     db: Session = Depends(get_db),
@@ -43,7 +43,7 @@ def read_carne_route(
         raise HTTPException(status_code=404, detail="Carnê não encontrado")
     return db_carne
 
-@router.put("/{carne_id}", response_model=schemas.CarneResponse) # CORRIGIDO: Era schemas.Carne
+@router.put("/{carne_id}", response_model=schemas.CarneResponse)
 def update_carne_route(
     carne_id: int,
     carne: schemas.CarneUpdate,
