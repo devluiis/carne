@@ -35,12 +35,13 @@ import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import Box from '@mui/material/Box';
-import Drawer from '@mui/material/Drawer'; // Ou SwipeableDrawer para melhor UX mobile
+import Drawer from '@mui/material/Drawer'; 
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemText from '@mui/material/ListItemText';
-import MenuIcon from '@mui/icons-material/Menu'; // Certifique-se de instalar os ícones do Material-UI: npm install @mui/icons-material
+import MenuIcon from '@mui/icons-material/Menu'; // Certifique-se de ter instalado: npm install @mui/icons-material
+
 
 const GlobalAlertContext = createContext(null);
 export const useGlobalAlert = () => useContext(GlobalAlertContext);
@@ -234,9 +235,9 @@ function Header() {
                                     Olá, {user.nome}! ({user.perfil})
                                 </Typography>
                                 <Button
-                                    variant="contained" // Botão preenchido
-                                    color="error" // Cor vermelha para sair
-                                    size="small" // Botão pequeno
+                                    variant="contained" 
+                                    color="error" 
+                                    size="small" 
                                     onClick={logout}
                                 >
                                     Sair
@@ -257,7 +258,7 @@ function Header() {
 
                         {/* Drawer (Menu Lateral) */}
                         <Drawer
-                            anchor="right" // Abre da direita
+                            anchor="right" 
                             open={drawerOpen}
                             onClose={toggleDrawer(false)}
                         >

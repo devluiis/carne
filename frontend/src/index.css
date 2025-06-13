@@ -1,4 +1,4 @@
-/* Regras globais e reset básico - Mantidas */
+/* Regras globais e reset básico */
 
 @tailwind base;
 @tailwind components;
@@ -21,60 +21,44 @@ body {
   min-height: 100vh;
 }
 
-/* Os estilos para 'header', 'main-nav', 'menu-toggle', 'nav-list', 'nav-link', 'user-info',
-   'mobile-only-user-info-section', 'logout-btn', 'logout-btn-mobile', 'close-menu-button',
-   'menu-overlay' foram REMOVIDOS. Eles agora são gerenciados pelo Material-UI (AppBar, Toolbar, Drawer, Button)
-   e classes Tailwind CSS na função 'Header' em App.jsx. */
+/* TODOS os estilos de HEADER, MENU (header, main-nav, menu-toggle, nav-list, nav-link, 
+  user-info, mobile-only-user-info-section, logout-btn, logout-btn-mobile, 
+  close-menu-button, menu-overlay e suas media queries) FORAM REMOVIDOS.
+  Eles agora são gerenciados pelos componentes Material-UI (AppBar, Toolbar, Drawer, Button, etc.)
+  e pelas classes utilitárias do Tailwind CSS diretamente no App.jsx.
+*/
 
 
-/* A classe 'main-content' pode ser usada para padding geral do conteúdo principal,
-   mas já foi adicionada classes Tailwind diretamente em App.jsx */
-/* main {
-  flex-grow: 1;
-  padding: 20px;
-} */
+/* Os estilos de FORMULÁRIO (form-container, login-form-container, form-group, form-input, 
+   form-select, form-textarea, required-star, form-row, form-actions, large-container, etc.)
+   FORAM REMOVIDOS. Eles agora são gerenciados pelos componentes Material-UI (Container, Box, TextField, Select, Grid, Typography, Button)
+   e classes Tailwind CSS nos componentes de formulário refatorados.
+*/
+
+/* Os estilos de BOTÕES (btn, btn-primary, btn-success, btn-danger, btn-secondary, 
+   btn-warning, btn-info, btn-sm, mt-2, button-group-mt-2) FORAM REMOVIDOS.
+   Eles agora são gerenciados pelos componentes Material-UI (Button) e classes Tailwind CSS.
+*/
+
+/* Os estilos de TABELAS (table-container, styled-table, thead, tbody, th, td, 
+   table-actions, styled-table.sub-table, payments-sub-table-container, 
+   payments-sub-table-title, sub-table-cell) FORAM REMOVIDOS.
+   Eles agora são gerenciados pelos componentes Material-UI (TableContainer, Table, TableHead, TableBody, TableRow, TableCell)
+   e classes Tailwind CSS nas páginas de lista.
+*/
+
+/* As classes de LAYOUT e UTILITÁRIAS que tinham CSS definido aqui (text-center, text-danger, text-warning, link-text)
+   FORAM REMOVIDAS, pois o Tailwind CSS já oferece equivalentes diretos (ex: text-center, text-red-500, text-blue-600).
+   Você deve usar as classes Tailwind diretamente no JSX.
+*/
 
 
-/* Os estilos de formulário como '.form-container', '.login-form-container', '.large-container',
-   'h2' dentro de form-container, '.form-group', '.form-input', '.form-select', '.form-textarea',
-   '.required-star', '.form-row', '.form-actions' foram REMOVIDOS.
-   Eles agora são gerenciados pelo Material-UI (Container, Box, TextField, Select, Grid, Typography, Button)
-   e classes Tailwind CSS nos componentes de formulário (LoginPage, ClientForm, CarneForm, etc.). */
+/* CLASSES QUE AINDA PODEM FAZER SENTIDO OU SÃO GLOBAIS ESPECÍFICAS (como no LoadingSpinner ou GlobalAlert) */
 
-
-/* Os estilos de botões como '.btn', '.btn-primary', '.btn-success', '.btn-danger',
-   '.btn-secondary', '.btn-warning', '.btn-info', '.btn-sm', '.mt-2', '.button-group-mt-2'
-   foram REMOVIDOS. Eles agora são gerenciados pelo Material-UI (Button) e classes Tailwind CSS. */
-
-
-/* Os estilos de tabela como '.table-container', '.styled-table', 'thead', 'tbody', 'th', 'td',
-   '.table-actions', '.styled-table.sub-table', '.payments-sub-table-container',
-   '.payments-sub-table-title', '.sub-table-cell' foram REMOVIDOS.
-   Eles agora são gerenciados pelo Material-UI (TableContainer, Table, TableHead, TableBody, TableRow, TableCell)
-   e classes Tailwind CSS nas páginas de lista (ClientsPage, CarnesPage, ProdutosPage, etc.). */
-
-
-/* Classes de layout e utilitárias - Algumas podem ser mantidas se ainda usadas,
-   mas muitas foram substituídas por classes Tailwind diretamente no JSX. */
-/* Apenas as classes que não têm um substituto direto e são genéricas o suficiente
-   podem ser consideradas, mas a maioria já foi movida para Tailwind ou MUI. */
-
-/* .text-center - Esta é uma classe utilitária do Tailwind, então pode ser redundante se você já estiver usando 'text-center' do Tailwind */
-/* .text-danger - Esta é uma classe utilitária do Tailwind, então pode ser redundante se você já estiver usando 'text-red-500' ou similar */
-/* .text-warning - Esta é uma classe utilitária do Tailwind, então pode ser redundante se você já estiver usando 'text-yellow-500' ou similar */
-
-.no-data-message { /* Mantida como uma classe semântica, mas os estilos são definidos pelo Tailwind */
-    /* Os estilos bg-gray-50, rounded-md, text-gray-600, italic foram movidos diretamente para o JSX com Tailwind */
-    /* Você pode manter esta classe se quiser que ela seja um "hook" semântico para o CSS,
-       mas os estilos visuais virão do Tailwind no JSX. */
+.main-content { /* Mantido se ainda usar em App.jsx para padding global */
+  /*flex-grow: 1; /* Já adicionado no JSX refatorado */
+  /*padding: 20px; /* Já adicionado no JSX refatorado como p-4 */
 }
-
-/* Os estilos para dashboard, filtros (filter-section, filter-grid, filter-buttons),
-   search-filter-container, header-with-button, carne-info-box, section-title,
-   payment-form-section, filter-form-row, report-results-section,
-   total-receipts-summary, total-debt-summary
-   foram REMOVIDOS ou seus estilos incorporados diretamente no JSX com Material-UI e Tailwind CSS. */
-
 
 /* Estilos para GlobalAlert - Mantidos se você não refatorou o GlobalAlert para MUI/Tailwind puro */
 .global-alert {
@@ -128,6 +112,7 @@ body {
 
 
 /* Estilos para ConfirmationModal - Mantidos se você não refatorou o ConfirmationModal para MUI/Tailwind puro */
+/* (Note: em CarneDetailsPage, os modais de pagamento/renegociação foram alterados para MUI Dialog) */
 .modal-overlay {
     position: fixed;
     top: 0;
@@ -183,7 +168,7 @@ body {
     justify-content: center;
     align-items: center;
     padding: 40px;
-    min-height: 300px;
+    min-height: 300px; /* Garante que o spinner tenha um espaço mínimo */
 }
 
 .spinner {
@@ -205,24 +190,8 @@ body {
     100% { transform: rotate(360deg); }
 }
 
-/* link-text - Esta é uma classe utilitária do Tailwind, então pode ser redundante se você já estiver usando 'text-blue-600 hover:underline' */
-/* .link-text {
-    color: #007bff;
-    text-decoration: none;
-    font-weight: bold;
-}
-.link-text:hover {
-    text-decoration: underline;
-} */
-
-
-/* As media queries e estilos responsivos relacionados ao HEADER, MENU, etc.,
-   também foram REMOVIDOS, pois o AppBar/Drawer do MUI e as classes responsivas do Tailwind
-   agora cuidam disso diretamente no JSX. */
-/* Ex: @media (max-width: 900px) {...} */
-/* E as demais classes de layout e utilitárias que já foram substituídas por Tailwind também. */
-
-/* Exemplo de classe customizada que você pode ter no JSX e que não seria nativa do Tailwind */
+/* Classe customizada para ajustar altura do conteúdo principal se houver um AppBar fixo */
+/* A altura de 64px é um valor comum para o AppBar do Material-UI. Ajuste se necessário. */
 .min-h-screen-minus-header {
-    min-height: calc(100vh - 64px); /* Supondo 64px de altura para o AppBar do MUI */
+  min-height: calc(100vh - 64px);
 }
