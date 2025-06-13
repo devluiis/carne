@@ -110,7 +110,6 @@ body {
     opacity: 1;
 }
 
-
 /* Estilos para ConfirmationModal - Mantidos se você não refatorou o ConfirmationModal para MUI/Tailwind puro */
 /* (Note: em CarneDetailsPage, os modais de pagamento/renegociação foram alterados para MUI Dialog) */
 .modal-overlay {
@@ -160,7 +159,6 @@ body {
     padding: 10px 20px;
 }
 
-
 /* Estilos para LoadingSpinner - Mantidos se você não refatorou o LoadingSpinner para MUI/Tailwind puro */
 .loading-spinner-container {
     display: flex;
@@ -168,7 +166,7 @@ body {
     justify-content: center;
     align-items: center;
     padding: 40px;
-    min-height: 300px; /* Garante que o spinner tenha um espaço mínimo */
+    min-height: 300px;
 }
 
 .spinner {
@@ -188,6 +186,15 @@ body {
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
+}
+
+.link-text {
+    color: #007bff;
+    text-decoration: none;
+    font-weight: bold;
+}
+.link-text:hover {
+    text-decoration: underline;
 }
 
 /* Classe customizada para ajustar altura do conteúdo principal se houver um AppBar fixo */
