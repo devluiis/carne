@@ -35,12 +35,38 @@ import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import Box from '@mui/material/Box';
-import Drawer from '@mui/material/Drawer'; 
+import Drawer from '@mui/material/Drawer';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemText from '@mui/material/ListItemText';
 import MenuIcon from '@mui/icons-material/Menu'; // Certifique-se de ter instalado: npm install @mui/icons-material
+import { createTheme, ThemeProvider } from '@mui/material/styles'; //
+import CssBaseline from '@mui/material/CssBaseline'; //
+
+
+// 1. Definição de um Tema Material-UI (Opcional, mas altamente recomendado para consistência)
+const theme = createTheme({ //
+  palette: { //
+    primary: { //
+      main: '#3F51B5', // Um azul mais vibrante para a cor principal do seu tema
+    }, //
+    secondary: { //
+      main: '#FFC107', // Amarelo/laranja para destaque
+    }, //
+    error: { //
+      main: '#D32F2F', // Vermelho padrão para erros
+    }, //
+    background: { //
+      default: '#f4f7f6', // Fundo claro da página
+      paper: '#FFFFFF', // Fundo de componentes como cards e modais
+      appBar: '#2C3E50', // Cor de fundo para a AppBar, um azul escuro
+    }, //
+  }, //
+  typography: { //
+    fontFamily: 'Roboto, sans-serif', //
+  }, //
+}); //
 
 
 const GlobalAlertContext = createContext(null);
@@ -70,52 +96,55 @@ function App() {
     const clearGlobalAlert = () => setGlobalAlert(null);
 
     return (
-        <Router>
-            <AuthProvider>
-                <GlobalAlertContext.Provider value={{ setGlobalAlert, clearGlobalAlert }}>
-                    <Header />
-                    {globalAlert && (
-                        <GlobalAlert 
-                            message={globalAlert.message} 
-                            type={globalAlert.type} 
-                            onClose={clearGlobalAlert} 
-                        />
-                    )}
-                    <main className="main-content flex-grow p-4"> {/* Adicionado classes Tailwind aqui */}
-                        <Routes>
-                            <Route path="/" element={<LoginPage />} />
-                            <Route path="/register-user" element={<RegisterUserPage />} />
-                            <Route path="/dashboard" element={<PrivateRoute><DashboardPage /></PrivateRoute>} />
-                            <Route path="/nova-venda" element={<PrivateRoute><NovaVendaPage /></PrivateRoute>} />
-                            <Route path="/clients" element={<PrivateRoute><ClientsPage /></PrivateRoute>} />
-                            <Route path="/clients/new" element={<PrivateRoute><ClientForm /></PrivateRoute>} />
-                            <Route path="/clients/edit/:id" element={<PrivateRoute><ClientForm /></PrivateRoute>} />
-                            <Route path="/clients/details/:id" element={<PrivateRoute><ClientDetailsPage /></PrivateRoute>} />
-                            <Route path="/carnes" element={<PrivateRoute><CarnesPage /></PrivateRoute>} />
-                            <Route path="/clients/:id_cliente/carnes" element={<PrivateRoute><CarnesPage /></PrivateRoute>} />
-                            <Route path="/carnes/new/:clientIdFromUrl?" element={<PrivateRoute><CarneForm /></PrivateRoute>} />
-                            <Route path="/carnes/edit/:id" element={<PrivateRoute><CarneForm /></PrivateRoute>} />
-                            <Route path="/carnes/details/:id" element={<PrivateRoute><CarneDetailsPage /></PrivateRoute>} />
-                            <Route path="/produtos" element={<PrivateRoute><ProdutosPage /></PrivateRoute>} />
-                            <Route path="/produtos/novo" element={<AdminRoute><ProdutoFormPage /></AdminRoute>} />
-                            <Route path="/produtos/editar/:id" element={<AdminRoute><ProdutoFormPage /></AdminRoute>} />
-                            <Route path="/reports/receipts" element={<PrivateRoute><ReceiptsReportPage /></PrivateRoute>} />
-                            <Route path="/reports/pending-debts-by-client/:client_id?" element={<PrivateRoute><PendingDebtsReportPage /></PrivateRoute>} />
-                            <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
-                            <Route path="/register-admin" element={<AdminRoute><RegisterAdminPage /></AdminRoute>} />
-                            <Route path="/register-atendente" element={<AdminRoute><RegisterUserByAdminPage /></AdminRoute>} />
-                        </Routes>
-                    </main>
-                </GlobalAlertContext.Provider>
-            </AuthProvider>
-        </Router>
+        <ThemeProvider theme={theme}> {/* */}
+            <CssBaseline /> {/* */}
+            <Router>
+                <AuthProvider>
+                    <GlobalAlertContext.Provider value={{ setGlobalAlert, clearGlobalAlert }}>
+                        <Header />
+                        {globalAlert && (
+                            <GlobalAlert
+                                message={globalAlert.message}
+                                type={globalAlert.type}
+                                onClose={clearGlobalAlert}
+                            />
+                        )}
+                        <main className="main-content flex-grow p-4">
+                            <Routes>
+                                <Route path="/" element={<LoginPage />} />
+                                <Route path="/register-user" element={<RegisterUserPage />} />
+                                <Route path="/dashboard" element={<PrivateRoute><DashboardPage /></PrivateRoute>} />
+                                <Route path="/nova-venda" element={<PrivateRoute><NovaVendaPage /></PrivateRoute>} />
+                                <Route path="/clients" element={<PrivateRoute><ClientsPage /></PrivateRoute>} />
+                                <Route path="/clients/new" element={<PrivateRoute><ClientForm /></PrivateRoute>} />
+                                <Route path="/clients/edit/:id" element={<PrivateRoute><ClientForm /></PrivateRoute>} />
+                                <Route path="/clients/details/:id" element={<PrivateRoute><ClientDetailsPage /></PrivateRoute>} />
+                                <Route path="/carnes" element={<PrivateRoute><CarnesPage /></PrivateRoute>} />
+                                <Route path="/clients/:id_cliente/carnes" element={<PrivateRoute><CarnesPage /></PrivateRoute>} />
+                                <Route path="/carnes/new/:clientIdFromUrl?" element={<PrivateRoute><CarneForm /></PrivateRoute>} />
+                                <Route path="/carnes/edit/:id" element={<PrivateRoute><CarneForm /></PrivateRoute>} />
+                                <Route path="/carnes/details/:id" element={<PrivateRoute><CarneDetailsPage /></PrivateRoute>} />
+                                <Route path="/produtos" element={<PrivateRoute><ProdutosPage /></PrivateRoute>} />
+                                <Route path="/produtos/novo" element={<AdminRoute><ProdutoFormPage /></AdminRoute>} />
+                                <Route path="/produtos/editar/:id" element={<AdminRoute><ProdutoFormPage /></AdminRoute>} />
+                                <Route path="/reports/receipts" element={<PrivateRoute><ReceiptsReportPage /></PrivateRoute>} />
+                                <Route path="/reports/pending-debts-by-client/:client_id?" element={<PrivateRoute><PendingDebtsReportPage /></PrivateRoute>} />
+                                <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
+                                <Route path="/register-admin" element={<AdminRoute><RegisterAdminPage /></AdminRoute>} />
+                                <Route path="/register-atendente" element={<AdminRoute><RegisterUserByAdminPage /></AdminRoute>} />
+                            </Routes>
+                        </main>
+                    </GlobalAlertContext.Provider>
+                </AuthProvider>
+            </Router>
+        </ThemeProvider> {/* */}
     );
 }
 
 function Header() {
     const { user, logout } = useAuth();
     const location = useLocation();
-    const [drawerOpen, setDrawerOpen] = useState(false); // Estado para controlar o Drawer do MUI
+    const [drawerOpen, setDrawerOpen] = useState(false);
 
     const toggleDrawer = (open) => (event) => {
         if (event.type === 'keydown' && (event.key === 'Tab' || event.key === 'Shift')) {
@@ -128,8 +157,8 @@ function Header() {
 
     const isLinkActive = (path) => {
         if (path === '/') return location.pathname === path;
-        return location.pathname === path || 
-               location.pathname.startsWith(path + '/') || 
+        return location.pathname === path ||
+               location.pathname.startsWith(path + '/') ||
                (path.includes(':') && location.pathname.startsWith(path.substring(0, path.indexOf(':'))));
     };
 
@@ -154,7 +183,7 @@ function Header() {
             role="presentation"
             onClick={toggleDrawer(false)}
             onKeyDown={toggleDrawer(false)}
-            className="flex flex-col h-full bg-gray-800 text-white" // Tailwind classes for drawer background and text
+            className="flex flex-col h-full bg-gray-800 text-white"
         >
             <Typography variant="h6" component="div" sx={{ p: 2, textAlign: 'center', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
                 Navegação
@@ -168,19 +197,21 @@ function Header() {
                                 to={item.path}
                                 selected={isLinkActive(item.path)}
                                 sx={{
+                                    // Ajuste de cores para o Drawer
                                     '&.Mui-selected': {
-                                        backgroundColor: 'primary.main', // Cor de destaque do MUI theme
+                                        backgroundColor: theme.palette.primary.main, // Cor do tema para o item selecionado
                                         '&:hover': {
-                                            backgroundColor: 'primary.dark',
-                                        },
-                                    },
+                                            backgroundColor: theme.palette.primary.dark, //
+                                        }, //
+                                    }, //
                                     '&:hover': {
-                                        backgroundColor: 'rgba(255,255,255,0.1)',
-                                    },
-                                    px: 2, // Tailwind px-2
+                                        backgroundColor: 'rgba(255,255,255,0.15)', // Um hover mais visível
+                                    }, //
+                                    px: 2,
+                                    color: 'white', // Garante que o texto seja branco no drawer
                                 }}
                             >
-                                <ListItemText primary={item.text} sx={{ color: 'white' }} />
+                                <ListItemText primary={item.text} sx={{ color: 'inherit' }} /> {/* Herda a cor do ListItemButton */}
                             </ListItemButton>
                         </ListItem>
                     )
@@ -188,12 +219,18 @@ function Header() {
             </List>
             {user && (
                 <Box sx={{ p: 2, borderTop: '1px solid rgba(255,255,255,0.1)' }} className="text-sm">
-                    <Typography className="mb-2">Olá, {user.nome}! ({user.perfil})</Typography>
+                    <Typography className="mb-2 text-white">Olá, {user.nome}! ({user.perfil})</Typography>
                     <Button
                         variant="contained"
                         color="error"
                         fullWidth
                         onClick={logout}
+                        sx={{
+                            backgroundColor: '#D32F2F', // Vermelho mais forte
+                            '&:hover': {
+                                backgroundColor: '#B71C1C', // Tom mais escuro no hover
+                            }, //
+                        }} //
                     >
                         Sair
                     </Button>
@@ -203,10 +240,9 @@ function Header() {
     );
 
     return (
-        // Alteração aqui: Definindo uma cor de fundo escura para o AppBar
-        <AppBar position="static" sx={{ bgcolor: '#212529', boxShadow: 3 }}> {/* Use um cinza escuro, como #212529, ou 'primary.main' do seu tema MUI */}
-            <Toolbar className="flex justify-between items-center px-4 sm:px-6 lg:px-8">
-                <Typography variant="h6" component="div" className="flex-shrink-0">
+        <AppBar position="static" sx={{ bgcolor: theme.palette.background.appBar, boxShadow: 6 }}> {/* Usa a cor definida no tema, e sombra mais forte */}
+            <Toolbar sx={{ minHeight: '64px', '@media (min-width:600px)': { minHeight: '64px' } }} className="flex justify-between items-center px-4 sm:px-6 lg:px-8"> {/* Garante altura mínima para um bom visual */}
+                <Typography variant="h6" component="div" sx={{ fontWeight: 'bold' }}> {/* Texto mais em negrito para o logo */}
                     <Link to={user ? "/dashboard" : "/"} className="text-white no-underline hover:text-gray-200">
                         Bios Store
                     </Link>
@@ -215,17 +251,25 @@ function Header() {
                 {user && (
                     <>
                         {/* Menu para telas maiores (desktop) */}
-                        <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 2 }} className="ml-auto">
+                        <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 1 }} className="ml-auto"> {/* Reduz o gap entre os botões para melhor aproveitamento do espaço */}
                             {menuItems.map((item) => (
                                 (item.roles.includes(user.perfil)) && (
                                     <Button
                                         key={item.text}
                                         component={Link}
                                         to={item.path}
-                                        // A cor do texto já é 'inherit' do AppBar ou definida pelas classes Tailwind
-                                        // Adicionando 'text-white' explicitamente para garantir visibilidade em fundo escuro
-                                        className={`capitalize ${isLinkActive(item.path) ? 'bg-blue-600 hover:bg-blue-700' : 'hover:bg-gray-700 text-white'}`}
-                                        sx={{ borderRadius: 1 }}
+                                        color="inherit" // Mantém a cor base do AppBar (branca)
+                                        className={`capitalize px-3 py-2 text-sm font-medium transition-colors duration-200 ease-in-out
+                                            ${isLinkActive(item.path)
+                                                ? 'bg-blue-600 text-white hover:bg-blue-700' // Cor de destaque para ativo
+                                                : 'text-white hover:bg-gray-700 hover:text-white' // Cores para inativo no hover
+                                            }`}
+                                        sx={{
+                                            borderRadius: 1,
+                                            minWidth: 'auto', // Ajusta largura mínima
+                                            padding: '8px 12px', // Ajusta padding para botões
+                                            fontSize: '0.875rem' // Tamanho da fonte
+                                        }} //
                                     >
                                         {item.text}
                                     </Button>
@@ -233,7 +277,7 @@ function Header() {
                             ))}
                             {/* Info do usuário (DESKTOP) */}
                             <Box className="flex items-center gap-2 ml-4">
-                                <Typography variant="body2" className="text-white whitespace-nowrap">
+                                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.8rem' }} className="whitespace-nowrap"> {/* Texto mais discreto */}
                                     Olá, {user.nome}! ({user.perfil})
                                 </Typography>
                                 <Button
@@ -241,6 +285,12 @@ function Header() {
                                     color="error"
                                     size="small"
                                     onClick={logout}
+                                    sx={{
+                                        backgroundColor: '#D32F2F', // Vermelho mais forte
+                                        '&:hover': {
+                                            backgroundColor: '#B71C1C', // Tom mais escuro no hover
+                                        }, //
+                                    }} //
                                 >
                                     Sair
                                 </Button>
@@ -250,10 +300,10 @@ function Header() {
                         {/* Botão de Menu Hamburger para telas pequenas (mobile) */}
                         <IconButton
                             edge="start"
-                            color="inherit" // Isso fará com que o ícone seja branco se o AppBar for escuro
+                            color="inherit"
                             aria-label="menu"
                             onClick={toggleDrawer(true)}
-                            sx={{ display: { md: 'none' } }}
+                            sx={{ display: { md: 'none' }, color: 'white' }} // Garante que o ícone seja branco
                         >
                             <MenuIcon />
                         </IconButton>
@@ -263,6 +313,12 @@ function Header() {
                             anchor="right"
                             open={drawerOpen}
                             onClose={toggleDrawer(false)}
+                            PaperProps={{ // Estilo para o Paper do Drawer
+                                sx: {
+                                    backgroundColor: theme.palette.background.appBar, // Fundo do drawer igual ao AppBar
+                                    color: 'white', // Texto branco
+                                }, //
+                            }} //
                         >
                             {drawerContent}
                         </Drawer>
