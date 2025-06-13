@@ -1,3 +1,4 @@
+// frontend/src/App.jsx
 import React, { useState, createContext, useContext } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './components/AuthProvider.jsx';
@@ -26,6 +27,20 @@ import ProdutoFormPage from './pages/ProdutoFormPage.jsx';
 // Seu GlobalAlert e Contexto
 import GlobalAlert from './components/GlobalAlert.jsx';
 import LoadingSpinner from './components/LoadingSpinner.jsx';
+
+// Importações do Material-UI para o Header
+import AppBar from '@mui/material/AppBar';
+import Toolbar from '@mui/material/Toolbar';
+import IconButton from '@mui/material/IconButton';
+import Typography from '@mui/material/Typography';
+import Button from '@mui/material/Button';
+import Box from '@mui/material/Box';
+import Drawer from '@mui/material/Drawer'; // Ou SwipeableDrawer para melhor UX mobile
+import List from '@mui/material/List';
+import ListItem from '@mui/material/ListItem';
+import ListItemButton from '@mui/material/ListItemButton';
+import ListItemText from '@mui/material/ListItemText';
+import MenuIcon from '@mui/icons-material/Menu'; // Certifique-se de instalar os ícones do Material-UI: npm install @mui/icons-material
 
 const GlobalAlertContext = createContext(null);
 export const useGlobalAlert = () => useContext(GlobalAlertContext);
@@ -65,7 +80,7 @@ function App() {
                             onClose={clearGlobalAlert} 
                         />
                     )}
-                    <main className="main-content">
+                    <main className="main-content flex-grow p-4"> {/* Adicionado classes Tailwind aqui */}
                         <Routes>
                             <Route path="/" element={<LoginPage />} />
                             <Route path="/register-user" element={<RegisterUserPage />} />
@@ -99,10 +114,16 @@ function App() {
 function Header() {
     const { user, logout } = useAuth();
     const location = useLocation();
-    const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [drawerOpen, setDrawerOpen] = useState(false); // Estado para controlar o Drawer do MUI
 
-    const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
-    const closeMenu = () => setIsMenuOpen(false);
+    const toggleDrawer = (open) => (event) => {
+        if (event.type === 'keydown' && (event.key === 'Tab' || event.key === 'Shift')) {
+            return;
+        }
+        setDrawerOpen(open);
+    };
+
+    const closeDrawer = () => setDrawerOpen(false);
 
     const isLinkActive = (path) => {
         if (path === '/') return location.pathname === path;
@@ -111,55 +132,141 @@ function Header() {
                (path.includes(':') && location.pathname.startsWith(path.substring(0, path.indexOf(':'))));
     };
 
-    return (
-        <header>
-            <h1>
-                <Link to={user ? "/dashboard" : "/"} className="app-title-link">
-                    Bios Store
-                </Link>
-            </h1>
+    // Definição dos itens do menu
+    const menuItems = [
+        { text: 'Dashboard', path: '/dashboard', roles: ['admin', 'atendente'] },
+        { text: 'Nova Venda', path: '/nova-venda', roles: ['admin', 'atendente'] },
+        { text: 'Clientes', path: '/clients', roles: ['admin', 'atendente'] },
+        { text: 'Carnês', path: '/carnes', roles: ['admin', 'atendente'] },
+        { text: 'Produtos', path: '/produtos', roles: ['admin', 'atendente'] },
+        { text: 'Rel. Receb.', path: '/reports/receipts', roles: ['admin', 'atendente'] },
+        { text: 'Rel. Dívidas', path: '/reports/pending-debts-by-client', roles: ['admin', 'atendente'] },
+        { text: 'Reg. Admin', path: '/register-admin', roles: ['admin'] },
+        { text: 'Reg. Atendente', path: '/register-atendente', roles: ['admin'] },
+        { text: 'Meu Perfil', path: '/profile', roles: ['admin', 'atendente'] },
+    ];
 
+    // Componente auxiliar para o conteúdo do Drawer
+    const drawerContent = (
+        <Box
+            sx={{ width: 250 }}
+            role="presentation"
+            onClick={toggleDrawer(false)}
+            onKeyDown={toggleDrawer(false)}
+            className="flex flex-col h-full bg-gray-800 text-white" // Tailwind classes for drawer background and text
+        >
+            <Typography variant="h6" component="div" sx={{ p: 2, textAlign: 'center', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                Navegação
+            </Typography>
+            <List className="flex-grow">
+                {user && menuItems.map((item) => (
+                    (item.roles.includes(user.perfil)) && (
+                        <ListItem key={item.text} disablePadding>
+                            <ListItemButton
+                                component={Link}
+                                to={item.path}
+                                selected={isLinkActive(item.path)}
+                                sx={{
+                                    '&.Mui-selected': {
+                                        backgroundColor: 'primary.main', // Cor de destaque do MUI theme
+                                        '&:hover': {
+                                            backgroundColor: 'primary.dark',
+                                        },
+                                    },
+                                    '&:hover': {
+                                        backgroundColor: 'rgba(255,255,255,0.1)',
+                                    },
+                                    px: 2, // Tailwind px-2
+                                }}
+                            >
+                                <ListItemText primary={item.text} sx={{ color: 'white' }} />
+                            </ListItemButton>
+                        </ListItem>
+                    )
+                ))}
+            </List>
             {user && (
-                <>
-                    <button className="menu-toggle" onClick={toggleMenu} aria-label="Abrir Menu">☰</button>
-                    {isMenuOpen && <div className="menu-overlay" onClick={closeMenu}></div>}
-
-                    <nav className={`main-nav ${isMenuOpen ? 'menu-open' : ''}`}>
-                        <button className="close-menu-button" onClick={closeMenu} aria-label="Fechar Menu">&times;</button>
-                        <ul className="nav-list">
-                            <li><Link to="/dashboard" className={isLinkActive('/dashboard') ? "nav-link active" : "nav-link"} onClick={closeMenu}>Dashboard</Link></li>
-                            <li><Link to="/nova-venda" className={isLinkActive('/nova-venda') ? "nav-link active" : "nav-link"} onClick={closeMenu}>Nova Venda</Link></li>
-                            <li><Link to="/clients" className={isLinkActive('/clients') ? "nav-link active" : "nav-link"} onClick={closeMenu}>Clientes</Link></li>
-                            <li><Link to="/carnes" className={isLinkActive('/carnes') ? "nav-link active" : "nav-link"} onClick={closeMenu}>Carnês</Link></li>
-                            <li><Link to="/produtos" className={isLinkActive('/produtos') ? "nav-link active" : "nav-link"} onClick={closeMenu}>Produtos</Link></li>
-                            <li><Link to="/reports/receipts" className={isLinkActive('/reports/receipts') ? "nav-link active" : "nav-link"} onClick={closeMenu}>Rel. Receb.</Link></li>
-                            <li><Link to="/reports/pending-debts-by-client" className={isLinkActive('/reports/pending-debts-by-client') ? "nav-link active" : "nav-link"} onClick={closeMenu}>Rel. Dívidas</Link></li>
-                            {user.perfil === 'admin' && (
-                                <>
-                                    <li><Link to="/register-admin" className={isLinkActive('/register-admin') ? "nav-link active" : "nav-link"} onClick={closeMenu}>Reg. Admin</Link></li>
-                                    <li><Link to="/register-atendente" className={isLinkActive('/register-atendente') ? "nav-link active" : "nav-link"} onClick={closeMenu}>Reg. Atendente</Link></li>
-                                </>
-                            )}
-                            <li><Link to="/profile" className={isLinkActive('/profile') ? "nav-link active" : "nav-link"} onClick={closeMenu}>Meu Perfil</Link></li>
-                        </ul>
-
-                        {/* Info do usuário (MOBILE) */}
-                        <div className="user-info mobile-only-user-info-section">
-                            <span>Olá, {user.nome}! ({user.perfil})</span>
-                            <button onClick={() => { logout(); closeMenu(); }} className="btn btn-danger btn-sm logout-btn-mobile">
-                                Sair
-                            </button>
-                        </div>
-                    </nav>
-
-                    {/* Info do usuário (DESKTOP) */}
-                    <div className="user-info">
-                        <span>Olá, {user.nome}! ({user.perfil})</span>
-                        <button onClick={logout} className="btn btn-danger btn-sm logout-btn">Sair</button>
-                    </div>
-                </>
+                <Box sx={{ p: 2, borderTop: '1px solid rgba(255,255,255,0.1)' }} className="text-sm">
+                    <Typography className="mb-2">Olá, {user.nome}! ({user.perfil})</Typography>
+                    <Button
+                        variant="contained"
+                        color="error"
+                        fullWidth
+                        onClick={logout}
+                    >
+                        Sair
+                    </Button>
+                </Box>
             )}
-        </header>
+        </Box>
+    );
+
+    return (
+        <AppBar position="static" sx={{ bgcolor: 'background.default', boxShadow: 3 }}> {/* MUI AppBar com cor de fundo padrão e sombra */}
+            <Toolbar className="flex justify-between items-center px-4 sm:px-6 lg:px-8"> {/* Tailwind para espaçamento e alinhamento */}
+                <Typography variant="h6" component="div" className="flex-shrink-0">
+                    <Link to={user ? "/dashboard" : "/"} className="text-white no-underline hover:text-gray-200">
+                        Bios Store
+                    </Link>
+                </Typography>
+
+                {user && (
+                    <>
+                        {/* Menu para telas maiores (desktop) */}
+                        <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 2 }} className="ml-auto"> {/* Oculta em xs, mostra em md, espaçamento */}
+                            {menuItems.map((item) => (
+                                (item.roles.includes(user.perfil)) && (
+                                    <Button
+                                        key={item.text}
+                                        component={Link}
+                                        to={item.path}
+                                        color="inherit" // Cor do texto do botão (branca no AppBar)
+                                        className={`capitalize ${isLinkActive(item.path) ? 'bg-blue-600 hover:bg-blue-700' : 'hover:bg-gray-700'}`} // Tailwind para caps, cor ativa
+                                        sx={{ borderRadius: 1 }} // Arredondamento
+                                    >
+                                        {item.text}
+                                    </Button>
+                                )
+                            ))}
+                            {/* Info do usuário (DESKTOP) */}
+                            <Box className="flex items-center gap-2 ml-4">
+                                <Typography variant="body2" className="text-white whitespace-nowrap">
+                                    Olá, {user.nome}! ({user.perfil})
+                                </Typography>
+                                <Button
+                                    variant="contained" // Botão preenchido
+                                    color="error" // Cor vermelha para sair
+                                    size="small" // Botão pequeno
+                                    onClick={logout}
+                                >
+                                    Sair
+                                </Button>
+                            </Box>
+                        </Box>
+
+                        {/* Botão de Menu Hamburger para telas pequenas (mobile) */}
+                        <IconButton
+                            edge="start"
+                            color="inherit"
+                            aria-label="menu"
+                            onClick={toggleDrawer(true)}
+                            sx={{ display: { md: 'none' } }} // Oculta em md e acima
+                        >
+                            <MenuIcon />
+                        </IconButton>
+
+                        {/* Drawer (Menu Lateral) */}
+                        <Drawer
+                            anchor="right" // Abre da direita
+                            open={drawerOpen}
+                            onClose={toggleDrawer(false)}
+                        >
+                            {drawerContent}
+                        </Drawer>
+                    </>
+                )}
+            </Toolbar>
+        </AppBar>
     );
 }
 

@@ -1,4 +1,4 @@
-/* Regras globais e reset básico */
+/* Regras globais e reset básico - Mantidas */
 
 @tailwind base;
 @tailwind components;
@@ -11,8 +11,8 @@ body {
       sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    background-color: #f4f7f6;
-    color: #333;
+    background-color: #f4f7f6; /* Cor de fundo geral */
+    color: #333; /* Cor do texto padrão */
 }
 
 #root {
@@ -21,510 +21,62 @@ body {
   min-height: 100vh;
 }
 
-header {
-    background: #333;
-    color: white;
-    padding: 10px 20px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    position: relative;
-    z-index: 900;
-}
-
-header h1 {
-    margin: 0;
-    font-size: 1.5rem;
-    flex-shrink: 0;
-}
-
-.app-title-link {
-    color: white;
-    text-decoration: none;
-}
-
-/* Botão de menu Hamburger (mobile) - Oculto por padrão no desktop */
-.menu-toggle {
-    display: none; 
-    background: none;
-    border: none;
-    color: white;
-    font-size: 2rem;
-    cursor: pointer;
-    padding: 5px 10px;
-}
-
-/* --- ESTILOS PARA DESKTOP (PADRÃO) --- */
-/* A barra de navegação principal e a info do usuário devem estar visíveis no desktop */
-.main-nav {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 15px;
-    flex-grow: 1;
-    justify-content: flex-end;
-}
-
-/* A seção de info do usuário padrão (desktop) */
-.user-info { 
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    white-space: nowrap;
-    color: white;
-}
-
-/* A seção de info do usuário específica para mobile deve estar OCULTA no desktop */
-.mobile-only-user-info-section { 
-    display: none;
-}
-
-.nav-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 5px;
-}
-
-.nav-link {
-    padding: 10px 15px;
-    color: white;
-    text-decoration: none;
-    transition: background-color 0.2s ease, border-radius 0.2s ease;
-    display: inline-block;
-    white-space: nowrap;
-}
-
-.nav-link:hover {
-    background-color: #555;
-    border-radius: 5px;
-}
-
-.nav-link.active {
-    background-color: #007bff;
-    border-radius: 5px;
-    font-weight: bold;
-}
-
-.logout-btn {
-    padding: 8px 12px;
-    font-size: 0.875rem;
-}
+/* Os estilos para 'header', 'main-nav', 'menu-toggle', 'nav-list', 'nav-link', 'user-info',
+   'mobile-only-user-info-section', 'logout-btn', 'logout-btn-mobile', 'close-menu-button',
+   'menu-overlay' foram REMOVIDOS. Eles agora são gerenciados pelo Material-UI (AppBar, Toolbar, Drawer, Button)
+   e classes Tailwind CSS na função 'Header' em App.jsx. */
 
 
-main {
+/* A classe 'main-content' pode ser usada para padding geral do conteúdo principal,
+   mas já foi adicionada classes Tailwind diretamente em App.jsx */
+/* main {
   flex-grow: 1;
   padding: 20px;
-}
-
-/* --- ESTILOS DE FORMULÁRIO --- */
-.form-container {
-    max-width: 600px;
-    margin: 40px auto;
-    padding: 30px;
-    background-color: white;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-}
-
-.login-form-container {
-    max-width: 450px;
-}
-
-.large-container {
-    max-width: 1100px;
-}
-
-.form-container h2 {
-    text-align: center;
-    margin-bottom: 25px;
-    color: #333;
-}
-
-.form-group {
-    margin-bottom: 20px;
-}
-
-.form-group label {
-    display: block;
-    margin-bottom: 8px;
-    font-weight: bold;
-    color: #555;
-}
-
-.form-input, .form-select, .form-textarea {
-    width: 100%;
-    padding: 12px;
-    box-sizing: border-box;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    font-size: 1rem;
-    transition: border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-.form-input:focus, .form-select:focus, .form-textarea:focus {
-    outline: none;
-    border-color: #007bff;
-    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.2);
-}
-
-.form-input[disabled], .form-select[disabled], .form-textarea[disabled] {
-    background-color: #e9ecef;
-    cursor: not-allowed;
-}
-
-.required-star {
-    color: red;
-    margin-left: 3px;
-}
-
-.form-row {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 15px;
-    margin-bottom: 20px;
-}
-@media (min-width: 768px) {
-    .form-row {
-        grid-template-columns: 1fr 1fr;
-    }
-}
-
-.form-actions {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    margin-top: 30px;
-}
-@media (min-width: 576px) {
-    .form-actions {
-        flex-direction: row;
-        justify-content: flex-end;
-    }
-    .form-actions .btn {
-        width: auto;
-        flex-grow: 0;
-    }
-}
+} */
 
 
-/* --- ESTILOS DE BOTÕES --- */
-.btn {
-    display: inline-block;
-    width: 100%;
-    padding: 12px 15px;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 1rem;
-    font-weight: bold;
-    text-align: center;
-    text-decoration: none;
-    transition: background-color 0.2s ease, transform 0.1s ease;
-}
-
-.btn:hover {
-    filter: brightness(1.1);
-}
-
-.btn:active {
-    transform: scale(0.98);
-}
-
-.btn:disabled {
-    background-color: #ccc;
-    cursor: not-allowed;
-    filter: none;
-}
-
-.btn-primary { background-color: #007bff; color: white; }
-.btn-success { background-color: #28a745; color: white; }
-.btn-danger { background-color: #dc3545; color: white; }
-.btn-secondary { background-color: #6c757d; color: white; }
-.btn-warning { background-color: #ffc107; color: #000; }
-.btn-info { background-color: #17a2b8; color: white; }
-
-.btn-sm {
-    padding: 6px 12px;
-    font-size: 0.875rem;
-    width: auto;
-}
-
-.mt-2 {
-    margin-top: 20px;
-}
-
-.button-group-mt-2 {
-    margin-top: 20px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    justify-content: flex-end;
-}
-.button-group-mt-2 .btn {
-    flex-grow: 1;
-    max-width: 100%;
-}
-@media (min-width: 576px) {
-    .button-group-mt-2 .btn {
-        flex-grow: 0;
-        width: auto;
-    }
-}
+/* Os estilos de formulário como '.form-container', '.login-form-container', '.large-container',
+   'h2' dentro de form-container, '.form-group', '.form-input', '.form-select', '.form-textarea',
+   '.required-star', '.form-row', '.form-actions' foram REMOVIDOS.
+   Eles agora são gerenciados pelo Material-UI (Container, Box, TextField, Select, Grid, Typography, Button)
+   e classes Tailwind CSS nos componentes de formulário (LoginPage, ClientForm, CarneForm, etc.). */
 
 
-/* --- ESTILOS DE TABELA --- */
-.table-container {
-    max-width: 1200px;
-    margin: 40px auto;
-    padding: 30px;
-    background-color: white;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-    overflow-x: auto;
-}
-
-.styled-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 20px;
-}
-
-.styled-table thead tr {
-    background-color: #333;
-    color: #ffffff;
-    text-align: left;
-}
-
-.styled-table th, .styled-table td {
-    padding: 12px 15px;
-    border-bottom: 1px solid #dddddd;
-}
-
-.styled-table tbody tr:nth-of-type(even) {
-    background-color: #f8f9fa;
-}
-
-.styled-table tbody tr:hover {
-    background-color: #e9ecef;
-}
-
-.table-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-}
-
-.styled-table.sub-table {
-    margin-top: 10px;
-    font-size: 0.9em;
-}
-.styled-table.sub-table th, .styled-table.sub-table td {
-    padding: 8px 10px;
-}
-.styled-table.sub-table thead tr {
-    background-color: #e9ecef;
-    color: #333;
-}
-.payments-sub-table-container {
-    margin: 15px 0;
-    padding: 10px;
-    border: 1px solid #e0e0e0;
-    border-radius: 5px;
-    background-color: #fafafa;
-}
-.payments-sub-table-title {
-    font-size: 0.9em;
-    margin-bottom: 10px;
-    color: #555;
-}
-.sub-table-cell {
-    padding: 0 !important;
-    border-top: none !important;
-    border-bottom: 1px solid #ddd !important;
-}
+/* Os estilos de botões como '.btn', '.btn-primary', '.btn-success', '.btn-danger',
+   '.btn-secondary', '.btn-warning', '.btn-info', '.btn-sm', '.mt-2', '.button-group-mt-2'
+   foram REMOVIDOS. Eles agora são gerenciados pelo Material-UI (Button) e classes Tailwind CSS. */
 
 
-/* --- CLASSES DE LAYOUT E UTILITÁRIAS --- */
-.text-center {
-    text-align: center;
-}
-.text-danger {
-    color: #dc3545;
-}
-.text-warning {
-    color: #ffc107;
-}
-
-.no-data-message {
-    padding: 20px;
-    background-color: #f8f9fa;
-    border-radius: 5px;
-    color: #777;
-    font-style: italic;
-}
-
-.dashboard-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 20px;
-}
-
-.card-dashboard {
-    background-color: #f9f9f9;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    padding: 20px;
-    text-align: center;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-}
-
-.card-dashboard h3 {
-    margin-top: 0;
-    margin-bottom: 15px;
-    font-size: 1.1rem;
-    color: #333;
-}
-
-.card-dashboard .card-value {
-    font-size: 2.2em;
-    font-weight: bold;
-    margin: 10px 0;
-    line-height: 1.2;
-}
-
-.card-dashboard .card-value-green {
-    color: #28a745;
-}
-
-.card-dashboard .card-value-red {
-    color: #dc3545;
-}
-
-.card-dashboard .card-value-blue {
-    color: #007bff;
-}
-
-.filter-section {
-    padding: 20px;
-    background-color: #f9f9f9;
-    border: 1px solid #eee;
-    border-radius: 8px;
-    margin-bottom: 20px;
-}
-.filter-section h3 {
-    margin-top: 0;
-    margin-bottom: 15px;
-    color: #333;
-}
-.filter-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 15px;
-    align-items: flex-end;
-}
-.filter-buttons {
-    display: flex;
-    gap: 10px;
-}
-.filter-buttons .btn {
-    width: 100%;
-}
-@media (min-width: 768px) {
-    .filter-buttons .btn {
-        width: auto;
-        flex-grow: 1;
-    }
-}
-
-.search-filter-container {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 20px;
-    align-items: center;
-    flex-wrap: wrap;
-}
-.search-filter-container .search-input {
-    flex-grow: 1;
-}
-.search-filter-container .btn-sm {
-    flex-shrink: 0;
-    width: auto;
-}
-
-.header-with-button {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-    flex-wrap: wrap;
-    gap: 10px;
-}
-.header-with-button h2 {
-    margin: 0;
-    flex-grow: 1;
-}
-.header-with-button .btn {
-    flex-shrink: 0;
-    width: auto;
-}
-
-.carne-info-box {
-    border: 1px solid #eee;
-    padding: 15px;
-    border-radius: 5px;
-    background-color: #f9f9f9;
-    margin-bottom: 30px;
-}
-.section-title {
-    margin-top: 30px;
-    margin-bottom: 15px;
-    color: #333;
-}
-.payment-form-section {
-    margin-top: 30px;
-    border: 1px solid #ccc;
-    background-color: #fff;
-    padding: 20px;
-}
-
-.filter-form-row {
-    display: flex;
-    gap: 15px;
-    margin-bottom: 30px;
-    padding: 15px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    background-color: #f9f9f9;
-    align-items: flex-end;
-    flex-wrap: wrap;
-}
-.filter-form-row .form-group.flex-grow {
-    flex-grow: 1;
-    min-width: 150px;
-}
-.filter-form-row .btn {
-    flex-shrink: 0;
-    width: auto;
-}
-
-.report-results-section {
-    margin-top: 30px;
-    border-top: 1px solid #eee;
-    padding-top: 20px;
-}
-.total-receipts-summary, .total-debt-summary {
-    font-size: 1.2em;
-    margin-bottom: 20px;
-}
+/* Os estilos de tabela como '.table-container', '.styled-table', 'thead', 'tbody', 'th', 'td',
+   '.table-actions', '.styled-table.sub-table', '.payments-sub-table-container',
+   '.payments-sub-table-title', '.sub-table-cell' foram REMOVIDOS.
+   Eles agora são gerenciados pelo Material-UI (TableContainer, Table, TableHead, TableBody, TableRow, TableCell)
+   e classes Tailwind CSS nas páginas de lista (ClientsPage, CarnesPage, ProdutosPage, etc.). */
 
 
-/* Estilos para GlobalAlert */
+/* Classes de layout e utilitárias - Algumas podem ser mantidas se ainda usadas,
+   mas muitas foram substituídas por classes Tailwind diretamente no JSX. */
+/* Apenas as classes que não têm um substituto direto e são genéricas o suficiente
+   podem ser consideradas, mas a maioria já foi movida para Tailwind ou MUI. */
+
+/* .text-center - Esta é uma classe utilitária do Tailwind, então pode ser redundante se você já estiver usando 'text-center' do Tailwind */
+/* .text-danger - Esta é uma classe utilitária do Tailwind, então pode ser redundante se você já estiver usando 'text-red-500' ou similar */
+/* .text-warning - Esta é uma classe utilitária do Tailwind, então pode ser redundante se você já estiver usando 'text-yellow-500' ou similar */
+
+.no-data-message { /* Mantida como uma classe semântica, mas os estilos são definidos pelo Tailwind */
+    /* Os estilos bg-gray-50, rounded-md, text-gray-600, italic foram movidos diretamente para o JSX com Tailwind */
+    /* Você pode manter esta classe se quiser que ela seja um "hook" semântico para o CSS,
+       mas os estilos visuais virão do Tailwind no JSX. */
+}
+
+/* Os estilos para dashboard, filtros (filter-section, filter-grid, filter-buttons),
+   search-filter-container, header-with-button, carne-info-box, section-title,
+   payment-form-section, filter-form-row, report-results-section,
+   total-receipts-summary, total-debt-summary
+   foram REMOVIDOS ou seus estilos incorporados diretamente no JSX com Material-UI e Tailwind CSS. */
+
+
+/* Estilos para GlobalAlert - Mantidos se você não refatorou o GlobalAlert para MUI/Tailwind puro */
 .global-alert {
     position: fixed;
     top: 20px;
@@ -574,7 +126,8 @@ main {
     opacity: 1;
 }
 
-/* Estilos para ConfirmationModal */
+
+/* Estilos para ConfirmationModal - Mantidos se você não refatorou o ConfirmationModal para MUI/Tailwind puro */
 .modal-overlay {
     position: fixed;
     top: 0;
@@ -622,7 +175,8 @@ main {
     padding: 10px 20px;
 }
 
-/* Estilos para LoadingSpinner */
+
+/* Estilos para LoadingSpinner - Mantidos se você não refatorou o LoadingSpinner para MUI/Tailwind puro */
 .loading-spinner-container {
     display: flex;
     flex-direction: column;
@@ -651,198 +205,24 @@ main {
     100% { transform: rotate(360deg); }
 }
 
-.link-text {
+/* link-text - Esta é uma classe utilitária do Tailwind, então pode ser redundante se você já estiver usando 'text-blue-600 hover:underline' */
+/* .link-text {
     color: #007bff;
     text-decoration: none;
     font-weight: bold;
 }
 .link-text:hover {
     text-decoration: underline;
+} */
+
+
+/* As media queries e estilos responsivos relacionados ao HEADER, MENU, etc.,
+   também foram REMOVIDOS, pois o AppBar/Drawer do MUI e as classes responsivas do Tailwind
+   agora cuidam disso diretamente no JSX. */
+/* Ex: @media (max-width: 900px) {...} */
+/* E as demais classes de layout e utilitárias que já foram substituídas por Tailwind também. */
+
+/* Exemplo de classe customizada que você pode ter no JSX e que não seria nativa do Tailwind */
+.min-h-screen-minus-header {
+    min-height: calc(100vh - 64px); /* Supondo 64px de altura para o AppBar do MUI */
 }
-
-/* --- Responsividade (Media Queries) --- */
-
-/* Breakpoint para dispositivos menores (tablets e celulares) */
-@media (max-width: 900px) { /* Ajuste este breakpoint conforme necessário */
-    header {
-        flex-wrap: nowrap;
-        justify-content: space-between;
-    }
-    
-    /* Oculta o menu de navegação completo e a info do usuário padrão do desktop */
-    .main-nav {
-        display: none; /* Oculta o menu por padrão */
-        position: fixed;
-        top: 0;
-        right: -70vw; /* Menu fora da tela */
-        width: 70vw; /* Largura do menu quando aberto */
-        max-width: 250px; /* Largura máxima para não ficar muito grande */
-        height: 100%; /* Altura total da viewport */
-        background-color: #444;
-        box-shadow: -2px 0 5px rgba(0,0,0,0.5);
-        transition: right 0.3s ease-in-out;
-        padding-top: 60px; /* Espaço para o botão de fechar */
-        z-index: 950;
-        flex-direction: column; /* Organiza os itens em coluna */
-    }
-
-    /* Mostra o menu quando 'menu-open' está ativo */
-    .main-nav.menu-open {
-        display: flex; /* Altera para flexbox para exibir o menu */
-        right: 0; /* Desliza para dentro da tela */
-    }
-
-    /* Mostra o botão hamburger */
-    .menu-toggle {
-        display: block; 
-    }
-
-    /* Oculta a seção de info do usuário normal do desktop */
-    .user-info { 
-        display: none; 
-    }
-
-    /* Exibe e estiliza a lista de links no menu mobile */
-    .main-nav .nav-list {
-        display: flex; /* Volta a exibir a lista */
-        flex-direction: column;
-        width: 100%;
-        gap: 10px;
-        padding: 20px;
-        flex-grow: 1; /* Permite que a lista ocupe o espaço restante */
-        overflow-y: auto; /* Adiciona scroll se a lista for muito longa */
-        -webkit-overflow-scrolling: touch; /* Suaviza o scroll no iOS */
-    }
-
-    .main-nav .nav-link {
-        width: 100%;
-        text-align: left;
-        padding: 12px 15px;
-        border-radius: 5px;
-    }
-
-    /* Exibe e estiliza a seção de informações do usuário (mobile) */
-    .mobile-only-user-info-section { 
-        display: flex !important; /* Garante que seja exibido */
-        flex-direction: column;
-        align-items: flex-start;
-        width: 100%;
-        padding: 20px;
-        border-top: 1px solid #555; /* Separador */
-        margin-top: auto; /* Empurra para o final do menu */
-    }
-    .mobile-only-user-info-section span {
-        margin-bottom: 10px;
-        font-weight: bold;
-        color: white;
-    }
-    /* Estilo específico para o botão de sair no menu mobile */
-    .logout-btn-mobile {
-    width: 100%;
-    padding: 10px 15px;
-    font-size: 1rem;
-    display: block;
-    box-sizing: border-box;
-    background-color: #dc3545;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    font-weight: bold;
-    text-align: center;
-    cursor: pointer;
-    margin-top: 10px;
-    transition: background-color 0.2s ease;
-}
-
-.logout-btn-mobile:hover {
-    background-color: #c82333;
-}
-
-.mobile-only-user-info-section {
-    display: flex !important;
-    flex-direction: column;
-    align-items: flex-start;
-    width: 100%;
-    padding: 20px;
-    border-top: 1px solid #555;
-    margin-top: auto;
-    background-color: rgba(255, 255, 255, 0.02); /* opcional para depuração visual */
-}
-
-
-    /* Botão de fechar o menu */
-    .close-menu-button {
-        display: block;
-        position: absolute;
-        top: 10px;
-        right: 10px;
-        background: none;
-        border: none;
-        color: white;
-        font-size: 2rem;
-        cursor: pointer;
-        padding: 5px 10px;
-        z-index: 960;
-    }
-
-    /* Overlay para fechar o menu ao clicar fora */
-    .menu-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        background-color: rgba(0, 0, 0, 0.5);
-        z-index: 940; /* Entre o header e o menu principal */
-    }
-
-    /* Outras responsividades gerais para mobile */
-    .form-container, .table-container {
-        margin: 20px auto;
-        padding: 15px;
-    }
-
-    .dashboard-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .filter-grid {
-        grid-template-columns: 1fr;
-    }
-    .filter-buttons {
-        flex-direction: column;
-    }
-
-    .header-with-button {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-    .header-with-button h2 {
-        width: 100%;
-        text-align: center;
-        margin-bottom: 10px;
-    }
-    .header-with-button .btn {
-        width: 100%;
-    }
-
-    .search-filter-container {
-        flex-direction: column;
-        align-items: stretch;
-    }
-    .search-filter-container .search-input,
-    .search-filter-container .btn-sm {
-        width: 100%;
-    }
-}
-
-/* Para telas muito pequenas, garantir que formulários não quebrem muito */
-@media (max-width: 576px) {
-    .form-actions {
-        flex-direction: column;
-    }
-    .form-actions .btn {
-        width: 100%;
-    }
-}
-
