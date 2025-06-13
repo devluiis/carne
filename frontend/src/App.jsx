@@ -96,9 +96,8 @@ function App() {
     const clearGlobalAlert = () => setGlobalAlert(null);
 
     return (
-        <ThemeProvider theme={theme}> {/* */}
-            <CssBaseline /> {/* */}
-            <Router>
+        <ThemeProvider theme={theme}>
+            <CssBaseline /> 
                 <AuthProvider>
                     <GlobalAlertContext.Provider value={{ setGlobalAlert, clearGlobalAlert }}>
                         <Header />
@@ -137,7 +136,7 @@ function App() {
                     </GlobalAlertContext.Provider>
                 </AuthProvider>
             </Router>
-        </ThemeProvider> {/* */}
+        </ThemeProvider>
     );
 }
 
