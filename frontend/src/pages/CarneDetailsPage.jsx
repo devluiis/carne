@@ -1,29 +1,36 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../components/AuthProvider.jsx';
-import { useGlobalAlert } from '../App.jsx'; // Correct import and usage
+import { useGlobalAlert } from '../App.jsx';
 import ConfirmationModal from '../components/ConfirmationModal';
 import LoadingSpinner from '../components/LoadingSpinner';
 
-// Importações do Material-UI para novos componentes (opcional, pode ser feito depois de testar a correção)
+// Importações do Material-UI
 import Button from '@mui/material/Button';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Container from '@mui/material/Container';
-import CircularProgress from '@mui/material/CircularProgress';
-import TextField from '@mui/material/TextField';
-import Dialog from '@mui/material/Dialog';
+import Paper from '@mui/material/Paper'; // Para os cards de informação
+import Table from '@mui/material/Table';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TableContainer from '@mui/material/TableContainer';
+import TableHead from '@mui/material/TableHead';
+import TableRow from '@mui/material/TableRow';
+import Chip from '@mui/material/Chip'; // Para os badges de status
+import Dialog from '@mui/material/Dialog'; // Para os modais
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
+import TextField from '@mui/material/TextField';
 
 
 const CarneDetailsPage = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const { user } = useAuth();
-    const { setGlobalAlert } = useGlobalAlert(); // Correctly destructuring setGlobalAlert
+    const { setGlobalAlert } = useGlobalAlert();
 
     const [carne, setCarne] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -40,30 +47,30 @@ const CarneDetailsPage = () => {
     const [newRenegotiatedValue, setNewRenegotiatedValue] = useState('');
 
 
-    useEffect(() => {
-        const fetchCarneDetails = async () => {
-            if (!user) {
-                setError("Usuário não autenticado.");
-                setLoading(false);
-                return;
-            }
-            try {
-                const response = await api.get(`/carnes/${id}`, {
-                    headers: {
-                        Authorization: `Bearer ${user.token}`
-                    }
-                });
-                setCarne(response.data);
-            } catch (err) {
-                console.error("Erro ao buscar detalhes do carnê:", err);
-                setError(err.response?.data?.detail || "Erro ao carregar detalhes do carnê.");
-            } finally {
-                setLoading(false);
-            }
-        };
+    const fetchCarneDetails = useCallback(async () => {
+        if (!user) {
+            setError("Usuário não autenticado.");
+            setLoading(false);
+            return;
+        }
+        try {
+            const response = await api.get(`/carnes/${id}`, {
+                headers: {
+                    Authorization: `Bearer ${user.token}`
+                }
+            });
+            setCarne(response.data);
+        } catch (err) {
+            console.error("Erro ao buscar detalhes do carnê:", err);
+            setError(err.response?.data?.detail || "Erro ao carregar detalhes do carnê.");
+        } finally {
+            setLoading(false);
+        }
+    }, [id, user, setGlobalAlert]); // Usando setGlobalAlert corretamente
 
+    useEffect(() => {
         fetchCarneDetails();
-    }, [id, user, setGlobalAlert]); // Changed setAlert to setGlobalAlert here
+    }, [fetchCarneDetails]);
 
     const handlePayClick = (parcela) => {
         setParcelaToPay(parcela);
@@ -76,11 +83,11 @@ const CarneDetailsPage = () => {
         try {
             const parsedPaymentValue = parseFloat(paymentValue);
             if (isNaN(parsedPaymentValue) || parsedPaymentValue <= 0) {
-                setGlobalAlert({ type: 'warning', message: 'Por favor, insira um valor de pagamento válido.' }); // Changed setAlert
+                setGlobalAlert({ type: 'warning', message: 'Por favor, insira um valor de pagamento válido.' });
                 return;
             }
             if (parsedPaymentValue > parcelaToPay.saldo_devedor) {
-                setGlobalAlert({ type: 'warning', message: 'O valor do pagamento excede o saldo devedor da parcela.' }); // Changed setAlert
+                setGlobalAlert({ type: 'warning', message: 'O valor do pagamento excede o saldo devedor da parcela.' });
                 return;
             }
 
@@ -91,18 +98,12 @@ const CarneDetailsPage = () => {
                     Authorization: `Bearer ${user.token}`
                 }
             });
-            setGlobalAlert({ type: 'success', message: 'Pagamento registrado com sucesso!' }); // Changed setAlert
+            setGlobalAlert({ type: 'success', message: 'Pagamento registrado com sucesso!' });
             setShowPaymentModal(false);
-            // Recarrega os detalhes do carnê para atualizar o status e saldos
-            const response = await api.get(`/carnes/${id}`, {
-                headers: {
-                    Authorization: `Bearer ${user.token}`
-                }
-            });
-            setCarne(response.data);
+            fetchCarneDetails(); // Recarrega os detalhes do carnê para atualizar o status e saldos
         } catch (err) {
             console.error("Erro ao registrar pagamento:", err);
-            setGlobalAlert({ type: 'error', message: err.response?.data?.detail || 'Erro ao registrar pagamento.' }); // Changed setAlert
+            setGlobalAlert({ type: 'error', message: err.response?.data?.detail || 'Erro ao registrar pagamento.' });
         }
     };
 
@@ -122,18 +123,12 @@ const CarneDetailsPage = () => {
                     Authorization: `Bearer ${user.token}`
                 }
             });
-            setGlobalAlert({ type: 'success', message: 'Pagamento estornado com sucesso!' }); // Changed setAlert
+            setGlobalAlert({ type: 'success', message: 'Pagamento estornado com sucesso!' });
             setShowReversePaymentModal(false);
-            // Recarrega os detalhes do carnê para atualizar o status e saldos
-            const response = await api.get(`/carnes/${id}`, {
-                headers: {
-                    Authorization: `Bearer ${user.token}`
-                }
-            });
-            setCarne(response.data);
+            fetchCarneDetails(); // Recarrega os detalhes do carnê para atualizar o status e saldos
         } catch (err) {
             console.error("Erro ao estornar pagamento:", err);
-            setGlobalAlert({ type: 'error', message: err.response?.data?.detail || 'Erro ao estornar pagamento.' }); // Changed setAlert
+            setGlobalAlert({ type: 'error', message: err.response?.data?.detail || 'Erro ao estornar pagamento.' });
         }
     };
 
@@ -149,11 +144,11 @@ const CarneDetailsPage = () => {
         try {
             const parsedNewValue = newRenegotiatedValue ? parseFloat(newRenegotiatedValue) : null;
             if (newDueDate === '') {
-                setGlobalAlert({ type: 'warning', message: 'Por favor, insira a nova data de vencimento.' }); // Changed setAlert
+                setGlobalAlert({ type: 'warning', message: 'Por favor, insira a nova data de vencimento.' });
                 return;
             }
             if (parsedNewValue !== null && (isNaN(parsedNewValue) || parsedNewValue <= 0)) {
-                setGlobalAlert({ type: 'warning', message: 'Por favor, insira um novo valor válido (opcional).' }); // Changed setAlert
+                setGlobalAlert({ type: 'warning', message: 'Por favor, insira um novo valor válido (opcional).' });
                 return;
             }
 
@@ -166,248 +161,291 @@ const CarneDetailsPage = () => {
                     Authorization: `Bearer ${user.token}`
                 }
             });
-            setGlobalAlert({ type: 'success', message: 'Parcela renegociada com sucesso!' }); // Changed setAlert
+            setGlobalAlert({ type: 'success', message: 'Parcela renegociada com sucesso!' });
             setShowRenegotiateModal(false);
-            // Recarrega os detalhes do carnê para atualizar
-            const response = await api.get(`/carnes/${id}`, {
-                headers: {
-                    Authorization: `Bearer ${user.token}`
-                }
-            });
-            setCarne(response.data);
+            fetchCarneDetails(); // Recarrega os detalhes do carnê para atualizar
         } catch (err) {
             console.error("Erro ao renegociar parcela:", err);
-            setGlobalAlert({ type: 'error', message: err.response?.data?.detail || 'Erro ao renegociar parcela.' }); // Changed setAlert
+            setGlobalAlert({ type: 'error', message: err.response?.data?.detail || 'Erro ao renegociar parcela.' });
         }
     };
-
-    // A função handleGeneratePdf foi removida
 
     if (loading) {
         return <LoadingSpinner />;
     }
 
     if (error) {
-        return <div className="alert alert-danger">{error}</div>;
+        return <Typography color="error" className="text-center p-4">{error}</Typography>;
     }
 
     if (!carne) {
-        return <div className="alert alert-info">Carnê não encontrado.</div>;
+        return <Typography color="info" className="text-center p-4">Carnê não encontrado.</Typography>;
     }
 
     // Função auxiliar para formatar moeda
     const formatCurrency = (value) => {
-        return new Intl.NumberFormat('pt-BR', {
+        return new Intl.NumberFomart('pt-BR', {
             style: 'currency',
             currency: 'BRL',
         }).format(value);
     };
 
+    // Função auxiliar para determinar a cor do chip de status
+    const getStatusChipColor = (status) => {
+        switch (status.toLowerCase()) {
+            case 'quitado': return 'success';
+            case 'em atraso': return 'error';
+            case 'cancelado': return 'default';
+            case 'ativo': return 'primary';
+            case 'pago': return 'success';
+            case 'pendente': return 'warning';
+            default: return 'info';
+        }
+    };
+
     return (
-        <div className="container mt-4">
-            <h2 className="mb-4">Detalhes do Carnê: {carne.descricao}</h2>
-            <div className="card mb-3">
-                <div className="card-body">
-                    <p><strong>ID do Carnê:</strong> {carne.id_carne}</p>
-                    <p><strong>Cliente:</strong> {carne.cliente.nome} ({carne.cliente.cpf_cnpj})</p>
-                    <p><strong>Valor Total Original:</strong> {formatCurrency(carne.valor_total_original)}</p>
-                    <p><strong>Número de Parcelas:</strong> {carne.numero_parcelas}</p>
-                    {carne.data_venda && <p><strong>Data da Venda:</strong> {new Date(carne.data_venda).toLocaleDateString('pt-BR')}</p>}
-                    {carne.valor_entrada !== null && <p><strong>Valor da Entrada:</strong> {formatCurrency(carne.valor_entrada)}</p>}
-                    {carne.forma_pagamento_entrada && <p><strong>Forma de Pagamento da Entrada:</strong> {carne.forma_pagamento_entrada}</p>}
-                    <p><strong>Status do Carnê:</strong> <span className={`badge bg-${carne.status_carne === 'quitado' ? 'success' : 'warning'}`}>{carne.status_carne.toUpperCase()}</span></p>
-                    <p><strong>Parcela Fixa:</strong> {carne.parcela_fixa ? 'Sim' : 'Não'}</p>
-                    <Link to={`/carnes/edit/${carne.id_carne}`} className="btn btn-warning me-2">Editar Carnê</Link>
-                    {/* Botão de gerar PDF removido */}
-                    <Link to="/carnes" className="btn btn-secondary">Voltar aos Carnês</Link>
-                </div>
-            </div>
+        <Container maxWidth="lg" className="py-8">
+            <Typography variant="h4" component="h1" className="mb-6 text-center font-bold text-gray-800">
+                Detalhes do Carnê: {carne.descricao}
+            </Typography>
 
-            <h3 className="mb-3">Parcelas</h3>
-            <div className="table-responsive">
-                <table className="table table-striped table-hover">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Valor Devido</th>
-                            <th>Juros/Multa</th>
-                            <th>Saldo Devedor</th>
-                            <th>Valor Pago</th>
-                            <th>Vencimento</th>
-                            <th>Status</th>
-                            <th>Obs.</th>
-                            <th>Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody>
+            <Paper elevation={3} className="p-6 mb-8 rounded-lg">
+                <Typography variant="h6" component="h2" className="mb-4 font-semibold text-gray-700">Informações do Carnê</Typography>
+                <Box className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-gray-700">
+                    <Typography variant="body1"><strong>ID do Carnê:</strong> {carne.id_carne}</Typography>
+                    <Typography variant="body1"><strong>Cliente:</strong> {carne.cliente.nome} ({carne.cliente.cpf_cnpj})</Typography>
+                    <Typography variant="body1"><strong>Valor Total Original:</strong> {formatCurrency(carne.valor_total_original)}</Typography>
+                    <Typography variant="body1"><strong>Número de Parcelas:</strong> {carne.numero_parcelas}</Typography>
+                    {carne.data_venda && <Typography variant="body1"><strong>Data da Venda:</strong> {new Date(carne.data_venda).toLocaleDateString('pt-BR')}</Typography>}
+                    {carne.valor_entrada !== null && <Typography variant="body1"><strong>Valor da Entrada:</strong> {formatCurrency(carne.valor_entrada)}</Typography>}
+                    {carne.forma_pagamento_entrada && <Typography variant="body1"><strong>Forma de Pagamento da Entrada:</strong> {carne.forma_pagamento_entrada}</Typography>}
+                    <Typography variant="body1">
+                        <strong>Status do Carnê:</strong>
+                        <Chip
+                            label={carne.status_carne.toUpperCase()}
+                            color={getStatusChipColor(carne.status_carne)}
+                            className="ml-2"
+                        />
+                    </Typography>
+                    <Typography variant="body1"><strong>Parcela Fixa:</strong> {carne.parcela_fixa ? 'Sim' : 'Não'}</Typography>
+                </Box>
+                <Box className="mt-6 flex flex-wrap gap-4 justify-end">
+                    <Button
+                        variant="contained"
+                        color="warning"
+                        component={Link}
+                        to={`/carnes/edit/${carne.id_carne}`}
+                        className="flex-grow sm:flex-grow-0"
+                    >
+                        Editar Carnê
+                    </Button>
+                    <Button
+                        variant="outlined"
+                        color="secondary"
+                        component={Link}
+                        to="/carnes"
+                        className="flex-grow sm:flex-grow-0"
+                    >
+                        Voltar aos Carnês
+                    </Button>
+                </Box>
+            </Paper>
+
+            <Typography variant="h5" component="h2" className="mb-4 font-bold text-gray-800">Parcelas</Typography>
+            <TableContainer component={Paper} elevation={3} className="mb-8 rounded-lg">
+                <Table>
+                    <TableHead className="bg-gray-200">
+                        <TableRow>
+                            <TableCell>#</TableCell>
+                            <TableCell>Valor Devido</TableCell>
+                            <TableCell>Juros/Multa</TableCell>
+                            <TableCell>Saldo Devedor</TableCell>
+                            <TableCell>Valor Pago</TableCell>
+                            <TableCell>Vencimento</TableCell>
+                            <TableCell>Status</TableCell>
+                            <TableCell>Obs.</TableCell>
+                            <TableCell>Ações</TableCell>
+                        </TableRow>
+                    </TableHead>
+                    <TableBody>
                         {carne.parcelas.map(parcela => (
-                            <tr key={parcela.id_parcela}>
-                                <td>{parcela.numero_parcela}</td>
-                                <td>{formatCurrency(parcela.valor_devido)}</td>
-                                <td>{formatCurrency(parcela.juros_multa)}</td>
-                                <td>{formatCurrency(parcela.saldo_devedor)}</td>
-                                <td>{formatCurrency(parcela.valor_pago)}</td>
-                                <td>{new Date(parcela.data_vencimento).toLocaleDateString('pt-BR')}</td>
-                                <td>
-                                    <span className={`badge bg-${parcela.status_parcela === 'pago' ? 'success' :
-                                                            parcela.status_parcela === 'pendente' ? 'warning' :
-                                                            'danger'}`}>
-                                        {parcela.status_parcela.toUpperCase()}
-                                    </span>
-                                </td>
-                                <td>{parcela.observacoes || '-'}</td>
-                                <td>
-                                    {parcela.status_parcela !== 'pago' && (
-                                        <button
-                                            className="btn btn-sm btn-success me-2"
-                                            onClick={() => handlePayClick(parcela)}
-                                            disabled={!user || (user.perfil !== 'admin' && user.perfil !== 'atendente')}
-                                        >
-                                            Pagar
-                                        </button>
-                                    )}
-                                    {user.perfil === 'admin' && (
-                                        <button
-                                            className="btn btn-sm btn-info me-2"
-                                            onClick={() => handleRenegotiateClick(parcela)}
-                                        >
-                                            Renegociar
-                                        </button>
-                                    )}
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-
-            <h3 className="mb-3 mt-4">Histórico de Pagamentos</h3>
-            {carne.pagamentos && carne.pagamentos.length > 0 ? (
-                <div className="table-responsive">
-                    <table className="table table-bordered table-sm">
-                        <thead>
-                            <tr>
-                                <th>ID Pagamento</th>
-                                <th>Parcela Ref.</th>
-                                <th>Valor Pago</th>
-                                <th>Data Pagamento</th>
-                                <th>Usuário</th>
-                                <th>Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {carne.pagamentos.map(pagamento => (
-                                <tr key={pagamento.id_pagamento}>
-                                    <td>{pagamento.id_pagamento}</td>
-                                    <td>{pagamento.numero_parcela}</td>
-                                    <td>{formatCurrency(pagamento.valor_pago)}</td>
-                                    <td>{new Date(pagamento.data_pagamento).toLocaleDateString('pt-BR')}</td>
-                                    <td>{pagamento.usuario_registro_nome || 'N/A'}</td> {/* Added user info */}
-                                    <td>
+                            <TableRow key={parcela.id_parcela} className="hover:bg-gray-50">
+                                <TableCell>{parcela.numero_parcela}</TableCell>
+                                <TableCell>{formatCurrency(parcela.valor_devido)}</TableCell>
+                                <TableCell>{formatCurrency(parcela.juros_multa)}</TableCell>
+                                <TableCell>{formatCurrency(parcela.saldo_devedor)}</TableCell>
+                                <TableCell>{formatCurrency(parcela.valor_pago)}</TableCell>
+                                <TableCell>{new Date(parcela.data_vencimento).toLocaleDateString('pt-BR')}</TableCell>
+                                <TableCell>
+                                    <Chip
+                                        label={parcela.status_parcela.toUpperCase()}
+                                        color={getStatusChipColor(parcela.status_parcela)}
+                                    />
+                                </TableCell>
+                                <TableCell>{parcela.observacoes || '-'}</TableCell>
+                                <TableCell>
+                                    <Box className="flex flex-wrap gap-2">
+                                        {parcela.status_parcela !== 'pago' && (
+                                            <Button
+                                                variant="contained"
+                                                color="success"
+                                                size="small"
+                                                onClick={() => handlePayClick(parcela)}
+                                                disabled={!user || (user.perfil !== 'admin' && user.perfil !== 'atendente')}
+                                            >
+                                                Pagar
+                                            </Button>
+                                        )}
                                         {user.perfil === 'admin' && (
-                                            <button
-                                                className="btn btn-sm btn-danger"
+                                            <Button
+                                                variant="contained"
+                                                color="info"
+                                                size="small"
+                                                onClick={() => handleRenegotiateClick(parcela)}
+                                            >
+                                                Renegociar
+                                            </Button>
+                                        )}
+                                    </Box>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </TableContainer>
+
+            <Typography variant="h5" component="h2" className="mb-4 font-bold text-gray-800">Histórico de Pagamentos</Typography>
+            {carne.pagamentos && carne.pagamentos.length > 0 ? (
+                <TableContainer component={Paper} elevation={3} className="mb-8 rounded-lg">
+                    <Table size="small"> {/* Tabela menor para histórico */}
+                        <TableHead className="bg-gray-100">
+                            <TableRow>
+                                <TableCell>ID Pagamento</TableCell>
+                                <TableCell>Parcela Ref.</TableCell>
+                                <TableCell>Valor Pago</TableCell>
+                                <TableCell>Data Pagamento</TableCell>
+                                <TableCell>Usuário</TableCell>
+                                <TableCell>Ações</TableCell>
+                            </TableRow>
+                        </TableHead>
+                        <TableBody>
+                            {carne.pagamentos.map(pagamento => (
+                                <TableRow key={pagamento.id_pagamento} className="hover:bg-gray-50">
+                                    <TableCell>{pagamento.id_pagamento}</TableCell>
+                                    <TableCell>{pagamento.numero_parcela}</TableCell>
+                                    <TableCell>{formatCurrency(pagamento.valor_pago)}</TableCell>
+                                    <TableCell>{new Date(pagamento.data_pagamento).toLocaleDateString('pt-BR')}</TableCell>
+                                    <TableCell>{pagamento.usuario_registro_nome || 'N/A'}</TableCell>
+                                    <TableCell>
+                                        {user.perfil === 'admin' && (
+                                            <Button
+                                                variant="contained"
+                                                color="error"
+                                                size="small"
                                                 onClick={() => handleReversePaymentClick(
                                                     carne.parcelas.find(p => p.id_parcela === pagamento.id_parcela),
                                                     pagamento
                                                 )}
                                             >
                                                 Estornar
-                                            </button>
+                                            </Button>
                                         )}
-                                    </td>
-                                </tr>
+                                    </TableCell>
+                                </TableRow>
                             ))}
-                        </tbody>
-                    </table>
-                </div>
+                        </TableBody>
+                    </Table>
+                </TableContainer>
             ) : (
-                <p>Nenhum pagamento registrado para este carnê.</p>
+                <Typography className="text-center text-gray-600">Nenhum pagamento registrado para este carnê.</Typography>
             )}
 
-            {/* Modal de Pagamento */}
-            <ConfirmationModal
-                isOpen={showPaymentModal}
-                title="Registrar Pagamento"
-                message={
-                    <div>
-                        <p>Deseja registrar o pagamento para a parcela {parcelaToPay?.numero_parcela}?</p>
-                        <p>Valor Devido: <strong>{formatCurrency(parcelaToPay?.saldo_devedor || 0)}</strong></p>
-                        <div className="mb-3">
-                            <label htmlFor="paymentValue" className="form-label">Valor a Pagar:</label>
-                            <input
-                                type="number"
-                                className="form-control"
-                                id="paymentValue"
-                                value={paymentValue}
-                                onChange={(e) => setPaymentValue(e.target.value)}
-                                step="0.01"
-                                min="0.01"
-                                max={parcelaToPay?.saldo_devedor.toFixed(2)}
-                            />
-                        </div>
-                    </div>
-                }
-                onConfirm={handlePaymentSubmit}
-                onCancel={() => setShowPaymentModal(false)}
-                confirmText="Confirmar Pagamento"
-                cancelText="Cancelar"
-            />
+            {/* Modal de Pagamento (usando Dialog do MUI) */}
+            <Dialog open={showPaymentModal} onClose={() => setShowPaymentModal(false)}>
+                <DialogTitle>Registrar Pagamento</DialogTitle>
+                <DialogContent>
+                    <Typography className="mb-2">Deseja registrar o pagamento para a parcela {parcelaToPay?.numero_parcela}?</Typography>
+                    <Typography className="mb-4">Valor Devido: <strong>{formatCurrency(parcelaToPay?.saldo_devedor || 0)}</strong></Typography>
+                    <TextField
+                        autoFocus
+                        margin="dense"
+                        id="paymentValue"
+                        label="Valor a Pagar"
+                        type="number"
+                        fullWidth
+                        variant="outlined"
+                        value={paymentValue}
+                        onChange={(e) => setPaymentValue(e.target.value)}
+                        inputProps={{ step: "0.01", min: "0.01", max: parcelaToPay?.saldo_devedor.toFixed(2) }}
+                    />
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setShowPaymentModal(false)} variant="outlined">
+                        Cancelar
+                    </Button>
+                    <Button onClick={handlePaymentSubmit} variant="contained" color="success">
+                        Confirmar Pagamento
+                    </Button>
+                </DialogActions>
+            </Dialog>
 
-            {/* Modal de Estorno de Pagamento */}
-            <ConfirmationModal
-                isOpen={showReversePaymentModal}
-                title="Estornar Pagamento"
-                message={
-                    <div>
-                        <p>Tem certeza que deseja estornar o pagamento de <strong>{formatCurrency(paymentToReverse?.valor_pago || 0)}</strong> para a parcela {parcelaToReverse?.numero_parcela}?</p>
-                        <p className="text-danger">Esta ação não pode ser desfeita.</p>
-                    </div>
-                }
-                onConfirm={handleReversePaymentConfirm}
-                onCancel={() => setShowReversePaymentModal(false)}
-                confirmText="Sim, Estornar"
-                cancelText="Cancelar"
-            />
+            {/* Modal de Estorno de Pagamento (usando Dialog do MUI) */}
+            <Dialog open={showReversePaymentModal} onClose={() => setShowReversePaymentModal(false)}>
+                <DialogTitle>Estornar Pagamento</DialogTitle>
+                <DialogContent>
+                    <Typography className="mb-2">Tem certeza que deseja estornar o pagamento de <strong>{formatCurrency(paymentToReverse?.valor_pago || 0)}</strong> para a parcela {parcelaToReverse?.numero_parcela}?</Typography>
+                    <Typography color="error" className="font-bold">Esta ação não pode ser desfeita.</Typography>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setShowReversePaymentModal(false)} variant="outlined">
+                        Cancelar
+                    </Button>
+                    <Button onClick={handleReversePaymentConfirm} variant="contained" color="error">
+                        Sim, Estornar
+                    </Button>
+                </DialogActions>
+            </Dialog>
 
-            {/* Modal de Renegociação */}
-            <ConfirmationModal
-                isOpen={showRenegotiateModal}
-                title="Renegociar Parcela"
-                message={
-                    <div>
-                        <p>Renegociar a parcela {parcelaToRenegotiate?.numero_parcela}:</p>
-                        <div className="mb-3">
-                            <label htmlFor="newDueDate" className="form-label">Nova Data de Vencimento:</label>
-                            <input
-                                type="date"
-                                className="form-control"
-                                id="newDueDate"
-                                value={newDueDate}
-                                onChange={(e) => setNewDueDate(e.target.value)}
-                            />
-                        </div>
-                        <div className="mb-3">
-                            <label htmlFor="newRenegotiatedValue" className="form-label">Novo Valor (opcional):</label>
-                            <input
-                                type="number"
-                                className="form-control"
-                                id="newRenegotiatedValue"
-                                value={newRenegotiatedValue}
-                                onChange={(e) => setNewRenegotiatedValue(e.target.value)}
-                                step="0.01"
-                                min="0"
-                            />
-                            <small className="form-text text-muted">Deixe em branco para manter o valor original com juros/multa aplicados até a nova data de vencimento.</small>
-                        </div>
-                    </div>
-                }
-                onConfirm={handleRenegotiateSubmit}
-                onCancel={() => setShowRenegotiateModal(false)}
-                confirmText="Confirmar Renegociação"
-                cancelText="Cancelar"
-            />
-        </div>
+            {/* Modal de Renegociação (usando Dialog do MUI) */}
+            <Dialog open={showRenegotiateModal} onClose={() => setShowRenegotiateModal(false)}>
+                <DialogTitle>Renegociar Parcela</DialogTitle>
+                <DialogContent>
+                    <Typography className="mb-2">Renegociar a parcela {parcelaToRenegotiate?.numero_parcela}:</Typography>
+                    <TextField
+                        margin="dense"
+                        id="newDueDate"
+                        label="Nova Data de Vencimento"
+                        type="date"
+                        fullWidth
+                        variant="outlined"
+                        value={newDueDate}
+                        onChange={(e) => setNewDueDate(e.target.value)}
+                        InputLabelProps={{ shrink: true }}
+                        className="mb-4"
+                    />
+                    <TextField
+                        margin="dense"
+                        id="newRenegotiatedValue"
+                        label="Novo Valor (opcional)"
+                        type="number"
+                        fullWidth
+                        variant="outlined"
+                        value={newRenegotiatedValue}
+                        onChange={(e) => setNewRenegotiatedValue(e.target.value)}
+                        inputProps={{ step: "0.01", min: "0" }}
+                        helperText="Deixe em branco para manter o valor original com juros/multa aplicados até a nova data de vencimento."
+                    />
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setShowRenegotiateModal(false)} variant="outlined">
+                        Cancelar
+                    </Button>
+                    <Button onClick={handleRenegotiateSubmit} variant="contained" color="primary">
+                        Confirmar Renegociação
+                    </Button>
+                </DialogActions>
+            </Dialog>
+        </Container>
     );
 };
 
