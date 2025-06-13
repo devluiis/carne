@@ -203,8 +203,9 @@ function Header() {
     );
 
     return (
-        <AppBar position="static" sx={{ bgcolor: 'background.default', boxShadow: 3 }}> {/* MUI AppBar com cor de fundo padrão e sombra */}
-            <Toolbar className="flex justify-between items-center px-4 sm:px-6 lg:px-8"> {/* Tailwind para espaçamento e alinhamento */}
+        // Alteração aqui: Definindo uma cor de fundo escura para o AppBar
+        <AppBar position="static" sx={{ bgcolor: '#212529', boxShadow: 3 }}> {/* Use um cinza escuro, como #212529, ou 'primary.main' do seu tema MUI */}
+            <Toolbar className="flex justify-between items-center px-4 sm:px-6 lg:px-8">
                 <Typography variant="h6" component="div" className="flex-shrink-0">
                     <Link to={user ? "/dashboard" : "/"} className="text-white no-underline hover:text-gray-200">
                         Bios Store
@@ -214,16 +215,17 @@ function Header() {
                 {user && (
                     <>
                         {/* Menu para telas maiores (desktop) */}
-                        <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 2 }} className="ml-auto"> {/* Oculta em xs, mostra em md, espaçamento */}
+                        <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 2 }} className="ml-auto">
                             {menuItems.map((item) => (
                                 (item.roles.includes(user.perfil)) && (
                                     <Button
                                         key={item.text}
                                         component={Link}
                                         to={item.path}
-                                        color="inherit" // Cor do texto do botão (branca no AppBar)
-                                        className={`capitalize ${isLinkActive(item.path) ? 'bg-blue-600 hover:bg-blue-700' : 'hover:bg-gray-700'}`} // Tailwind para caps, cor ativa
-                                        sx={{ borderRadius: 1 }} // Arredondamento
+                                        // A cor do texto já é 'inherit' do AppBar ou definida pelas classes Tailwind
+                                        // Adicionando 'text-white' explicitamente para garantir visibilidade em fundo escuro
+                                        className={`capitalize ${isLinkActive(item.path) ? 'bg-blue-600 hover:bg-blue-700' : 'hover:bg-gray-700 text-white'}`}
+                                        sx={{ borderRadius: 1 }}
                                     >
                                         {item.text}
                                     </Button>
@@ -235,9 +237,9 @@ function Header() {
                                     Olá, {user.nome}! ({user.perfil})
                                 </Typography>
                                 <Button
-                                    variant="contained" 
-                                    color="error" 
-                                    size="small" 
+                                    variant="contained"
+                                    color="error"
+                                    size="small"
                                     onClick={logout}
                                 >
                                     Sair
@@ -248,17 +250,17 @@ function Header() {
                         {/* Botão de Menu Hamburger para telas pequenas (mobile) */}
                         <IconButton
                             edge="start"
-                            color="inherit"
+                            color="inherit" // Isso fará com que o ícone seja branco se o AppBar for escuro
                             aria-label="menu"
                             onClick={toggleDrawer(true)}
-                            sx={{ display: { md: 'none' } }} // Oculta em md e acima
+                            sx={{ display: { md: 'none' } }}
                         >
                             <MenuIcon />
                         </IconButton>
 
                         {/* Drawer (Menu Lateral) */}
                         <Drawer
-                            anchor="right" 
+                            anchor="right"
                             open={drawerOpen}
                             onClose={toggleDrawer(false)}
                         >
