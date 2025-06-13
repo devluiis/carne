@@ -6,12 +6,29 @@ import { useGlobalAlert } from '../App.jsx';
 import LoadingSpinner from '../components/LoadingSpinner.jsx';
 import ConfirmationModal from '../components/ConfirmationModal.jsx';
 
+// Importações do Material-UI
+import Button from '@mui/material/Button';
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
+import Container from '@mui/material/Container';
+import Paper from '@mui/material/Paper';
+import Table from '@mui/material/Table';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TableContainer from '@mui/material/TableContainer';
+import TableHead from '@mui/material/TableHead';
+import TableRow from '@mui/material/TableRow';
+import TextField from '@mui/material/TextField';
+import Grid from '@mui/material/Grid';
+
+
+// Função auxiliar para formatar moeda - CORRIGIDO Intl.NumberFomart para Intl.NumberFormat
 const formatCurrency = (value) => {
     const num = Number(value);
     if (isNaN(num)) {
         return 'N/A';
     }
-    return num.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(num);
 };
 
 function ProdutosPage() {
@@ -98,105 +115,133 @@ function ProdutosPage() {
 
     return (
         <>
-            <div className="table-container">
-                <h2 className="text-center">Gerenciamento de Produtos</h2>
+            <Container maxWidth="lg" className="py-8">
+                <Box className="flex justify-between items-center mb-6 flex-wrap gap-4">
+                    <Typography variant="h4" component="h1" className="font-bold text-gray-800 flex-grow">
+                        Gerenciamento de Produtos
+                    </Typography>
+                    <Button
+                        variant="contained"
+                        color="success"
+                        onClick={navigateToCreateProduto}
+                        className="py-2 px-4 whitespace-nowrap"
+                    >
+                        + Adicionar Novo Produto
+                    </Button>
+                </Box>
 
-                <div className="form-container filter-section">
-                    <h3>Filtrar Produtos:</h3>
-                    <div className="filter-grid">
-                        <div className="form-group">
-                            <label htmlFor="searchNome">Nome do Produto:</label>
-                            <input
+                <Paper elevation={3} className="p-6 mb-8 rounded-lg">
+                    <Typography variant="h6" component="h2" className="mb-4 font-semibold text-gray-700">Filtrar Produtos:</Typography>
+                    <Grid container spacing={3} alignItems="flex-end" className="mb-4">
+                        <Grid item xs={12} sm={6} md={4}>
+                            <TextField
+                                fullWidth
                                 id="searchNome"
+                                label="Nome do Produto"
                                 type="text"
                                 placeholder="Buscar por nome..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="form-input"
+                                variant="outlined"
+                                size="small"
                             />
-                        </div>
-                        <div className="form-group">
-                            <label htmlFor="searchCategoria">Categoria:</label>
-                            <input
+                        </Grid>
+                        <Grid item xs={12} sm={6} md={4}>
+                            <TextField
+                                fullWidth
                                 id="searchCategoria"
+                                label="Categoria"
                                 type="text"
                                 placeholder="Filtrar por categoria..."
                                 value={filterCategoria}
                                 onChange={(e) => setFilterCategoria(e.target.value)}
-                                className="form-input"
+                                variant="outlined"
+                                size="small"
                             />
-                        </div>
-                        <div className="form-group">
-                            <label htmlFor="searchMarca">Marca:</label>
-                            <input
+                        </Grid>
+                        <Grid item xs={12} sm={6} md={4}>
+                            <TextField
+                                fullWidth
                                 id="searchMarca"
+                                label="Marca"
                                 type="text"
                                 placeholder="Filtrar por marca..."
                                 value={filterMarca}
                                 onChange={(e) => setFilterMarca(e.target.value)}
-                                className="form-input"
+                                variant="outlined"
+                                size="small"
                             />
-                        </div>
-                        <div className="form-group filter-buttons">
-                            <button onClick={handleClearFilters} className="btn btn-secondary">Limpar Filtros</button>
-                        </div>
-                    </div>
-                </div>
-
-                <button onClick={navigateToCreateProduto} className="btn btn-success" style={{width: 'auto', marginBottom: '20px'}}>
-                    + Adicionar Novo Produto
-                </button>
+                        </Grid>
+                        <Grid item xs={12} sm={6} md={2}>
+                            <Button
+                                fullWidth
+                                variant="outlined"
+                                color="secondary"
+                                onClick={handleClearFilters}
+                                className="py-2"
+                            >
+                                Limpar Filtros
+                            </Button>
+                        </Grid>
+                    </Grid>
+                </Paper>
 
                 {produtosList.length === 0 ? (
-                    <p className="text-center no-data-message">
+                    <Typography className="text-center p-4 bg-gray-50 rounded-md text-gray-600 italic">
                         Nenhum produto encontrado.
-                    </p>
+                    </Typography>
                 ) : (
-                    <table className="styled-table">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Nome</th>
-                                <th>Categoria</th>
-                                <th>Marca</th>
-                                <th>Preço Venda</th>
-                                <th>Estoque</th>
-                                <th>Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {produtosList.map((produto) => (
-                                <tr key={produto.id_produto}>
-                                    <td>{produto.id_produto}</td>
-                                    <td>{produto.nome}</td>
-                                    <td>{produto.categoria || 'N/A'}</td>
-                                    <td>{produto.marca || 'N/A'}</td>
-                                    <td>{produto.preco_venda !== null ? formatCurrency(produto.preco_venda) : 'N/A'}</td>
-                                    <td>{produto.estoque_atual !== null ? produto.estoque_atual : 'N/A'} {produto.unidade_medida || ''}</td>
-                                    <td>
-                                        <div className="table-actions">
-                                            <button 
-                                                onClick={() => navigateToEditProduto(produto.id_produto)} 
-                                                className="btn btn-warning btn-sm"
-                                            >
-                                                Editar
-                                            </button>
-                                            {user?.perfil === 'admin' && (
-                                                <button 
-                                                    onClick={() => handleOpenDeleteModal(produto.id_produto)} 
-                                                    className="btn btn-danger btn-sm"
+                    <TableContainer component={Paper} elevation={3} className="rounded-lg">
+                        <Table>
+                            <TableHead className="bg-gray-200">
+                                <TableRow>
+                                    <TableCell>ID</TableCell>
+                                    <TableCell>Nome</TableCell>
+                                    <TableCell>Categoria</TableCell>
+                                    <TableCell>Marca</TableCell>
+                                    <TableCell>Preço Venda</TableCell>
+                                    <TableCell>Estoque</TableCell>
+                                    <TableCell>Ações</TableCell>
+                                </TableRow>
+                            </TableHead>
+                            <TableBody>
+                                {produtosList.map((produto) => (
+                                    <TableRow key={produto.id_produto} className="hover:bg-gray-50">
+                                        <TableCell>{produto.id_produto}</TableCell>
+                                        <TableCell>{produto.nome}</TableCell>
+                                        <TableCell>{produto.categoria || 'N/A'}</TableCell>
+                                        <TableCell>{produto.marca || 'N/A'}</TableCell>
+                                        <TableCell>{produto.preco_venda !== null ? formatCurrency(produto.preco_venda) : 'N/A'}</TableCell>
+                                        <TableCell>{produto.estoque_atual !== null ? produto.estoque_atual : 'N/A'} {produto.unidade_medida || ''}</TableCell>
+                                        <TableCell>
+                                            <Box className="flex flex-wrap gap-2">
+                                                <Button
+                                                    variant="contained"
+                                                    color="warning"
+                                                    size="small"
+                                                    onClick={() => navigateToEditProduto(produto.id_produto)}
                                                 >
-                                                    Excluir
-                                                </button>
-                                            )}
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                                                    Editar
+                                                </Button>
+                                                {user?.perfil === 'admin' && (
+                                                    <Button
+                                                        variant="contained"
+                                                        color="error"
+                                                        size="small"
+                                                        onClick={() => handleOpenDeleteModal(produto.id_produto)}
+                                                    >
+                                                        Excluir
+                                                    </Button>
+                                                )}
+                                            </Box>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </TableContainer>
                 )}
-            </div>
+            </Container>
 
             <ConfirmationModal
                 isOpen={showDeleteModal}

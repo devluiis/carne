@@ -66,7 +66,7 @@ const CarneDetailsPage = () => {
         } finally {
             setLoading(false);
         }
-    }, [id, user, setGlobalAlert]); // Usando setGlobalAlert corretamente
+    }, [id, user, setGlobalAlert]);
 
     useEffect(() => {
         fetchCarneDetails();
@@ -182,9 +182,9 @@ const CarneDetailsPage = () => {
         return <Typography color="info" className="text-center p-4">Carnê não encontrado.</Typography>;
     }
 
-    // Função auxiliar para formatar moeda
+    // Função auxiliar para formatar moeda - CORRIGIDO Intl.NumberFomart para Intl.NumberFormat
     const formatCurrency = (value) => {
-        return new Intl.NumberFomart('pt-BR', {
+        return new Intl.NumberFormat('pt-BR', {
             style: 'currency',
             currency: 'BRL',
         }).format(value);
