@@ -8,7 +8,7 @@ export default defineConfig({
   resolve: {
     alias: {
       // Define aliases de caminho para diretórios específicos usando new URL e import.meta.url
-      // Esta é uma forma mais robusta de resolver caminhos absolutos no Vite.
+      // Esta é a forma mais robusta de resolver caminhos absolutos no Vite.
       '@components': new URL('./src/components', import.meta.url).pathname,
       '@pages': new URL('./src/pages', import.meta.url).pathname,
       '@': new URL('./src', import.meta.url).pathname, // Um alias genérico para a pasta 'src'

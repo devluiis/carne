@@ -1,13 +1,13 @@
 // frontend/src/App.jsx
 import React, { useState, createContext, useContext } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
-import { AuthProvider, useAuth } from '@components/AuthProvider.jsx'; // Caminho atualizado
+import { AuthProvider, useAuth } from '@components/AuthProvider.jsx'; // Usando alias
 
-// Importações das páginas (caminhos atualizados)
+// Importações das páginas (caminhos usando alias)
 import LoginPage from '@pages/LoginPage.jsx';
 import DashboardPage from '@pages/DashboardPage.jsx';
 import ClientsPage from '@pages/ClientsPage.jsx';
-import ClientForm from '@components/ClientForm.jsx'; // Caminho atualizado
+import ClientForm from '@components/ClientForm.jsx'; // Usando alias
 import ClientDetailsPage from '@pages/ClientDetailsPage.jsx';
 import CarnesPage from '@pages/CarnesPage.jsx';
 import CarneForm from '@pages/CarneForm.jsx';
@@ -20,11 +20,11 @@ import RegisterUserPage from '@pages/RegisterUserPage.jsx';
 import RegisterAdminPage from '@pages/RegisterAdminPage.jsx';
 import RegisterUserByAdminPage from '@pages/RegisterUserByAdminPage.jsx';
 
-// Importações para produtos (caminhos atualizados)
+// Importações para produtos (caminhos usando alias)
 import ProdutosPage from '@pages/ProdutosPage.jsx';
 import ProdutoFormPage from '@pages/ProdutoFormPage.jsx';
 
-// Seu GlobalAlert e Contexto (caminhos atualizados)
+// Seu GlobalAlert e Contexto (caminhos usando alias)
 import GlobalAlert from '@components/GlobalAlert.jsx';
 import LoadingSpinner from '@components/LoadingSpinner.jsx';
 
@@ -48,9 +48,12 @@ import MenuIcon from '@mui/icons-material/Menu';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
+import AccountCircle from '@mui/icons-material/AccountCircle';
+import ExitToAppIcon from '@mui/icons-material/ExitToApp';
+
 
 // Material-UI para tema e normalização de CSS
-import { createTheme, ThemeProvider } from '@mui/material/styles';
+import { createTheme, ThemeProvider, useTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 
 
@@ -103,7 +106,7 @@ const AdminRoute = ({ children }) => {
 };
 
 // Componente principal da aplicação
-function App() {
+export default function App() {
     const [globalAlert, setGlobalAlert] = useState(null);
     const clearGlobalAlert = () => setGlobalAlert(null);
 
@@ -166,6 +169,7 @@ function Header() {
     const { user, logout } = useAuth();
     const location = useLocation();
     const [drawerOpen, setDrawerOpen] = useState(false);
+    const theme = useTheme();
 
     // Estados e handlers para os menus suspensos de Relatórios e Registros
     const [anchorElReports, setAnchorElReports] = useState(null);
@@ -206,7 +210,6 @@ function Header() {
         // Verifica se o path exato ou um sub-caminho está ativo
         return location.pathname === path ||
                location.pathname.startsWith(path + '/') ||
-               // Lida com paths com parâmetros como /clients/edit/:id
                (path.includes(':') && location.pathname.startsWith(path.substring(0, path.indexOf(':'))));
     };
 
@@ -239,7 +242,7 @@ function Header() {
                 { text: 'Novo Atendente', path: '/register-atendente', roles: ['admin'] },
             ]
         },
-        { text: 'Meu Perfil', path: '/profile', roles: ['admin', 'atendente'], type: 'link' },
+        { text: 'Meu Perfil', path: '/profile', roles: ['admin', 'atendente'], type: 'link', icon: <AccountCircle sx={{ mr: 0.5 }} /> }, // Adicionado ícone
     ];
 
     // Conteúdo para o Drawer (menu lateral mobile)
@@ -333,7 +336,7 @@ function Header() {
                             },
                         }}
                     >
-                        Sair
+                        <ExitToAppIcon sx={{ mr: 1 }} /> Sair {/* Ícone de Sair */}
                     </Button>
                 </Box>
             )}
@@ -341,7 +344,7 @@ function Header() {
     );
 
     return (
-        <AppBar position="static" sx={{ bgcolor: theme.palette.background.appBar, boxShadow: 6 }}> {/* AppBar com fundo escuro e sombra */}
+        <AppBar position="static" sx={{ bgcolor: theme.palette.background.appBar, boxShadow: 6 }}>
             <Toolbar sx={{ minHeight: '64px', '@media (min-width:600px)': { minHeight: '64px' } }} className="flex justify-between items-center px-4 sm:px-6 lg:px-8">
                 <Typography variant="h6" component="div" sx={{ fontWeight: 'bold' }}>
                     <Link to={user ? "/dashboard" : "/"} className="text-white no-underline hover:text-gray-200">
@@ -360,20 +363,20 @@ function Header() {
                                             key={item.text}
                                             component={Link}
                                             to={item.path}
-                                            color="inherit" // Mantém a cor base do AppBar (branca para o texto)
+                                            color="inherit"
                                             className={`capitalize px-3 py-2 text-sm font-medium transition-colors duration-200 ease-in-out
                                                 ${isLinkActive(item.path)
-                                                    ? 'bg-blue-600 text-white hover:bg-blue-700' // Estilo para item ativo
-                                                    : 'text-white hover:bg-gray-700 hover:text-white' // Estilo para item inativo
+                                                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                                    : 'text-white hover:bg-gray-700 hover:text-white'
                                                 }`}
                                             sx={{
                                                 borderRadius: 1,
-                                                minWidth: 'auto', // Ajusta largura mínima
-                                                padding: '8px 12px', // Ajusta padding para botões
-                                                fontSize: '0.875rem' // Tamanho da fonte
+                                                minWidth: 'auto',
+                                                padding: '8px 12px',
+                                                fontSize: '0.875rem'
                                             }}
                                         >
-                                            {item.text}
+                                            {item.icon} {item.text}
                                         </Button>
                                     ) : ( // Renderiza um botão que abre um menu suspenso
                                         <React.Fragment key={item.text}>
@@ -455,11 +458,12 @@ function Header() {
                                     )
                                 )
                             ))}
-                            {/* Informações do usuário (desktop) */}
+                            {/* Info do usuário (DESKTOP) */}
                             <Box className="flex items-center gap-2 ml-4">
                                 <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.8rem' }} className="whitespace-nowrap">
                                     Olá, {user.nome}! ({user.perfil})
                                 </Typography>
+                                {/* Botão Sair com ícone */}
                                 <Button
                                     variant="contained"
                                     color="error"
@@ -470,9 +474,12 @@ function Header() {
                                         '&:hover': {
                                             backgroundColor: '#B71C1C',
                                         },
+                                        minWidth: 'auto', // Para que o botão não tenha uma largura mínima fixa, se for apenas um ícone
+                                        px: 1.5, // Padding horizontal menor se for apenas ícone
                                     }}
                                 >
-                                    Sair
+                                    <ExitToAppIcon /> {/* Ícone de Sair */}
+                                    <Box sx={{ display: { xs: 'none', lg: 'inline' }, ml: 0.5 }}>Sair</Box> {/* Esconde o texto em telas menores, mostra em telas maiores */}
                                 </Button>
                             </Box>
                         </Box>
@@ -508,5 +515,3 @@ function Header() {
         </AppBar>
     );
 }
-
-export default App;
