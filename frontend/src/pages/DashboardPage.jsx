@@ -4,6 +4,13 @@ import { useAuth } from '../components/AuthProvider.jsx';
 import { useGlobalAlert } from '../App.jsx';
 import LoadingSpinner from '../components/LoadingSpinner.jsx';
 
+// Importações do Material-UI
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
+import Container from '@mui/material/Container';
+import Paper from '@mui/material/Paper'; // Para os cards do dashboard
+import Button from '@mui/material/Button'; // Para o botão de tentar novamente
+
 function DashboardPage() {
     const [summaryData, setSummaryData] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -39,62 +46,104 @@ function DashboardPage() {
 
     if (!summaryData) {
         return (
-            <div className="form-container text-center">
-                <h2>Dashboard</h2>
-                <p>Não foi possível carregar os dados do dashboard ou não há dados disponíveis.</p>
-                <button onClick={fetchDashboardSummary} className="btn btn-primary" style={{width: 'auto'}}>
-                    Tentar Novamente
-                </button>
-            </div>
+            <Container component="main" maxWidth="md" className="flex flex-col items-center justify-center min-h-screen py-8">
+                <Paper elevation={3} className="p-6 mb-8 rounded-lg text-center w-full max-w-md">
+                    <Typography variant="h5" component="h2" className="mb-4 font-bold text-gray-800">
+                        Dashboard
+                    </Typography>
+                    <Typography className="mb-6 text-gray-700">
+                        Não foi possível carregar os dados do dashboard ou não há dados disponíveis.
+                    </Typography>
+                    <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={fetchDashboardSummary}
+                    >
+                        Tentar Novamente
+                    </Button>
+                </Paper>
+            </Container>
         );
     }
 
+    // Função auxiliar para determinar a cor do texto do card (apenas para este componente, não global)
+    const getCardValueColorClass = (valueType) => {
+        switch (valueType) {
+            case 'green': return 'text-green-600';
+            case 'red': return 'text-red-600';
+            case 'blue': return 'text-blue-600';
+            default: return 'text-gray-900';
+        }
+    };
+
     return (
-        <div className="form-container large-container"> {/* Usando large-container */}
-            <h2 className="text-center section-title">Painel de Controle</h2>
-            <div className="dashboard-grid"> {/* Nova classe para o grid do dashboard */}
-                <div className="card-dashboard">
-                    <h3>Total de Clientes</h3>
-                    <p className="card-value">{summaryData.total_clientes}</p>
-                </div>
-                <div className="card-dashboard">
-                    <h3>Total de Carnês</h3>
-                    <p className="card-value">{summaryData.total_carnes}</p>
-                </div>
-                <div className="card-dashboard">
-                    <h3>Carnês Ativos</h3>
-                    <p className="card-value card-value-green">{summaryData.total_carnes_ativos}</p>
-                </div>
-                <div className="card-dashboard">
-                    <h3>Carnês Quitados</h3>
-                    <p className="card-value card-value-blue">{summaryData.total_carnes_quitados}</p>
-                </div>
-                <div className="card-dashboard">
-                    <h3>Carnês em Atraso</h3>
-                    <p className="card-value card-value-red">{summaryData.total_carnes_atrasados}</p>
-                </div>
-                <div className="card-dashboard">
-                    <h3>Dívida Aberta (Total)</h3>
-                    <p className="card-value card-value-red">R$ {Number(summaryData.total_divida_geral_aberta).toFixed(2)}</p>
-                </div>
-                <div className="card-dashboard">
-                    <h3>Recebido Hoje</h3>
-                    <p className="card-value card-value-green">R$ {Number(summaryData.total_recebido_hoje).toFixed(2)}</p>
-                </div>
-                <div className="card-dashboard">
-                    <h3>Recebido no Mês</h3>
-                    <p className="card-value card-value-green">R$ {Number(summaryData.total_recebido_mes).toFixed(2)}</p>
-                </div>
-                <div className="card-dashboard">
-                    <h3>Parcelas a Vencer (7d)</h3>
-                    <p className="card-value card-value-blue">{summaryData.parcelas_a_vencer_7dias}</p>
-                </div>
-                <div className="card-dashboard">
-                    <h3>Parcelas Atrasadas</h3>
-                    <p className="card-value card-value-red">{summaryData.parcelas_atrasadas}</p>
-                </div>
-            </div>
-        </div>
+        <Container component="main" maxWidth="lg" className="py-8">
+            <Typography variant="h4" component="h1" className="mb-8 text-center font-bold text-gray-800">
+                Painel de Controle
+            </Typography>
+            <Box className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"> {/* Tailwind para grid responsivo */}
+                <Paper elevation={3} className="p-5 rounded-lg text-center bg-gray-50 flex flex-col justify-between items-center h-full"> {/* Card individual */}
+                    <Typography variant="h6" component="h3" className="mb-2 font-semibold text-gray-700">Total de Clientes</Typography>
+                    <Typography variant="h4" component="p" className={`font-bold ${getCardValueColorClass()}`}>
+                        {summaryData.total_clientes}
+                    </Typography>
+                </Paper>
+                <Paper elevation={3} className="p-5 rounded-lg text-center bg-gray-50 flex flex-col justify-between items-center h-full">
+                    <Typography variant="h6" component="h3" className="mb-2 font-semibold text-gray-700">Total de Carnês</Typography>
+                    <Typography variant="h4" component="p" className={`font-bold ${getCardValueColorClass()}`}>
+                        {summaryData.total_carnes}
+                    </Typography>
+                </Paper>
+                <Paper elevation={3} className="p-5 rounded-lg text-center bg-green-50 flex flex-col justify-between items-center h-full">
+                    <Typography variant="h6" component="h3" className="mb-2 font-semibold text-gray-700">Carnês Ativos</Typography>
+                    <Typography variant="h4" component="p" className={`font-bold ${getCardValueColorClass('green')}`}>
+                        {summaryData.total_carnes_ativos}
+                    </Typography>
+                </Paper>
+                <Paper elevation={3} className="p-5 rounded-lg text-center bg-blue-50 flex flex-col justify-between items-center h-full">
+                    <Typography variant="h6" component="h3" className="mb-2 font-semibold text-gray-700">Carnês Quitados</Typography>
+                    <Typography variant="h4" component="p" className={`font-bold ${getCardValueColorClass('blue')}`}>
+                        {summaryData.total_carnes_quitados}
+                    </Typography>
+                </Paper>
+                <Paper elevation={3} className="p-5 rounded-lg text-center bg-red-50 flex flex-col justify-between items-center h-full">
+                    <Typography variant="h6" component="h3" className="mb-2 font-semibold text-gray-700">Carnês em Atraso</Typography>
+                    <Typography variant="h4" component="p" className={`font-bold ${getCardValueColorClass('red')}`}>
+                        {summaryData.total_carnes_atrasados}
+                    </Typography>
+                </Paper>
+                <Paper elevation={3} className="p-5 rounded-lg text-center bg-red-50 flex flex-col justify-between items-center h-full">
+                    <Typography variant="h6" component="h3" className="mb-2 font-semibold text-gray-700">Dívida Aberta (Total)</Typography>
+                    <Typography variant="h4" component="p" className={`font-bold ${getCardValueColorClass('red')}`}>
+                        R$ {Number(summaryData.total_divida_geral_aberta).toFixed(2)}
+                    </Typography>
+                </Paper>
+                <Paper elevation={3} className="p-5 rounded-lg text-center bg-green-50 flex flex-col justify-between items-center h-full">
+                    <Typography variant="h6" component="h3" className="mb-2 font-semibold text-gray-700">Recebido Hoje</Typography>
+                    <Typography variant="h4" component="p" className={`font-bold ${getCardValueColorClass('green')}`}>
+                        R$ {Number(summaryData.total_recebido_hoje).toFixed(2)}
+                    </Typography>
+                </Paper>
+                <Paper elevation={3} className="p-5 rounded-lg text-center bg-green-50 flex flex-col justify-between items-center h-full">
+                    <Typography variant="h6" component="h3" className="mb-2 font-semibold text-gray-700">Recebido no Mês</Typography>
+                    <Typography variant="h4" component="p" className={`font-bold ${getCardValueColorClass('green')}`}>
+                        R$ {Number(summaryData.total_recebido_mes).toFixed(2)}
+                    </Typography>
+                </Paper>
+                <Paper elevation={3} className="p-5 rounded-lg text-center bg-blue-50 flex flex-col justify-between items-center h-full">
+                    <Typography variant="h6" component="h3" className="mb-2 font-semibold text-gray-700">Parcelas a Vencer (7d)</Typography>
+                    <Typography variant="h4" component="p" className={`font-bold ${getCardValueColorClass('blue')}`}>
+                        {summaryData.parcelas_a_vencer_7dias}
+                    </Typography>
+                </Paper>
+                <Paper elevation={3} className="p-5 rounded-lg text-center bg-red-50 flex flex-col justify-between items-center h-full">
+                    <Typography variant="h6" component="h3" className="mb-2 font-semibold text-gray-700">Parcelas Atrasadas</Typography>
+                    <Typography variant="h4" component="p" className={`font-bold ${getCardValueColorClass('red')}`}>
+                        {summaryData.parcelas_atrasadas}
+                    </Typography>
+                </Paper>
+            </Box>
+        </Container>
     );
 }
 

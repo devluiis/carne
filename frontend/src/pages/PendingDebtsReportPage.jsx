@@ -5,19 +5,45 @@ import { useAuth } from '../components/AuthProvider.jsx';
 import { useGlobalAlert } from '../App.jsx';
 import LoadingSpinner from '../components/LoadingSpinner.jsx';
 
-const getStatusStyle = (status) => {
-    switch (status) {
-        case 'Paga':
-        case 'Paga com Atraso':
-            return { color: '#28a745', fontWeight: 'bold' };
-        case 'Atrasada':
-            return { color: '#dc3545', fontWeight: 'bold' };
-        case 'Parcialmente Paga':
-            return { color: '#fd7e14', fontWeight: 'bold' };
-        case 'Pendente':
-        default:
-            return { color: '#007bff', fontWeight: 'bold' };
+// Importações do Material-UI
+import Button from '@mui/material/Button';
+import TextField from '@mui/material/TextField';
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
+import Container from '@mui/material/Container';
+import Paper from '@mui/material/Paper';
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
+import InputLabel from '@mui/material/InputLabel';
+import FormControl from '@mui/material/FormControl';
+import Table from '@mui/material/Table';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TableContainer from '@mui/material/TableContainer';
+import TableHead from '@mui/material/TableHead';
+import TableRow from '@mui/material/TableRow';
+import Chip from '@mui/material/Chip'; // Para o status
+
+// Função auxiliar para determinar a cor do chip de status da parcela
+const getStatusChipColor = (status) => {
+    switch (status.toLowerCase()) {
+        case 'paga':
+        case 'paga com atraso': return 'success';
+        case 'atrasada': return 'error';
+        case 'parcialmente paga': return 'warning';
+        case 'pendente': return 'primary';
+        case 'renegociada': return 'info';
+        default: return 'default';
     }
+};
+
+// Função auxiliar para formatar moeda (reutilizada)
+const formatCurrency = (value) => {
+    const num = Number(value);
+    if (isNaN(num)) {
+        return 'N/A';
+    }
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(num);
 };
 
 function PendingDebtsReportPage() {
@@ -124,85 +150,108 @@ function PendingDebtsReportPage() {
         }
     };
 
-    if (!user) return <p className="text-center text-danger">Faça login para acessar esta página.</p>;
+    if (!user) return <Typography color="error" className="text-center p-4">Faça login para acessar esta página.</Typography>;
     if (loadingClients && clientOptions.length === 0) return <LoadingSpinner message="Carregando lista de clientes..." />;
 
     return (
-        <div className="form-container large-container"> {/* Usando large-container */}
-            <h2 className="text-center">Relatório de Dívidas Pendentes por Cliente</h2>
+        <Container component="main" maxWidth="lg" className="py-8">
+            <Typography variant="h4" component="h1" className="mb-6 text-center font-bold text-gray-800">
+                Relatório de Dívidas Pendentes por Cliente
+            </Typography>
 
-            <form onSubmit={handleSubmit} className="filter-form-row"> {/* Nova classe para o formulário de filtro */}
-                <div className="form-group flex-grow"> {/* flex-grow para o select */}
-                    <label htmlFor="clientReportSelect">Cliente:</label>
-                    <select
-                        id="clientReportSelect"
-                        value={selectedClientId}
-                        onChange={handleClientSelectionChange}
-                        className="form-select"
+            <Paper elevation={3} className="p-6 mb-8 rounded-lg">
+                <Box component="form" onSubmit={handleSubmit} noValidate className="flex flex-col sm:flex-row gap-4 items-end">
+                    <FormControl fullWidth margin="normal" size="small" className="flex-grow sm:flex-grow">
+                        <InputLabel id="clientReportSelect-label">Cliente</InputLabel>
+                        <Select
+                            labelId="clientReportSelect-label"
+                            id="clientReportSelect"
+                            value={selectedClientId}
+                            label="Cliente"
+                            onChange={handleClientSelectionChange}
+                        >
+                            <MenuItem value="">
+                                <em>-- Selecione um Cliente --</em>
+                            </MenuItem>
+                            {clientOptions.map(client => (
+                                <MenuItem key={client.id_cliente} value={client.id_cliente}>
+                                    {client.nome} ({client.cpf_cnpj})
+                                </MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
+                    <Button
+                        type="submit"
+                        variant="contained"
+                        disabled={loadingReport || !selectedClientId || selectedClientId === "0"}
+                        className="py-2 px-4"
                     >
-                        <option value="">-- Selecione um Cliente --</option>
-                        {clientOptions.map(client => (
-                            <option key={client.id_cliente} value={client.id_cliente}>
-                                {client.nome} ({client.cpf_cnpj})
-                            </option>
-                        ))}
-                    </select>
-                </div>
-                <button type="submit" className="btn btn-primary" disabled={loadingReport || !selectedClientId || selectedClientId === "0"}>
-                    {loadingReport ? 'Gerando...' : 'Gerar Relatório'}
-                </button>
-            </form>
+                        {loadingReport ? 'Gerando...' : 'Gerar Relatório'}
+                    </Button>
+                </Box>
+            </Paper>
 
             {loadingReport && <LoadingSpinner message="Gerando relatório..." />}
 
             {!loadingReport && !reportData && (
-                 <p className="text-center no-data-message">{initialMessage}</p>
+                 <Typography className="text-center p-4 bg-gray-50 rounded-md text-gray-600 italic">
+                     {initialMessage}
+                 </Typography>
             )}
 
             {reportData && (
-                <div className="report-results-section"> {/* Nova classe para a seção de resultados */}
-                    <h3 className="section-title">Dívidas Pendentes para: {reportData.cliente_nome} ({reportData.cliente_cpf_cnpj})</h3>
-                    <p className="total-debt-summary">Total da Dívida Pendente: <strong className="text-danger">R$ {Number(reportData.total_divida_pendente).toFixed(2)}</strong></p>
+                <Paper elevation={3} className="p-6 mb-8 rounded-lg">
+                    <Typography variant="h5" component="h3" className="mb-4 font-bold text-gray-800">
+                        Dívidas Pendentes para: {reportData.cliente_nome} ({reportData.cliente_cpf_cnpj})
+                    </Typography>
+                    <Typography variant="h6" className="mb-4 text-red-600 font-bold">
+                        Total da Dívida Pendente: {formatCurrency(reportData.total_divida_pendente)}
+                    </Typography>
 
                     {reportData.parcelas_pendentes.length === 0 ? (
-                        <p className="text-center no-data-message">Nenhuma parcela pendente encontrada para este cliente.</p>
+                        <Typography className="text-center p-4 bg-gray-50 rounded-md text-gray-600 italic">
+                            Nenhuma parcela pendente encontrada para este cliente.
+                        </Typography>
                     ) : (
-                        <table className="styled-table">
-                            <thead>
-                                <tr>
-                                    <th>Carnê (Descrição)</th>
-                                    <th>Parcela Nº</th>
-                                    <th>Vencimento</th>
-                                    <th>Valor Devido</th>
-                                    <th>Juros/Multa</th>
-                                    <th>Valor Pago</th>
-                                    <th>Saldo Devedor</th>
-                                    <th>Status Parcela</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {reportData.parcelas_pendentes.map((parcela) => (
-                                    <tr key={parcela.id_parcela}>
-                                        <td>{parcela.carnes_descricao || `ID ${parcela.id_carne}`}</td>
-                                        <td>{parcela.numero_parcela}</td>
-                                        <td>{new Date(parcela.data_vencimento + 'T00:00:00').toLocaleDateString()}</td>
-                                        <td>R$ {Number(parcela.valor_devido).toFixed(2)}</td>
-                                        <td>R$ {Number(parcela.juros_multa).toFixed(2)}</td>
-                                        <td>R$ {Number(parcela.valor_pago).toFixed(2)}</td>
-                                        <td>R$ {Number(parcela.saldo_devedor).toFixed(2)}</td>
-                                        <td>
-                                            <span style={getStatusStyle(parcela.status_parcela)}>
-                                                {parcela.status_parcela}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                        <TableContainer>
+                            <Table size="small">
+                                <TableHead className="bg-gray-200">
+                                    <TableRow>
+                                        <TableCell>Carnê (Descrição)</TableCell>
+                                        <TableCell>Parcela Nº</TableCell>
+                                        <TableCell>Vencimento</TableCell>
+                                        <TableCell>Valor Devido</TableCell>
+                                        <TableCell>Juros/Multa</TableCell>
+                                        <TableCell>Valor Pago</TableCell>
+                                        <TableCell>Saldo Devedor</TableCell>
+                                        <TableCell>Status Parcela</TableCell>
+                                    </TableRow>
+                                </TableHead>
+                                <TableBody>
+                                    {reportData.parcelas_pendentes.map((parcela) => (
+                                        <TableRow key={parcela.id_parcela} className="hover:bg-gray-50">
+                                            <TableCell>{parcela.carnes_descricao || `ID ${parcela.id_carne}`}</TableCell>
+                                            <TableCell>{parcela.numero_parcela}</TableCell>
+                                            <TableCell>{new Date(parcela.data_vencimento + 'T00:00:00').toLocaleDateString('pt-BR')}</TableCell>
+                                            <TableCell>{formatCurrency(parcela.valor_devido)}</TableCell>
+                                            <TableCell>{formatCurrency(parcela.juros_multa)}</TableCell>
+                                            <TableCell>{formatCurrency(parcela.valor_pago)}</TableCell>
+                                            <TableCell>{formatCurrency(parcela.saldo_devedor)}</TableCell>
+                                            <TableCell>
+                                                <Chip
+                                                    label={parcela.status_parcela.toUpperCase()}
+                                                    color={getStatusChipColor(parcela.status_parcela)}
+                                                />
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </TableContainer>
                     )}
-                </div>
+                </Paper>
             )}
-        </div>
+        </Container>
     );
 }
 

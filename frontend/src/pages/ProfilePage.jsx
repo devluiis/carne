@@ -10,6 +10,7 @@ import TextField from '@mui/material/TextField';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Container from '@mui/material/Container';
+import Paper from '@mui/material/Paper';
 import CircularProgress from '@mui/material/CircularProgress';
 
 function ProfilePage() {
@@ -48,22 +49,12 @@ function ProfilePage() {
     }
 
     return (
-        <Container component="main" maxWidth="sm" className="flex items-center justify-center min-h-screen py-8">
-            <Box
-                sx={{
-                    p: 4, // padding-4
-                    borderRadius: 2, // rounded-lg
-                    boxShadow: 3, // shadow-md
-                    bgcolor: 'background.paper', // bg-white
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                }}
-                className="w-full max-w-md mx-auto" // Tailwind classes
-            >
-                <Typography component="h1" variant="h5" className="mb-6 font-bold text-gray-800">
+        <Container component="main" maxWidth="xs" className="flex items-center justify-center min-h-screen py-8">
+            <Paper elevation={3} className="p-6 mb-8 rounded-lg w-full max-w-md">
+                <Typography component="h1" variant="h5" className="mb-6 text-center font-bold text-gray-800">
                     Meu Perfil
                 </Typography>
+                
                 <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1 }} className="w-full">
                     <TextField
                         margin="normal"
@@ -104,8 +95,9 @@ function ProfilePage() {
                         id="profileDataCadastro"
                         label="Data de Cadastro"
                         name="data_cadastro"
-                        value={new Date(user.data_cadastro).toLocaleDateString()}
+                        value={new Date(user.data_cadastro).toLocaleDateString('pt-BR')}
                         disabled
+                        InputLabelProps={{ shrink: true }} // Para garantir que o label não se sobreponha à data
                         className="mb-6"
                     />
                     <Button
@@ -119,7 +111,7 @@ function ProfilePage() {
                         {submitLoading ? <CircularProgress size={24} color="inherit" /> : 'Atualizar Perfil'}
                     </Button>
                 </Box>
-            </Box>
+            </Paper>
         </Container>
     );
 }
