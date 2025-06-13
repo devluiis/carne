@@ -40,33 +40,33 @@ import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemText from '@mui/material/ListItemText';
-import MenuIcon from '@mui/icons-material/Menu'; // Certifique-se de ter instalado: npm install @mui/icons-material
-import { createTheme, ThemeProvider } from '@mui/material/styles'; //
-import CssBaseline from '@mui/material/CssBaseline'; //
+import MenuIcon from '@mui/icons-material/Menu';
+import { createTheme, ThemeProvider } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
 
 
 // 1. Definição de um Tema Material-UI (Opcional, mas altamente recomendado para consistência)
-const theme = createTheme({ //
-  palette: { //
-    primary: { //
+const theme = createTheme({
+  palette: {
+    primary: {
       main: '#3F51B5', // Um azul mais vibrante para a cor principal do seu tema
-    }, //
-    secondary: { //
+    },
+    secondary: {
       main: '#FFC107', // Amarelo/laranja para destaque
-    }, //
-    error: { //
+    },
+    error: {
       main: '#D32F2F', // Vermelho padrão para erros
-    }, //
-    background: { //
+    },
+    background: {
       default: '#f4f7f6', // Fundo claro da página
       paper: '#FFFFFF', // Fundo de componentes como cards e modais
       appBar: '#2C3E50', // Cor de fundo para a AppBar, um azul escuro
-    }, //
-  }, //
-  typography: { //
-    fontFamily: 'Roboto, sans-serif', //
-  }, //
-}); //
+    },
+  },
+  typography: {
+    fontFamily: 'Roboto, sans-serif',
+  },
+});
 
 
 const GlobalAlertContext = createContext(null);
@@ -97,7 +97,9 @@ function App() {
 
     return (
         <ThemeProvider theme={theme}>
-            <CssBaseline /> 
+            <CssBaseline />
+            {/* INÍCIO DA CORREÇÃO: Router deve envolver todo o conteúdo que utiliza o roteamento */}
+            <Router>
                 <AuthProvider>
                     <GlobalAlertContext.Provider value={{ setGlobalAlert, clearGlobalAlert }}>
                         <Header />
@@ -136,6 +138,7 @@ function App() {
                     </GlobalAlertContext.Provider>
                 </AuthProvider>
             </Router>
+            {/* FIM DA CORREÇÃO: Router fechado aqui */}
         </ThemeProvider>
     );
 }
@@ -210,7 +213,7 @@ function Header() {
                                     color: 'white', // Garante que o texto seja branco no drawer
                                 }}
                             >
-                                <ListItemText primary={item.text} sx={{ color: 'inherit' }} /> {/* Herda a cor do ListItemButton */}
+                                <ListItemText primary={item.text} sx={{ color: 'inherit' }} />
                             </ListItemButton>
                         </ListItem>
                     )
@@ -229,7 +232,7 @@ function Header() {
                             '&:hover': {
                                 backgroundColor: '#B71C1C', // Tom mais escuro no hover
                             }, //
-                        }} //
+                        }}
                     >
                         Sair
                     </Button>
@@ -239,9 +242,9 @@ function Header() {
     );
 
     return (
-        <AppBar position="static" sx={{ bgcolor: theme.palette.background.appBar, boxShadow: 6 }}> {/* Usa a cor definida no tema, e sombra mais forte */}
-            <Toolbar sx={{ minHeight: '64px', '@media (min-width:600px)': { minHeight: '64px' } }} className="flex justify-between items-center px-4 sm:px-6 lg:px-8"> {/* Garante altura mínima para um bom visual */}
-                <Typography variant="h6" component="div" sx={{ fontWeight: 'bold' }}> {/* Texto mais em negrito para o logo */}
+        <AppBar position="static" sx={{ bgcolor: theme.palette.background.appBar, boxShadow: 6 }}>
+            <Toolbar sx={{ minHeight: '64px', '@media (min-width:600px)': { minHeight: '64px' } }} className="flex justify-between items-center px-4 sm:px-6 lg:px-8">
+                <Typography variant="h6" component="div" sx={{ fontWeight: 'bold' }}>
                     <Link to={user ? "/dashboard" : "/"} className="text-white no-underline hover:text-gray-200">
                         Bios Store
                     </Link>
@@ -250,25 +253,25 @@ function Header() {
                 {user && (
                     <>
                         {/* Menu para telas maiores (desktop) */}
-                        <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 1 }} className="ml-auto"> {/* Reduz o gap entre os botões para melhor aproveitamento do espaço */}
+                        <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 1 }} className="ml-auto">
                             {menuItems.map((item) => (
                                 (item.roles.includes(user.perfil)) && (
                                     <Button
                                         key={item.text}
                                         component={Link}
                                         to={item.path}
-                                        color="inherit" // Mantém a cor base do AppBar (branca)
+                                        color="inherit"
                                         className={`capitalize px-3 py-2 text-sm font-medium transition-colors duration-200 ease-in-out
                                             ${isLinkActive(item.path)
-                                                ? 'bg-blue-600 text-white hover:bg-blue-700' // Cor de destaque para ativo
-                                                : 'text-white hover:bg-gray-700 hover:text-white' // Cores para inativo no hover
+                                                ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                                : 'text-white hover:bg-gray-700 hover:text-white'
                                             }`}
                                         sx={{
                                             borderRadius: 1,
-                                            minWidth: 'auto', // Ajusta largura mínima
-                                            padding: '8px 12px', // Ajusta padding para botões
-                                            fontSize: '0.875rem' // Tamanho da fonte
-                                        }} //
+                                            minWidth: 'auto',
+                                            padding: '8px 12px',
+                                            fontSize: '0.875rem'
+                                        }}
                                     >
                                         {item.text}
                                     </Button>
@@ -276,7 +279,7 @@ function Header() {
                             ))}
                             {/* Info do usuário (DESKTOP) */}
                             <Box className="flex items-center gap-2 ml-4">
-                                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.8rem' }} className="whitespace-nowrap"> {/* Texto mais discreto */}
+                                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.8rem' }} className="whitespace-nowrap">
                                     Olá, {user.nome}! ({user.perfil})
                                 </Typography>
                                 <Button
@@ -285,11 +288,11 @@ function Header() {
                                     size="small"
                                     onClick={logout}
                                     sx={{
-                                        backgroundColor: '#D32F2F', // Vermelho mais forte
+                                        backgroundColor: '#D32F2F',
                                         '&:hover': {
-                                            backgroundColor: '#B71C1C', // Tom mais escuro no hover
-                                        }, //
-                                    }} //
+                                            backgroundColor: '#B71C1C',
+                                        },
+                                    }}
                                 >
                                     Sair
                                 </Button>
@@ -302,7 +305,7 @@ function Header() {
                             color="inherit"
                             aria-label="menu"
                             onClick={toggleDrawer(true)}
-                            sx={{ display: { md: 'none' }, color: 'white' }} // Garante que o ícone seja branco
+                            sx={{ display: { md: 'none' }, color: 'white' }}
                         >
                             <MenuIcon />
                         </IconButton>
@@ -312,12 +315,12 @@ function Header() {
                             anchor="right"
                             open={drawerOpen}
                             onClose={toggleDrawer(false)}
-                            PaperProps={{ // Estilo para o Paper do Drawer
+                            PaperProps={{
                                 sx: {
-                                    backgroundColor: theme.palette.background.appBar, // Fundo do drawer igual ao AppBar
-                                    color: 'white', // Texto branco
-                                }, //
-                            }} //
+                                    backgroundColor: theme.palette.background.appBar,
+                                    color: 'white',
+                                },
+                            }}
                         >
                             {drawerContent}
                         </Drawer>
