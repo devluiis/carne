@@ -2,15 +2,28 @@ import React, { useState, useEffect, useContext } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../components/AuthProvider.jsx';
-import { useGlobalAlert } from '../App.jsx';
+import { useGlobalAlert } from '../App.jsx'; // Correct import and usage
 import ConfirmationModal from '../components/ConfirmationModal';
 import LoadingSpinner from '../components/LoadingSpinner';
+
+// Importações do Material-UI para novos componentes (opcional, pode ser feito depois de testar a correção)
+import Button from '@mui/material/Button';
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
+import Container from '@mui/material/Container';
+import CircularProgress from '@mui/material/CircularProgress';
+import TextField from '@mui/material/TextField';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
+
 
 const CarneDetailsPage = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const { user } = useAuth();
-    const { setGlobalAlert } = useGlobalAlert();
+    const { setGlobalAlert } = useGlobalAlert(); // Correctly destructuring setGlobalAlert
 
     const [carne, setCarne] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -50,7 +63,7 @@ const CarneDetailsPage = () => {
         };
 
         fetchCarneDetails();
-    }, [id, user, setAlert]);
+    }, [id, user, setGlobalAlert]); // Changed setAlert to setGlobalAlert here
 
     const handlePayClick = (parcela) => {
         setParcelaToPay(parcela);
@@ -63,11 +76,11 @@ const CarneDetailsPage = () => {
         try {
             const parsedPaymentValue = parseFloat(paymentValue);
             if (isNaN(parsedPaymentValue) || parsedPaymentValue <= 0) {
-                setAlert({ type: 'danger', message: 'Por favor, insira um valor de pagamento válido.' });
+                setGlobalAlert({ type: 'warning', message: 'Por favor, insira um valor de pagamento válido.' }); // Changed setAlert
                 return;
             }
             if (parsedPaymentValue > parcelaToPay.saldo_devedor) {
-                setAlert({ type: 'warning', message: 'O valor do pagamento excede o saldo devedor da parcela.' });
+                setGlobalAlert({ type: 'warning', message: 'O valor do pagamento excede o saldo devedor da parcela.' }); // Changed setAlert
                 return;
             }
 
@@ -78,7 +91,7 @@ const CarneDetailsPage = () => {
                     Authorization: `Bearer ${user.token}`
                 }
             });
-            setAlert({ type: 'success', message: 'Pagamento registrado com sucesso!' });
+            setGlobalAlert({ type: 'success', message: 'Pagamento registrado com sucesso!' }); // Changed setAlert
             setShowPaymentModal(false);
             // Recarrega os detalhes do carnê para atualizar o status e saldos
             const response = await api.get(`/carnes/${id}`, {
@@ -89,7 +102,7 @@ const CarneDetailsPage = () => {
             setCarne(response.data);
         } catch (err) {
             console.error("Erro ao registrar pagamento:", err);
-            setAlert({ type: 'danger', message: err.response?.data?.detail || 'Erro ao registrar pagamento.' });
+            setGlobalAlert({ type: 'error', message: err.response?.data?.detail || 'Erro ao registrar pagamento.' }); // Changed setAlert
         }
     };
 
@@ -109,7 +122,7 @@ const CarneDetailsPage = () => {
                     Authorization: `Bearer ${user.token}`
                 }
             });
-            setAlert({ type: 'success', message: 'Pagamento estornado com sucesso!' });
+            setGlobalAlert({ type: 'success', message: 'Pagamento estornado com sucesso!' }); // Changed setAlert
             setShowReversePaymentModal(false);
             // Recarrega os detalhes do carnê para atualizar o status e saldos
             const response = await api.get(`/carnes/${id}`, {
@@ -120,7 +133,7 @@ const CarneDetailsPage = () => {
             setCarne(response.data);
         } catch (err) {
             console.error("Erro ao estornar pagamento:", err);
-            setAlert({ type: 'danger', message: err.response?.data?.detail || 'Erro ao estornar pagamento.' });
+            setGlobalAlert({ type: 'error', message: err.response?.data?.detail || 'Erro ao estornar pagamento.' }); // Changed setAlert
         }
     };
 
@@ -136,11 +149,11 @@ const CarneDetailsPage = () => {
         try {
             const parsedNewValue = newRenegotiatedValue ? parseFloat(newRenegotiatedValue) : null;
             if (newDueDate === '') {
-                setAlert({ type: 'danger', message: 'Por favor, insira a nova data de vencimento.' });
+                setGlobalAlert({ type: 'warning', message: 'Por favor, insira a nova data de vencimento.' }); // Changed setAlert
                 return;
             }
             if (parsedNewValue !== null && (isNaN(parsedNewValue) || parsedNewValue <= 0)) {
-                setAlert({ type: 'danger', message: 'Por favor, insira um novo valor válido (opcional).' });
+                setGlobalAlert({ type: 'warning', message: 'Por favor, insira um novo valor válido (opcional).' }); // Changed setAlert
                 return;
             }
 
@@ -153,7 +166,7 @@ const CarneDetailsPage = () => {
                     Authorization: `Bearer ${user.token}`
                 }
             });
-            setAlert({ type: 'success', message: 'Parcela renegociada com sucesso!' });
+            setGlobalAlert({ type: 'success', message: 'Parcela renegociada com sucesso!' }); // Changed setAlert
             setShowRenegotiateModal(false);
             // Recarrega os detalhes do carnê para atualizar
             const response = await api.get(`/carnes/${id}`, {
@@ -164,7 +177,7 @@ const CarneDetailsPage = () => {
             setCarne(response.data);
         } catch (err) {
             console.error("Erro ao renegociar parcela:", err);
-            setAlert({ type: 'danger', message: err.response?.data?.detail || 'Erro ao renegociar parcela.' });
+            setGlobalAlert({ type: 'error', message: err.response?.data?.detail || 'Erro ao renegociar parcela.' }); // Changed setAlert
         }
     };
 
@@ -289,6 +302,7 @@ const CarneDetailsPage = () => {
                                     <td>{pagamento.numero_parcela}</td>
                                     <td>{formatCurrency(pagamento.valor_pago)}</td>
                                     <td>{new Date(pagamento.data_pagamento).toLocaleDateString('pt-BR')}</td>
+                                    <td>{pagamento.usuario_registro_nome || 'N/A'}</td> {/* Added user info */}
                                     <td>
                                         {user.perfil === 'admin' && (
                                             <button
@@ -313,7 +327,7 @@ const CarneDetailsPage = () => {
 
             {/* Modal de Pagamento */}
             <ConfirmationModal
-                show={showPaymentModal}
+                isOpen={showPaymentModal}
                 title="Registrar Pagamento"
                 message={
                     <div>
@@ -336,13 +350,13 @@ const CarneDetailsPage = () => {
                 }
                 onConfirm={handlePaymentSubmit}
                 onCancel={() => setShowPaymentModal(false)}
-                confirmButtonText="Confirmar Pagamento"
-                cancelButtonText="Cancelar"
+                confirmText="Confirmar Pagamento"
+                cancelText="Cancelar"
             />
 
             {/* Modal de Estorno de Pagamento */}
             <ConfirmationModal
-                show={showReversePaymentModal}
+                isOpen={showReversePaymentModal}
                 title="Estornar Pagamento"
                 message={
                     <div>
@@ -352,13 +366,13 @@ const CarneDetailsPage = () => {
                 }
                 onConfirm={handleReversePaymentConfirm}
                 onCancel={() => setShowReversePaymentModal(false)}
-                confirmButtonText="Sim, Estornar"
-                cancelButtonText="Cancelar"
+                confirmText="Sim, Estornar"
+                cancelText="Cancelar"
             />
 
             {/* Modal de Renegociação */}
             <ConfirmationModal
-                show={showRenegotiateModal}
+                isOpen={showRenegotiateModal}
                 title="Renegociar Parcela"
                 message={
                     <div>
@@ -390,8 +404,8 @@ const CarneDetailsPage = () => {
                 }
                 onConfirm={handleRenegotiateSubmit}
                 onCancel={() => setShowRenegotiateModal(false)}
-                confirmButtonText="Confirmar Renegociação"
-                cancelButtonText="Cancelar"
+                confirmText="Confirmar Renegociação"
+                cancelText="Cancelar"
             />
         </div>
     );
