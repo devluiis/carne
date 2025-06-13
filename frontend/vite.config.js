@@ -1,21 +1,22 @@
 // frontend/vite.config.js
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import path from 'path'; // Importar o módulo 'path' do Node.js
 
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      // Define aliases de caminho para diretórios específicos usando new URL e import.meta.url
-      // Esta é a forma mais robusta de resolver caminhos absolutos no Vite.
-      '@components': new URL('./src/components', import.meta.url).pathname,
-      '@pages': new URL('./src/pages', import.meta.url).pathname,
-      '@': new URL('./src', import.meta.url).pathname, // Um alias genérico para a pasta 'src'
+      // Define aliases de caminho para diretórios específicos usando path.resolve e process.cwd()
+      // Esta é uma forma mais robusta de resolver caminhos absolutos em diferentes ambientes de build.
+      '@components': path.resolve(process.cwd(), 'src/components'),
+      '@pages': path.resolve(process.cwd(), 'src/pages'),
+      '@': path.resolve(process.cwd(), 'src'), // Um alias genérico para a pasta 'src'
 
       // Aliases para otimizar a resolução de módulos do Material-UI
-      '@mui/material': new URL('./node_modules/@mui/material', import.meta.url).pathname,
-      '@mui/icons-material': new URL('./node_modules/@mui/icons-material', import.meta.url).pathname,
+      '@mui/material': path.resolve(process.cwd(), 'node_modules/@mui/material'),
+      '@mui/icons-material': path.resolve(process.cwd(), 'node_modules/@mui/icons-material'),
     },
   },
   optimizeDeps: {
@@ -26,5 +27,5 @@ export default defineConfig({
       '@mui/icons-material',
     ],
   },
-  // REMOVA A SEÇÃO 'build.rollupOptions.external' se ela estiver presente em qualquer outro lugar.
+  // Certifique-se de que não há uma seção 'build.rollupOptions.external' que esteja excluindo esses módulos.
 });

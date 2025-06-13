@@ -1,32 +1,32 @@
 // frontend/src/App.jsx
 import React, { useState, createContext, useContext } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
-import { AuthProvider, useAuth } from '@components/AuthProvider.jsx'; // Usando alias
+import { AuthProvider, useAuth } from './components/AuthProvider.jsx'; // Caminho relativo
 
-// Importações das páginas (caminhos usando alias)
-import LoginPage from '@pages/LoginPage.jsx';
-import DashboardPage from '@pages/DashboardPage.jsx';
-import ClientsPage from '@pages/ClientsPage.jsx';
-import ClientForm from '@components/ClientForm.jsx'; // Usando alias
-import ClientDetailsPage from '@pages/ClientDetailsPage.jsx';
-import CarnesPage from '@pages/CarnesPage.jsx';
-import CarneForm from '@pages/CarneForm.jsx';
-import CarneDetailsPage from '@pages/CarneDetailsPage.jsx';
-import NovaVendaPage from '@pages/NovaVendaPage.jsx';
-import ReceiptsReportPage from '@pages/ReceiptsReportPage.jsx';
-import PendingDebtsReportPage from '@pages/PendingDebtsReportPage.jsx';
-import ProfilePage from '@pages/ProfilePage.jsx';
-import RegisterUserPage from '@pages/RegisterUserPage.jsx';
-import RegisterAdminPage from '@pages/RegisterAdminPage.jsx';
-import RegisterUserByAdminPage from '@pages/RegisterUserByAdminPage.jsx';
+// Importações das páginas (caminhos relativos)
+import LoginPage from './pages/LoginPage.jsx';
+import DashboardPage from './pages/DashboardPage.jsx';
+import ClientsPage from './pages/ClientsPage.jsx';
+import ClientForm from './components/ClientForm.jsx'; // Caminho relativo
+import ClientDetailsPage from './pages/ClientDetailsPage.jsx';
+import CarnesPage from './pages/CarnesPage.jsx';
+import CarneForm from './pages/CarneForm.jsx';
+import CarneDetailsPage from './pages/CarneDetailsPage.jsx';
+import NovaVendaPage from './pages/NovaVendaPage.jsx';
+import ReceiptsReportPage from './pages/ReceiptsReportPage.jsx';
+import PendingDebtsReportPage from './pages/PendingDebtsReportPage.jsx';
+import ProfilePage from './pages/ProfilePage.jsx';
+import RegisterUserPage from './pages/RegisterUserPage.jsx';
+import RegisterAdminPage from './pages/RegisterAdminPage.jsx';
+import RegisterUserByAdminPage from './pages/RegisterUserByAdminPage.jsx';
 
-// Importações para produtos (caminhos usando alias)
-import ProdutosPage from '@pages/ProdutosPage.jsx';
-import ProdutoFormPage from '@pages/ProdutoFormPage.jsx';
+// Importações para produtos (caminhos relativos)
+import ProdutosPage from './pages/ProdutosPage.jsx';
+import ProdutoFormPage from './pages/ProdutoFormPage.jsx';
 
-// Seu GlobalAlert e Contexto (caminhos usando alias)
-import GlobalAlert from '@components/GlobalAlert.jsx';
-import LoadingSpinner from '@components/LoadingSpinner.jsx';
+// Seu GlobalAlert e Contexto (caminhos relativos)
+import GlobalAlert from './components/GlobalAlert.jsx';
+import LoadingSpinner from './components/LoadingSpinner.jsx';
 
 // Importações do Material-UI para o Header
 import AppBar from '@mui/material/AppBar';
@@ -242,7 +242,8 @@ function Header() {
                 { text: 'Novo Atendente', path: '/register-atendente', roles: ['admin'] },
             ]
         },
-        { text: 'Meu Perfil', path: '/profile', roles: ['admin', 'atendente'], type: 'link', icon: <AccountCircle sx={{ mr: 0.5 }} /> }, // Adicionado ícone
+        // 'Meu Perfil' agora será apenas um ícone no desktop
+        { text: 'Meu Perfil', path: '/profile', roles: ['admin', 'atendente'], type: 'link', icon: <AccountCircle sx={{ mr: 0 }} /> },
     ];
 
     // Conteúdo para o Drawer (menu lateral mobile)
@@ -330,13 +331,13 @@ function Header() {
                         fullWidth
                         onClick={logout}
                         sx={{
-                            backgroundColor: '#D32F2F', // Vermelho forte
+                            backgroundColor: '#D32F2F',
                             '&:hover': {
-                                backgroundColor: '#B71C1C', // Tom mais escuro no hover
+                                backgroundColor: '#B71C1C',
                             },
                         }}
                     >
-                        <ExitToAppIcon sx={{ mr: 1 }} /> Sair {/* Ícone de Sair */}
+                        <ExitToAppIcon sx={{ mr: 1 }} /> Sair {/* Ícone de Sair com texto no Drawer */}
                     </Button>
                 </Box>
             )}
@@ -358,7 +359,7 @@ function Header() {
                         <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 1 }} className="ml-auto">
                             {menuItems.map((item) => (
                                 (item.roles.includes(user.perfil)) && (
-                                    item.type === 'link' ? ( // Renderiza um botão de link direto
+                                    item.type === 'link' ? (
                                         <Button
                                             key={item.text}
                                             component={Link}
@@ -376,7 +377,8 @@ function Header() {
                                                 fontSize: '0.875rem'
                                             }}
                                         >
-                                            {item.icon} {item.text}
+                                            {/* Renderiza apenas o ícone para "Meu Perfil" */}
+                                            {item.text === 'Meu Perfil' ? item.icon : <>{item.icon} {item.text}</>}
                                         </Button>
                                     ) : ( // Renderiza um botão que abre um menu suspenso
                                         <React.Fragment key={item.text}>
@@ -463,7 +465,7 @@ function Header() {
                                 <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.8rem' }} className="whitespace-nowrap">
                                     Olá, {user.nome}! ({user.perfil})
                                 </Typography>
-                                {/* Botão Sair com ícone */}
+                                {/* Botão Sair com ícone (agora sem texto ao lado) */}
                                 <Button
                                     variant="contained"
                                     color="error"
@@ -475,11 +477,10 @@ function Header() {
                                             backgroundColor: '#B71C1C',
                                         },
                                         minWidth: 'auto', // Para que o botão não tenha uma largura mínima fixa, se for apenas um ícone
-                                        px: 1.5, // Padding horizontal menor se for apenas ícone
+                                        px: 1.5, // Padding horizontal menor para focar no ícone
                                     }}
                                 >
                                     <ExitToAppIcon /> {/* Ícone de Sair */}
-                                    <Box sx={{ display: { xs: 'none', lg: 'inline' }, ml: 0.5 }}>Sair</Box> {/* Esconde o texto em telas menores, mostra em telas maiores */}
                                 </Button>
                             </Box>
                         </Box>
