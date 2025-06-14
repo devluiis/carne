@@ -13,8 +13,8 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    # CORREÇÃO AQUI: Mudado para o nome correto da função em auth.py
-    user = auth.get_current_user_from_token_util(db, token) 
+    # CORREÇÃO FINAL AQUI: Chamando a função corretamente nomeada do módulo auth
+    user = auth.get_user_from_token(db, token) 
     if user is None:
         raise credentials_exception
     return user
@@ -24,7 +24,7 @@ async def get_current_active_user(current_user: models.Usuario = Depends(get_cur
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user
 
-# NOVA FUNÇÃO: get_current_admin_user
+# FUNÇÃO: get_current_admin_user
 async def get_current_admin_user(current_user: models.Usuario = Depends(get_current_active_user)):
     if current_user.perfil != 'admin':
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Operation requires admin privileges")
