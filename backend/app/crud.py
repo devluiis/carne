@@ -418,7 +418,8 @@ def get_carne(db: Session, carne_id: int, apply_interest: bool = True):
         "descricao": db_carne.descricao,
         "valor_total_original": float(db_carne.valor_total_original),
         "numero_parcelas": db_carne.numero_parcelas,
-        "valor_parcela_sugerido": float(db_carne.valor_parcela_sugerido) if db_carne.valor_parcela_sugerido is not None else None,
+        # CORREÇÃO AQUI: Use valor_parcela_original para o campo sugerido se for carnê fixo
+        "valor_parcela_sugerido": float(db_carne.valor_parcela_original) if db_carne.parcela_fixa else None,
         "data_primeiro_vencimento": db_carne.data_primeiro_vencimento,
         "frequencia_pagamento": db_carne.frequencia_pagamento,
         "status_carne": db_carne.status_carne,
@@ -541,7 +542,8 @@ def get_carnes(
             "descricao": carne_obj.descricao,
             "valor_total_original": float(carne_obj.valor_total_original),
             "numero_parcelas": carne_obj.numero_parcelas,
-            "valor_parcela_sugerido": float(carne_obj.valor_parcela_sugerido) if carne_obj.valor_parcela_sugerido is not None else None,
+            # CORREÇÃO AQUI: Use valor_parcela_original para o campo sugerido se for carnê fixo
+            "valor_parcela_sugerido": float(carne_obj.valor_parcela_original) if carne_obj.parcela_fixa else None,
             "data_primeiro_vencimento": carne_obj.data_primeiro_vencimento,
             "frequencia_pagamento": carne_obj.frequencia_pagamento,
             "status_carne": carne_obj.status_carne,
