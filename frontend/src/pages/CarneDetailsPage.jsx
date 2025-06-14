@@ -1,5 +1,3 @@
-// frontend/src/pages/CarneDetailsPage.jsx
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { api } from '../api';
@@ -22,14 +20,14 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Chip from '@mui/material/Chip'; // Para os badges de status
 import Dialog from '@mui/material/Dialog'; // Para os modais
-import DialogActions from '@mui/material/DialogActions';
-import DialogContent from '@mui/material/DialogContent';
-import DialogTitle from '@mui/material/DialogTitle';
+import DialogActions from '@mui/material/Dialog/DialogActions'; // Corrigido o import
+import DialogContent from '@mui/material/Dialog/DialogContent'; // Corrigido o import
+import DialogTitle from '@mui/material/Dialog/DialogTitle'; // Corrigido o import
 import TextField from '@mui/material/TextField';
-import Select from '@mui/material/Select'; // Adicione esta importação
-import MenuItem from '@mui/material/MenuItem'; // Adicione esta importação
-import InputLabel from '@mui/material/InputLabel'; // Adicione esta importação
-import FormControl from '@mui/material/FormControl'; // Adicione esta importação
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
+import InputLabel from '@mui/material/InputLabel';
+import FormControl from '@mui/material/FormControl';
 
 
 const CarneDetailsPage = () => {
@@ -43,7 +41,8 @@ const CarneDetailsPage = () => {
     const [error, setError] = useState(null);
     const [parcelaToPay, setParcelaToPay] = useState(null);
     const [paymentValue, setPaymentValue] = useState('');
-    const [formaPagamento, setFormaPagamento] = useState(''); // NOVO ESTADO
+    const [formaPagamento, setFormaPagamento] = useState('');
+    const [dataPagamento, setDataPagamento] = useState(''); // NOVO ESTADO PARA A DATA DO PAGAMENTO
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [showReversePaymentModal, setShowReversePaymentModal] = useState(false);
     const [parcelaToReverse, setParcelaToReverse] = useState(null);
@@ -82,7 +81,9 @@ const CarneDetailsPage = () => {
     const handlePayClick = (parcela) => {
         setParcelaToPay(parcela);
         setPaymentValue(parcela.saldo_devedor.toFixed(2));
-        setFormaPagamento(''); // Reiniciar a forma de pagamento ao abrir o modal
+        setFormaPagamento('');
+        // Preenche a data de pagamento com a data atual por padrão
+        setDataPagamento(new Date().toISOString().split('T')[0]); 
         setShowPaymentModal(true);
     };
 
@@ -98,15 +99,20 @@ const CarneDetailsPage = () => {
                 setGlobalAlert({ type: 'warning', message: 'O valor do pagamento excede o saldo devedor da parcela.' });
                 return;
             }
-            if (!formaPagamento) { // Nova validação
+            if (!formaPagamento) {
                 setGlobalAlert({ type: 'warning', message: 'Por favor, selecione a forma de pagamento.' });
+                return;
+            }
+            if (!dataPagamento) { // Nova validação para a data de pagamento
+                setGlobalAlert({ type: 'warning', message: 'Por favor, insira a data do pagamento.' });
                 return;
             }
 
             await api.post(`/carnes/${carne.id_carne}/parcelas/${parcelaToPay.id_parcela}/pagar`, {
-                id_parcela: parcelaToPay.id_parcela, // INCLUIR NO CORPO
+                id_parcela: parcelaToPay.id_parcela,
                 valor_pago: parsedPaymentValue,
-                forma_pagamento: formaPagamento // INCLUIR NO CORPO
+                forma_pagamento: formaPagamento,
+                data_pagamento: dataPagamento // ENVIAR A DATA DE PAGAMENTO
             }, {
                 headers: {
                     Authorization: `Bearer ${user.token}`
@@ -130,6 +136,8 @@ const CarneDetailsPage = () => {
     const handleReversePaymentConfirm = async () => {
         if (!user || !parcelaToReverse || !paymentToReverse) return;
         try {
+            // A rota de estorno no backend espera 'pagamento_id' como parâmetro de query ou corpo
+            // No backend, a rota está definida para receber um objeto no body com `pagamento_id`
             await api.post(`/carnes/${carne.id_carne}/parcelas/${parcelaToReverse.id_parcela}/reverse-payment`, {
                 pagamento_id: paymentToReverse.id_pagamento
             }, {
@@ -166,11 +174,11 @@ const CarneDetailsPage = () => {
                 return;
             }
 
-            await api.post(`/carnes/${carne.id_carne}/parcelas/${parcelaToRenegotiate.id_parcela}/renegotiate`, null, {
-                params: {
-                    new_due_date: newDueDate,
-                    new_value: parsedNewValue
-                },
+            await api.post(`/carnes/${carne.id_carne}/parcelas/${parcelaToRenegotiate.id_parcela}/renegotiate`, {
+                new_data_vencimento: newDueDate,
+                new_valor_devido: parsedNewValue
+                // status_parcela_apos_renegociacao pode ser enviado se houver lógica específica
+            }, {
                 headers: {
                     Authorization: `Bearer ${user.token}`
                 }
@@ -213,9 +221,9 @@ const CarneDetailsPage = () => {
             case 'ativo': return 'primary';
             case 'paga': return 'success';
             case 'pendente': return 'warning';
-            case 'parcialmente paga': return 'warning'; // Adicionado
-            case 'paga com atraso': return 'success'; // Adicionado
-            case 'renegociada': return 'info'; // Adicionado
+            case 'parcialmente paga': return 'warning';
+            case 'paga com atraso': return 'success';
+            case 'renegociada': return 'info';
             default: return 'info';
         }
     };
@@ -341,7 +349,7 @@ const CarneDetailsPage = () => {
                                 <TableCell>Parcela Ref.</TableCell>
                                 <TableCell>Valor Pago</TableCell>
                                 <TableCell>Data Pagamento</TableCell>
-                                <TableCell>Forma Pagamento</TableCell> {/* Adicionado */}
+                                <TableCell>Forma Pagamento</TableCell>
                                 <TableCell>Usuário</TableCell>
                                 <TableCell>Ações</TableCell>
                             </TableRow>
@@ -353,7 +361,7 @@ const CarneDetailsPage = () => {
                                     <TableCell>{pagamento.parcela_numero}</TableCell>
                                     <TableCell>{formatCurrency(pagamento.valor_pago)}</TableCell>
                                     <TableCell>{new Date(pagamento.data_pagamento).toLocaleDateString('pt-BR')}</TableCell>
-                                    <TableCell>{pagamento.forma_pagamento || 'N/A'}</TableCell> {/* Exibindo forma de pagamento */}
+                                    <TableCell>{pagamento.forma_pagamento || 'N/A'}</TableCell>
                                     <TableCell>{pagamento.usuario_registro_nome || 'N/A'}</TableCell>
                                     <TableCell>
                                         {user.perfil === 'admin' && (
@@ -397,7 +405,19 @@ const CarneDetailsPage = () => {
                         onChange={(e) => setPaymentValue(e.target.value)}
                         inputProps={{ step: "0.01", min: "0.01", max: parcelaToPay?.saldo_devedor ? (parcelaToPay.saldo_devedor + 0.01).toFixed(2) : undefined }}
                     />
-                    <FormControl fullWidth margin="dense" sx={{ mt: 2 }}> {/* NOVO CAMPO */}
+                    <TextField // NOVO CAMPO DE DATA
+                        margin="dense"
+                        id="dataPagamento"
+                        label="Data do Pagamento"
+                        type="date"
+                        fullWidth
+                        variant="outlined"
+                        value={dataPagamento}
+                        onChange={(e) => setDataPagamento(e.target.value)}
+                        InputLabelProps={{ shrink: true }}
+                        sx={{ mt: 2 }}
+                    />
+                    <FormControl fullWidth margin="dense" sx={{ mt: 2 }}>
                         <InputLabel id="forma-pagamento-label">Forma de Pagamento *</InputLabel>
                         <Select
                             labelId="forma-pagamento-label"
