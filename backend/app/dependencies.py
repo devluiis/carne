@@ -13,7 +13,8 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    user = auth.get_current_user_from_token(db, token)
+    # CORREÇÃO AQUI: Mudado de auth.get_current_user_from_token para auth.get_user_from_token
+    user = auth.get_user_from_token(db, token) 
     if user is None:
         raise credentials_exception
     return user
