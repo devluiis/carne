@@ -20,9 +20,9 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Chip from '@mui/material/Chip'; // Para os badges de status
 import Dialog from '@mui/material/Dialog'; // Para os modais
-import DialogActions from '@mui/material/Dialog/DialogActions'; // Corrigido o import
-import DialogContent from '@mui/material/Dialog/DialogContent'; // Corrigido o import
-import DialogTitle from '@mui/material/Dialog/DialogTitle'; // Corrigido o import
+import DialogActions from '@mui/material/DialogActions'; // Corrigido o import
+import DialogContent from '@mui/material/DialogContent'; // Corrigido o import
+import DialogTitle from '@mui/material/DialogTitle'; // Corrigido o import
 import TextField from '@mui/material/TextField';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
@@ -405,7 +405,7 @@ const CarneDetailsPage = () => {
                         onChange={(e) => setPaymentValue(e.target.value)}
                         inputProps={{ step: "0.01", min: "0.01", max: parcelaToPay?.saldo_devedor ? (parcelaToPay.saldo_devedor + 0.01).toFixed(2) : undefined }}
                     />
-                    <TextField // NOVO CAMPO DE DATA
+                    <TextField // CAMPO DE DATA DE PAGAMENTO
                         margin="dense"
                         id="dataPagamento"
                         label="Data do Pagamento"
@@ -415,7 +415,7 @@ const CarneDetailsPage = () => {
                         value={dataPagamento}
                         onChange={(e) => setDataPagamento(e.target.value)}
                         InputLabelProps={{ shrink: true }}
-                        sx={{ mt: 2 }}
+                        sx={{ mt: 2 }} // Margem superior para separar dos outros campos
                     />
                     <FormControl fullWidth margin="dense" sx={{ mt: 2 }}>
                         <InputLabel id="forma-pagamento-label">Forma de Pagamento *</InputLabel>
