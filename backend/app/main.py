@@ -72,6 +72,8 @@ app = FastAPI(
 )
 
 # --- SEÇÃO DE CONFIGURAÇÃO DO CORS ---
+# Você já tinha allow_origins=["*"], o que é a configuração mais permissiva
+# e deve resolver a maioria dos problemas de CORS.
 origins = [
     "https://biosxambioa.netlify.app",    # SEU DOMÍNIO DO NETLIFY
     "http://localhost:5173",            # Para desenvolvimento local do frontend
@@ -81,13 +83,12 @@ origins = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"], # Mantido para máxima compatibilidade, mas o ideal seria usar a lista 'origins' acima em produção
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 # --- FIM DA SEÇÃO DE CONFIGURAÇÃO DO CORS ---
-
 
 
 # Inclui os routers da API
@@ -129,4 +130,3 @@ else:
     # Monta os arquivos estáticos. O html=True serve o index.html para rotas não encontradas (bom para SPAs)
     # e o index.html será servido para a rota "/"
     app.mount("/", StaticFiles(directory=frontend_build_path, html=True), name="static-frontend")
-    
