@@ -154,6 +154,10 @@ class PagamentoResponse(PagamentoCreate):
     class Config:
         from_attributes = True
 
+# NOVO SCHEMA PARA ESTORNO DE PAGAMENTO
+class PagamentoReverse(BaseModel):
+    pagamento_id: int # O ID do pagamento que será estornado
+
 class PagamentoReportItem(PagamentoResponse):
     cliente_nome: str
     carnes_descricao: Optional[str] = None
@@ -238,7 +242,6 @@ class CarneResponse(CarneBase):
     data_criacao: datetime
     valor_parcela_original: float # Este é o valor da parcela calculado ou o valor total para carnê flexível
     cliente: ClientResponseMin
-    # Mudei de PagamentoResponse para PagamentoResponseMin para garantir que os campos extras sejam aceitos
     # Esta lista representa TODOS os pagamentos do carnê, consolidados das parcelas.
     pagamentos: List[PagamentoResponseMin] = [] 
     parcelas: List[ParcelaResponse] = [] # Esta lista é das parcelas do carnê
