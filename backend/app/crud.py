@@ -393,40 +393,48 @@ def get_carne(db: Session, carne_id: int, apply_interest: bool = True):
             db.refresh(parcela) # Ensure parcela is fresh to get its payments
             for pagamento in parcela.pagamentos:
                 db.refresh(pagamento) # Ensure payment is fresh
-                # Validate Pagamento to ensure all fields are present for response
-                payment_base_data = schemas.PagamentoResponse.model_validate(pagamento).model_dump()
-                
-                # Add extra fields for consolidated history
-                payment_base_data['parcela_numero'] = parcela.numero_parcela
-                payment_base_data['parcela_data_vencimento'] = parcela.data_vencimento
-                payment_base_data['usuario_registro_nome'] = pagamento.usuario_registro.nome if pagamento.usuario_registro else 'N/A'
-                all_payments.append(payment_base_data)
+                # Construct payment data as a dictionary that matches PagamentoResponseMin
+                payment_data = {
+                    "id_pagamento": pagamento.id_pagamento,
+                    "data_pagamento": pagamento.data_pagamento,
+                    "valor_pago": float(pagamento.valor_pago),
+                    "forma_pagamento": pagamento.forma_pagamento,
+                    "observacoes": pagamento.observacoes,
+                    "id_usuario_registro": pagamento.id_usuario_registro,
+                    "parcela_numero": parcela.numero_parcela,
+                    "parcela_data_vencimento": parcela.data_vencimento,
+                    "usuario_registro_nome": pagamento.usuario_registro.nome if pagamento.usuario_registro else 'N/A'
+                }
+                all_payments.append(payment_data)
     
     # Ordenar pagamentos por data (mais recente primeiro)
     all_payments.sort(key=lambda p: p['data_pagamento'], reverse=True)
 
-    # Convert db_carne (SQLAlchemy model) to a dictionary that can be validated by Pydantic
-    # This ensures that all Pydantic fields, including the manually added 'pagamentos' list, are included.
-    carne_data = schemas.CarneBase.model_validate(db_carne).model_dump()
-    carne_data['id_carne'] = db_carne.id_carne
-    carne_data['data_criacao'] = db_carne.data_criacao
-    carne_data['valor_parcela_original'] = float(db_carne.valor_parcela_original) # Ensure float conversion
-    carne_data['cliente'] = schemas.ClientResponseMin.model_validate(db_carne.cliente).model_dump()
+    # Construir um dicionário completo para CarneResponse
+    carne_response_data = {
+        "id_carne": db_carne.id_carne,
+        "id_cliente": db_carne.id_cliente,
+        "data_venda": db_carne.data_venda,
+        "descricao": db_carne.descricao,
+        "valor_total_original": float(db_carne.valor_total_original),
+        "numero_parcelas": db_carne.numero_parcelas,
+        "valor_parcela_sugerido": float(db_carne.valor_parcela_sugerido) if db_carne.valor_parcela_sugerido is not None else None,
+        "data_primeiro_vencimento": db_carne.data_primeiro_vencimento,
+        "frequencia_pagamento": db_carne.frequencia_pagamento,
+        "status_carne": db_carne.status_carne,
+        "observacoes": db_carne.observacoes,
+        "valor_entrada": float(db_carne.valor_entrada),
+        "forma_pagamento_entrada": db_carne.forma_pagamento_entrada,
+        "parcela_fixa": db_carne.parcela_fixa,
+        "data_criacao": db_carne.data_criacao,
+        "valor_parcela_original": float(db_carne.valor_parcela_original),
+        "cliente": schemas.ClientResponseMin.model_validate(db_carne.cliente).model_dump(),
+        "pagamentos": all_payments, # A lista consolidada de pagamentos
+        "parcelas": [schemas.ParcelaResponse.model_validate(p).model_dump() for p in db_carne.parcelas]
+    }
 
-    # Add the consolidated payments list
-    carne_data['pagamentos'] = all_payments # This is now explicitly added to the dictionary
-
-    # Process parcelas separately for their Pydantic representation
-    carne_data['parcelas'] = []
-    for parcela in db_carne.parcelas:
-        # Refresh parcela just in case, though it should be current after _apply_interest_and_fine_if_due
-        db.refresh(parcela)
-        # Validate individual parcela
-        parcela_data = schemas.ParcelaResponse.model_validate(parcela).model_dump()
-        carne_data['parcelas'].append(parcela_data)
-
-    # Finally, validate the entire dictionary with CarneResponse schema
-    return schemas.CarneResponse.model_validate(carne_data)
+    # Finalmente, valide o dicionário inteiro com o esquema CarneResponse
+    return schemas.CarneResponse.model_validate(carne_response_data)
 
 def get_carnes(
     db: Session, skip: int = 0, limit: int = 100, id_cliente: Optional[int] = None,
@@ -435,7 +443,7 @@ def get_carnes(
 ):
     query = db.query(models.Carne).options(
         joinedload(models.Carne.cliente),
-        joinedload(models.Carne.parcelas).joinedload(models.Parcela.pagamentos) # Carrega parcelas e pagamentos para recalcular status
+        joinedload(models.Carne.parcelas).joinedload(models.Parcela.pagamentos).joinedload(models.Pagamento.usuario_registro) # Carrega pagamentos e usuários de registro
     )
 
     if id_cliente:
@@ -510,24 +518,43 @@ def get_carnes(
                 db.refresh(parcela) # Refresha a parcela também para ter pagamentos atualizados
                 for pagamento in parcela.pagamentos:
                     db.refresh(pagamento) # Refresha o pagamento
-                    # Adicionar dados da parcela e do usuário ao pagamento para facilitar o consumo no frontend
-                    payment_dict = schemas.PagamentoResponseMin.model_validate(pagamento).model_dump()
-                    payment_dict['parcela_numero'] = parcela.numero_parcela
-                    payment_dict['parcela_data_vencimento'] = parcela.data_vencimento
-                    payment_dict['usuario_registro_nome'] = pagamento.usuario_registro.nome if pagamento.usuario_registro else 'N/A'
-                    all_payments_for_carne.append(payment_dict)
+                    # Constrói o dicionário de pagamento
+                    payment_data = {
+                        "id_pagamento": pagamento.id_pagamento,
+                        "data_pagamento": pagamento.data_pagamento,
+                        "valor_pago": float(pagamento.valor_pago),
+                        "forma_pagamento": pagamento.forma_pagamento,
+                        "observacoes": pagamento.observacoes,
+                        "id_usuario_registro": pagamento.id_usuario_registro,
+                        "parcela_numero": parcela.numero_parcela,
+                        "parcela_data_vencimento": parcela.data_vencimento,
+                        "usuario_registro_nome": pagamento.usuario_registro.nome if pagamento.usuario_registro else 'N/A'
+                    }
+                    all_payments_for_carne.append(payment_data)
         all_payments_for_carne.sort(key=lambda p: p['data_pagamento'], reverse=True)
         
-        # Now, create the CarneResponse dictionary for this specific carne_obj
-        carne_response_dict = schemas.CarneBase.model_validate(carne_obj).model_dump()
-        carne_response_dict['id_carne'] = carne_obj.id_carne
-        carne_response_dict['data_criacao'] = carne_obj.data_criacao
-        carne_response_dict['valor_parcela_original'] = float(carne_obj.valor_parcela_original)
-        carne_response_dict['cliente'] = schemas.ClientResponseMin.model_validate(carne_obj.cliente).model_dump()
-        carne_response_dict['pagamentos'] = all_payments_for_carne # Add consolidated payments
-        
-        # Add parcelas as well in their Pydantic format
-        carne_response_dict['parcelas'] = [schemas.ParcelaResponse.model_validate(p).model_dump() for p in carne_obj.parcelas]
+        # Constrói o dicionário completo para CarneResponse para este carnê
+        carne_response_dict = {
+            "id_carne": carne_obj.id_carne,
+            "id_cliente": carne_obj.id_cliente,
+            "data_venda": carne_obj.data_venda,
+            "descricao": carne_obj.descricao,
+            "valor_total_original": float(carne_obj.valor_total_original),
+            "numero_parcelas": carne_obj.numero_parcelas,
+            "valor_parcela_sugerido": float(carne_obj.valor_parcela_sugerido) if carne_obj.valor_parcela_sugerido is not None else None,
+            "data_primeiro_vencimento": carne_obj.data_primeiro_vencimento,
+            "frequencia_pagamento": carne_obj.frequencia_pagamento,
+            "status_carne": carne_obj.status_carne,
+            "observacoes": carne_obj.observacoes,
+            "valor_entrada": float(carne_obj.valor_entrada),
+            "forma_pagamento_entrada": carne_obj.forma_pagamento_entrada,
+            "parcela_fixa": carne_obj.parcela_fixa,
+            "data_criacao": carne_obj.data_criacao,
+            "valor_parcela_original": float(carne_obj.valor_parcela_original),
+            "cliente": schemas.ClientResponseMin.model_validate(carne_obj.cliente).model_dump(),
+            "pagamentos": all_payments_for_carne, # Adiciona pagamentos consolidados
+            "parcelas": [schemas.ParcelaResponse.model_validate(p).model_dump() for p in carne_obj.parcelas]
+        }
 
         final_carnes_list.append(schemas.CarneResponse.model_validate(carne_response_dict))
 
@@ -771,7 +798,7 @@ def update_carne(db: Session, carne_id: int, carne_update: schemas.CarneCreate):
                 if parcela_valor_devido < Decimal('0.00'):
                     parcela_valor_devido = Decimal('0.00')
 
-                db_parcela_nova = models.Parcela(
+                db_parcela = models.Parcela(
                     id_carne=db_carne.id_carne,
                     numero_parcela=i + 1,
                     valor_devido=parcela_valor_devido,
@@ -783,7 +810,7 @@ def update_carne(db: Session, carne_id: int, carne_update: schemas.CarneCreate):
                     juros_multa_anterior_aplicada=Decimal('0.00'),
                     observacoes=None
                 )
-                db.add(db_parcela_nova)
+                db.add(db_parcela)
                 current_due_date = calculate_next_due_date(current_due_date, db_carne.frequencia_pagamento)
 
             db.commit()
