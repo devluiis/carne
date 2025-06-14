@@ -1,3 +1,5 @@
+// frontend/src/pages/CarneDetailsPage.jsx
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { api } from '../api';
@@ -24,6 +26,10 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import TextField from '@mui/material/TextField';
+import Select from '@mui/material/Select'; // Adicione esta importação
+import MenuItem from '@mui/material/MenuItem'; // Adicione esta importação
+import InputLabel from '@mui/material/InputLabel'; // Adicione esta importação
+import FormControl from '@mui/material/FormControl'; // Adicione esta importação
 
 
 const CarneDetailsPage = () => {
@@ -37,6 +43,7 @@ const CarneDetailsPage = () => {
     const [error, setError] = useState(null);
     const [parcelaToPay, setParcelaToPay] = useState(null);
     const [paymentValue, setPaymentValue] = useState('');
+    const [formaPagamento, setFormaPagamento] = useState(''); // NOVO ESTADO
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [showReversePaymentModal, setShowReversePaymentModal] = useState(false);
     const [parcelaToReverse, setParcelaToReverse] = useState(null);
@@ -75,6 +82,7 @@ const CarneDetailsPage = () => {
     const handlePayClick = (parcela) => {
         setParcelaToPay(parcela);
         setPaymentValue(parcela.saldo_devedor.toFixed(2));
+        setFormaPagamento(''); // Reiniciar a forma de pagamento ao abrir o modal
         setShowPaymentModal(true);
     };
 
@@ -86,13 +94,19 @@ const CarneDetailsPage = () => {
                 setGlobalAlert({ type: 'warning', message: 'Por favor, insira um valor de pagamento válido.' });
                 return;
             }
-            if (parsedPaymentValue > parcelaToPay.saldo_devedor) {
+            if (parsedPaymentValue > parcelaToPay.saldo_devedor + 0.01) { // Pequena margem para evitar problemas de float
                 setGlobalAlert({ type: 'warning', message: 'O valor do pagamento excede o saldo devedor da parcela.' });
+                return;
+            }
+            if (!formaPagamento) { // Nova validação
+                setGlobalAlert({ type: 'warning', message: 'Por favor, selecione a forma de pagamento.' });
                 return;
             }
 
             await api.post(`/carnes/${carne.id_carne}/parcelas/${parcelaToPay.id_parcela}/pagar`, {
-                valor_pago: parsedPaymentValue
+                id_parcela: parcelaToPay.id_parcela, // INCLUIR NO CORPO
+                valor_pago: parsedPaymentValue,
+                forma_pagamento: formaPagamento // INCLUIR NO CORPO
             }, {
                 headers: {
                     Authorization: `Bearer ${user.token}`
@@ -182,7 +196,7 @@ const CarneDetailsPage = () => {
         return <Typography color="info" className="text-center p-4">Carnê não encontrado.</Typography>;
     }
 
-    // Função auxiliar para formatar moeda - CORRIGIDO Intl.NumberFomart para Intl.NumberFormat
+    // Função auxiliar para formatar moeda
     const formatCurrency = (value) => {
         return new Intl.NumberFormat('pt-BR', {
             style: 'currency',
@@ -197,8 +211,11 @@ const CarneDetailsPage = () => {
             case 'em atraso': return 'error';
             case 'cancelado': return 'default';
             case 'ativo': return 'primary';
-            case 'pago': return 'success';
+            case 'paga': return 'success';
             case 'pendente': return 'warning';
+            case 'parcialmente paga': return 'warning'; // Adicionado
+            case 'paga com atraso': return 'success'; // Adicionado
+            case 'renegociada': return 'info'; // Adicionado
             default: return 'info';
         }
     };
@@ -285,7 +302,7 @@ const CarneDetailsPage = () => {
                                 <TableCell>{parcela.observacoes || '-'}</TableCell>
                                 <TableCell>
                                     <Box className="flex flex-wrap gap-2">
-                                        {parcela.status_parcela !== 'pago' && (
+                                        {parcela.status_parcela !== 'Paga' && parcela.status_parcela !== 'Paga com Atraso' && (
                                             <Button
                                                 variant="contained"
                                                 color="success"
@@ -324,6 +341,7 @@ const CarneDetailsPage = () => {
                                 <TableCell>Parcela Ref.</TableCell>
                                 <TableCell>Valor Pago</TableCell>
                                 <TableCell>Data Pagamento</TableCell>
+                                <TableCell>Forma Pagamento</TableCell> {/* Adicionado */}
                                 <TableCell>Usuário</TableCell>
                                 <TableCell>Ações</TableCell>
                             </TableRow>
@@ -332,9 +350,10 @@ const CarneDetailsPage = () => {
                             {carne.pagamentos.map(pagamento => (
                                 <TableRow key={pagamento.id_pagamento} className="hover:bg-gray-50">
                                     <TableCell>{pagamento.id_pagamento}</TableCell>
-                                    <TableCell>{pagamento.numero_parcela}</TableCell>
+                                    <TableCell>{pagamento.parcela_numero}</TableCell>
                                     <TableCell>{formatCurrency(pagamento.valor_pago)}</TableCell>
                                     <TableCell>{new Date(pagamento.data_pagamento).toLocaleDateString('pt-BR')}</TableCell>
+                                    <TableCell>{pagamento.forma_pagamento || 'N/A'}</TableCell> {/* Exibindo forma de pagamento */}
                                     <TableCell>{pagamento.usuario_registro_nome || 'N/A'}</TableCell>
                                     <TableCell>
                                         {user.perfil === 'admin' && (
@@ -376,8 +395,28 @@ const CarneDetailsPage = () => {
                         variant="outlined"
                         value={paymentValue}
                         onChange={(e) => setPaymentValue(e.target.value)}
-                        inputProps={{ step: "0.01", min: "0.01", max: parcelaToPay?.saldo_devedor.toFixed(2) }}
+                        inputProps={{ step: "0.01", min: "0.01", max: parcelaToPay?.saldo_devedor ? (parcelaToPay.saldo_devedor + 0.01).toFixed(2) : undefined }}
                     />
+                    <FormControl fullWidth margin="dense" sx={{ mt: 2 }}> {/* NOVO CAMPO */}
+                        <InputLabel id="forma-pagamento-label">Forma de Pagamento *</InputLabel>
+                        <Select
+                            labelId="forma-pagamento-label"
+                            id="formaPagamento"
+                            value={formaPagamento}
+                            label="Forma de Pagamento *"
+                            onChange={(e) => setFormaPagamento(e.target.value)}
+                            required
+                        >
+                            <MenuItem value="">
+                                <em>Selecione...</em>
+                            </MenuItem>
+                            <MenuItem value="Dinheiro">Dinheiro</MenuItem>
+                            <MenuItem value="PIX">PIX</MenuItem>
+                            <MenuItem value="Cartão de Crédito">Cartão de Crédito</MenuItem>
+                            <MenuItem value="Débito">Débito</MenuItem>
+                            <MenuItem value="Outro">Outro</MenuItem>
+                        </Select>
+                    </FormControl>
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={() => setShowPaymentModal(false)} variant="outlined">
