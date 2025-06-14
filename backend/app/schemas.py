@@ -94,6 +94,10 @@ class PagamentoResponseMin(BaseModel):
     forma_pagamento: str
     observacoes: Optional[str] = None
     id_usuario_registro: int
+    # Adicionar campos extras para o histórico de pagamentos consolidado
+    parcela_numero: Optional[int] = None
+    parcela_data_vencimento: Optional[date] = None
+    usuario_registro_nome: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -118,7 +122,7 @@ class ParcelaResponse(ParcelaBase):
     data_pagamento_completo: Optional[date] = None
     juros_multa: float
     juros_multa_anterior_aplicada: float = Field(0.00)
-    pagamentos: List[PagamentoResponseMin] = []
+    pagamentos: List[PagamentoResponseMin] = [] # Esta lista é de pagamentos da PARCELA específica
 
     # Campos adicionais para o PDF, podem ser calculados no CRUD
     juros_multa_percentual: Optional[float] = None
@@ -234,7 +238,10 @@ class CarneResponse(CarneBase):
     data_criacao: datetime
     valor_parcela_original: float # Este é o valor da parcela calculado ou o valor total para carnê flexível
     cliente: ClientResponseMin
-    parcelas: List[ParcelaResponse] = []
+    # Mudei de PagamentoResponse para PagamentoResponseMin para garantir que os campos extras sejam aceitos
+    # Esta lista representa TODOS os pagamentos do carnê, consolidados das parcelas.
+    pagamentos: List[PagamentoResponseMin] = [] 
+    parcelas: List[ParcelaResponse] = [] # Esta lista é das parcelas do carnê
 
     class Config:
         from_attributes = True
