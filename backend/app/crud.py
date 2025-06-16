@@ -1,4 +1,5 @@
-# backend/app/crud.py
+import os
+import sys
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import IntegrityError
 from app import models, schemas
@@ -299,14 +300,16 @@ def get_client_summary(db: Session, client_id: int):
             has_overdue_parcel = any(p.status_parcela == 'Atrasada' for p in carne_obj.parcelas)
             has_partially_paid_parcel = any(p.status_parcela == 'Parcialmente Paga' for p in carne_obj.parcelas)
             
+            new_status_carne = carne_obj.status_carne # Manter o status atual se não houver mudança
+
             if all_parcels_paid and carne_obj.parcelas:
-                carne_obj.status_carne = 'Quitado'
+                new_status_carne = 'Quitado'
             elif has_overdue_parcel:
-                carne_obj.status_carne = 'Em Atraso'
+                new_status_carne = 'Em Atraso'
             elif has_partially_paid_parcel:
-                carne_obj.status_carne = 'Ativo' # Pode ser 'Parcialmente Ativo' se quiser distinguir
+                new_status_carne = 'Ativo' # Pode ser 'Parcialmente Ativo' se quiser distinguir
             else:
-                carne_obj.status_carne = 'Ativo' # Se não tem atrasadas e não pagas, mas também não totalmente pagas
+                new_status_carne = 'Ativo' # Se não tem atrasadas e não pagas, mas também não totalmente pagas
         db.add(carne_obj) # Adiciona ao session, mas não faz commit aqui
 
     db.commit() # Commit uma vez após o loop de carnês para salvar as mudanças de status e juros/multas
@@ -1575,7 +1578,7 @@ def update_carne(db: Session, carne_id: int, carne_update: schemas.CarneCreate):
                 if key in ['valor_total_original', 'valor_parcela_sugerido', 'valor_entrada']:
                     current_val = Decimal(str(current_val)) if current_val is not None else None # manter str para Decimal para compatibilidade
                     new_val = Decimal(str(new_val)) if new_val is not None else None # manter str para Decimal para compatibilidade
-                # Para booleanos, comparar diretamente
+                # Para booleanos, comparar directamente
                 elif key == 'parcela_fixa':
                     if current_val != new_val: # A mudança no tipo de parcela sempre dispara regeneração
                         regenerate_parcels_flag = True
@@ -1587,1422 +1590,12 @@ def update_carne(db: Session, carne_id: int, carne_update: schemas.CarneCreate):
 
     # Aplicar as atualizações aos campos do objeto db_carne
     for key, value in update_data.items():
-        if key == 'valor_parcela_original': # Este campo é calculado, não setado diretamente
+        if key == 'valor_parcela_original': # Este campo é calculado, não setado directamente
             continue
         if key in ['valor_total_original', 'valor_entrada'] and value is not None:
             setattr(db_carne, key, value) # Alterado: Pydantic já validou para Decimal
         elif key == 'valor_parcela_sugerido' and value is not None:
-            pass # Não armazena diretamente no db_carne, é usado para cálculo
-        else:
-            setattr(db_carne, key, value)
-
-    # Lógica de regeneração de parcelas
-    if regenerate_parcels_flag and not has_payments:
-        # Excluir parcelas existentes
-        db.query(models.Parcela).filter(models.Parcela.id_carne == carne_id).delete(synchronize_session='fetch')
-        db.flush() # Garante que as deleções sejam processadas antes de adicionar novas
-
-        valor_total_original_decimal = db_carne.valor_total_original # Alterado: Pydantic já validou para Decimal
-        valor_entrada_decimal = db_carne.valor_entrada # Alterado: Pydantic já validou para Decimal
-        valor_a_parcelar = valor_total_original_decimal - valor_entrada_decimal
-
-        # Se o carnê se torna não fixo
-        if not db_carne.parcela_fixa:
-            db_carne.numero_parcelas = 1
-            db_carne.valor_parcela_original = valor_a_parcelar.quantize(Decimal('0.01'))
-            db_carne.frequencia_pagamento = "única" # Ou "variável"
-
-            db_parcela_nova = models.Parcela(
-                id_carne=db_carne.id_carne,
-                numero_parcela=1,
-                valor_devido=valor_a_parcelar,
-                data_vencimento=db_carne.data_primeiro_vencimento,
-                valor_pago=Decimal('0.00'),
-                saldo_devedor=valor_a_parcelar,
-                status_parcela='Pendente',
-                juros_multa=Decimal('0.00'),
-                juros_multa_anterior_aplicada=Decimal('0.00'),
-                observacoes=None
-            )
-            db.add(db_parcela_nova)
-        else: # Se o carnê é fixo (ou mudou para fixo)
-            if db_carne.numero_parcelas <= 0:
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Para carnês com parcela fixa, o número de parcelas deve ser maior que zero.")
-            if valor_a_parcelar <= Decimal('0.00') and db_carne.numero_parcelas > 0:
-                 pass # A validação já é feita no frontend ou no esquema
-
-            valor_parcela_sugerido_decimal = carne_update.valor_parcela_sugerido if carne_update.valor_parcela_sugerido is not None else Decimal('0.00') # Alterado para usar o Decimal do update_data
-            if valor_parcela_sugerido_decimal == Decimal('0.00'): # Default se não sugerido
-                if valor_a_parcelar > Decimal('0.00'):
-                    valor_parcela_original_calculado = (valor_a_parcelar / db_carne.numero_parcelas).quantize(Decimal('0.01'))
-                else:
-                    valor_parcela_original_calculado = Decimal('0.00')
-            else:
-                valor_parcela_original_calculado = valor_parcela_sugerido_decimal
-
-
-            db_carne.valor_parcela_original = valor_parcela_original_calculado # ATUALIZA O VALOR NO OBJETO DO CARNÊ
-
-            current_due_date = db_carne.data_primeiro_vencimento
-            for i in range(db_carne.numero_parcelas):
-                parcela_valor_devido = valor_parcela_original_calculado
-                if i == db_carne.numero_parcelas - 1:
-                    soma_parcelas_anteriores = valor_parcela_original_calculado * i
-                    parcela_valor_devido = valor_a_parcelar - soma_parcelas_anteriores
-                    parcela_valor_devido = parcela_valor_devido.quantize(Decimal('0.01'))
-
-                if parcela_valor_devido < Decimal('0.00'):
-                    parcela_valor_devido = Decimal('0.00')
-
-                db_parcela = models.Parcela(
-                    id_carne=db_carne.id_carne,
-                    numero_parcela=i + 1,
-                    valor_devido=parcela_valor_devido,
-                    data_vencimento=current_due_date,
-                    valor_pago=Decimal('0.00'),
-                    saldo_devedor=parcela_valor_devido,
-                    status_parcela='Pendente',
-                    juros_multa=Decimal('0.00'),
-                    juros_multa_anterior_aplicada=Decimal('0.00'),
-                    observacoes=None
-                )
-                db.add(db_parcela)
-                current_due_date = calculate_next_due_date(current_due_date, db_carne.frequencia_pagamento)
-
-            db.commit()
-            db.refresh(db_carne) # Refresh novamente para carregar as parcelas
-        return db_carne
-
-
-def update_carne(db: Session, carne_id: int, carne_update: schemas.CarneCreate):
-    db_carne = db.query(models.Carne).filter(models.Carne.id_carne == carne_id).first()
-    if not db_carne:
-        return None
-
-    has_payments = db.query(models.Pagamento).join(models.Parcela).filter(models.Parcela.id_carne == carne_id).first()
-
-    update_data = carne_update.model_dump(exclude_unset=False)
-
-    new_data_venda = update_data.get('data_venda', db_carne.data_venda)
-    new_data_primeiro_vencimento = update_data.get('data_primeiro_vencimento', db_carne.data_primeiro_vencimento)
-    if new_data_venda and new_data_primeiro_vencimento < new_data_venda:
-         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A data do primeiro vencimento não pode ser anterior à data da venda.")
-
-    # Detectar mudança no tipo de carnê (fixo/flexível) ou em campos financeiros que exigem regeneração
-    regenerate_parcels_flag = False
-    financial_keys_for_parcel_regeneration = [
-        'valor_total_original', 'numero_parcelas',
-        'valor_parcela_sugerido', # Campo relevante para carnê fixo
-        'data_primeiro_vencimento',
-        'frequencia_pagamento', 'valor_entrada',
-        'parcela_fixa' # NOVO: Mudança no tipo de carnê exige regeneração
-    ]
-
-    if has_payments:
-        # Se tem pagamentos, só permite alterar descricao, status_carne, observacoes, data_venda
-        allowed_keys_with_payments = ['descricao', 'status_carne', 'observacoes', 'data_venda']
-        for key_to_update in list(update_data.keys()):
-            if key_to_update not in allowed_keys_with_payments:
-                if getattr(db_carne, key_to_update) != update_data[key_to_update]:
-                    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                                        detail=f"Não é possível alterar o campo '{key_to_update}' de um carnê que já possui pagamentos.")
-    else: # Não tem pagamentos, pode regenerar parcelas
-        for key in financial_keys_for_parcel_regeneration:
-            if key in update_data:
-                current_val = getattr(db_carne, key)
-                new_val = update_data.get(key)
-
-                # Tratamento para comparação de Decimals
-                if key in ['valor_total_original', 'valor_parcela_sugerido', 'valor_entrada']:
-                    current_val = Decimal(str(current_val)) if current_val is not None else None # manter str para Decimal para compatibilidade
-                    new_val = Decimal(str(new_val)) if new_val is not None else None # manter str para Decimal para compatibilidade
-                # Para booleanos, comparar diretamente
-                elif key == 'parcela_fixa':
-                    if current_val != new_val: # A mudança no tipo de parcela sempre dispara regeneração
-                        regenerate_parcels_flag = True
-                        break
-                # Para outros tipos, comparação padrão
-                if current_val != new_val:
-                    regenerate_parcels_flag = True
-                    break
-
-    # Aplicar as atualizações aos campos do objeto db_carne
-    for key, value in update_data.items():
-        if key == 'valor_parcela_original': # Este campo é calculado, não setado diretamente
-            continue
-        if key in ['valor_total_original', 'valor_entrada'] and value is not None:
-            setattr(db_carne, key, value) # Alterado: Pydantic já validou para Decimal
-        elif key == 'valor_parcela_sugerido' and value is not None:
-            pass # Não armazena diretamente no db_carne, é usado para cálculo
-        else:
-            setattr(db_carne, key, value)
-
-    # Lógica de regeneração de parcelas
-    if regenerate_parcels_flag and not has_payments:
-        # Excluir parcelas existentes
-        db.query(models.Parcela).filter(models.Parcela.id_carne == carne_id).delete(synchronize_session='fetch')
-        db.flush() # Garante que as deleções sejam processadas antes de adicionar novas
-
-        valor_total_original_decimal = db_carne.valor_total_original # Alterado: Pydantic já validou para Decimal
-        valor_entrada_decimal = db_carne.valor_entrada # Alterado: Pydantic já validou para Decimal
-        valor_a_parcelar = valor_total_original_decimal - valor_entrada_decimal
-
-        # Se o carnê se torna não fixo
-        if not db_carne.parcela_fixa:
-            db_carne.numero_parcelas = 1
-            db_carne.valor_parcela_original = valor_a_parcelar.quantize(Decimal('0.01'))
-            db_carne.frequencia_pagamento = "única" # Ou "variável"
-
-            db_parcela_nova = models.Parcela(
-                id_carne=db_carne.id_carne,
-                numero_parcela=1,
-                valor_devido=valor_a_parcelar,
-                data_vencimento=db_carne.data_primeiro_vencimento,
-                valor_pago=Decimal('0.00'),
-                saldo_devedor=valor_a_parcelar,
-                status_parcela='Pendente',
-                juros_multa=Decimal('0.00'),
-                juros_multa_anterior_aplicada=Decimal('0.00'),
-                observacoes=None
-            )
-            db.add(db_parcela_nova)
-        else: # Se o carnê é fixo (ou mudou para fixo)
-            if db_carne.numero_parcelas <= 0:
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Para carnês com parcela fixa, o número de parcelas deve ser maior que zero.")
-            if valor_a_parcelar <= Decimal('0.00') and db_carne.numero_parcelas > 0:
-                 pass # A validação já é feita no frontend ou no esquema
-
-            valor_parcela_sugerido_decimal = carne_update.valor_parcela_sugerido if carne_update.valor_parcela_sugerido is not None else Decimal('0.00') # Alterado para usar o Decimal do update_data
-            if valor_parcela_sugerido_decimal == Decimal('0.00'): # Default se não sugerido
-                if valor_a_parcelar > Decimal('0.00'):
-                    valor_parcela_original_calculado = (valor_a_parcelar / db_carne.numero_parcelas).quantize(Decimal('0.01'))
-                else:
-                    valor_parcela_original_calculado = Decimal('0.00')
-            else:
-                valor_parcela_original_calculado = valor_parcela_sugerido_decimal
-
-
-            db_carne.valor_parcela_original = valor_parcela_original_calculado # ATUALIZA O VALOR NO OBJETO DO CARNÊ
-
-            current_due_date = db_carne.data_primeiro_vencimento
-            for i in range(db_carne.numero_parcelas):
-                parcela_valor_devido = valor_parcela_original_calculado
-                if i == db_carne.numero_parcelas - 1:
-                    soma_parcelas_anteriores = valor_parcela_original_calculado * i
-                    parcela_valor_devido = valor_a_parcelar - soma_parcelas_anteriores
-                    parcela_valor_devido = parcela_valor_devido.quantize(Decimal('0.01'))
-
-                if parcela_valor_devido < Decimal('0.00'):
-                    parcela_valor_devido = Decimal('0.00')
-
-                db_parcela = models.Parcela(
-                    id_carne=db_carne.id_carne,
-                    numero_parcela=i + 1,
-                    valor_devido=parcela_valor_devido,
-                    data_vencimento=current_due_date,
-                    valor_pago=Decimal('0.00'),
-                    saldo_devedor=parcela_valor_devido,
-                    status_parcela='Pendente',
-                    juros_multa=Decimal('0.00'),
-                    juros_multa_anterior_aplicada=Decimal('0.00'),
-                    observacoes=None
-                )
-                db.add(db_parcela)
-                current_due_date = calculate_next_due_date(current_due_date, db_carne.frequencia_pagamento)
-
-            db.commit()
-            db.refresh(db_carne) # Refresh novamente para carregar as parcelas
-        return db_carne
-
-
-def update_carne(db: Session, carne_id: int, carne_update: schemas.CarneCreate):
-    db_carne = db.query(models.Carne).filter(models.Carne.id_carne == carne_id).first()
-    if not db_carne:
-        return None
-
-    has_payments = db.query(models.Pagamento).join(models.Parcela).filter(models.Parcela.id_carne == carne_id).first()
-
-    update_data = carne_update.model_dump(exclude_unset=False)
-
-    new_data_venda = update_data.get('data_venda', db_carne.data_venda)
-    new_data_primeiro_vencimento = update_data.get('data_primeiro_vencimento', db_carne.data_primeiro_vencimento)
-    if new_data_venda and new_data_primeiro_vencimento < new_data_venda:
-         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A data do primeiro vencimento não pode ser anterior à data da venda.")
-
-    # Detectar mudança no tipo de carnê (fixo/flexível) ou em campos financeiros que exigem regeneração
-    regenerate_parcels_flag = False
-    financial_keys_for_parcel_regeneration = [
-        'valor_total_original', 'numero_parcelas',
-        'valor_parcela_sugerido', # Campo relevante para carnê fixo
-        'data_primeiro_vencimento',
-        'frequencia_pagamento', 'valor_entrada',
-        'parcela_fixa' # NOVO: Mudança no tipo de carnê exige regeneração
-    ]
-
-    if has_payments:
-        # Se tem pagamentos, só permite alterar descricao, status_carne, observacoes, data_venda
-        allowed_keys_with_payments = ['descricao', 'status_carne', 'observacoes', 'data_venda']
-        for key_to_update in list(update_data.keys()):
-            if key_to_update not in allowed_keys_with_payments:
-                if getattr(db_carne, key_to_update) != update_data[key_to_update]:
-                    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                                        detail=f"Não é possível alterar o campo '{key_to_update}' de um carnê que já possui pagamentos.")
-    else: # Não tem pagamentos, pode regenerar parcelas
-        for key in financial_keys_for_parcel_regeneration:
-            if key in update_data:
-                current_val = getattr(db_carne, key)
-                new_val = update_data.get(key)
-
-                # Tratamento para comparação de Decimals
-                if key in ['valor_total_original', 'valor_parcela_sugerido', 'valor_entrada']:
-                    current_val = Decimal(str(current_val)) if current_val is not None else None # manter str para Decimal para compatibilidade
-                    new_val = Decimal(str(new_val)) if new_val is not None else None # manter str para Decimal para compatibilidade
-                # Para booleanos, comparar diretamente
-                elif key == 'parcela_fixa':
-                    if current_val != new_val: # A mudança no tipo de parcela sempre dispara regeneração
-                        regenerate_parcels_flag = True
-                        break
-                # Para outros tipos, comparação padrão
-                if current_val != new_val:
-                    regenerate_parcels_flag = True
-                    break
-
-    # Aplicar as atualizações aos campos do objeto db_carne
-    for key, value in update_data.items():
-        if key == 'valor_parcela_original': # Este campo é calculado, não setado diretamente
-            continue
-        if key in ['valor_total_original', 'valor_entrada'] and value is not None:
-            setattr(db_carne, key, value) # Alterado: Pydantic já validou para Decimal
-        elif key == 'valor_parcela_sugerido' and value is not None:
-            pass # Não armazena diretamente no db_carne, é usado para cálculo
-        else:
-            setattr(db_carne, key, value)
-
-    # Lógica de regeneração de parcelas
-    if regenerate_parcels_flag and not has_payments:
-        # Excluir parcelas existentes
-        db.query(models.Parcela).filter(models.Parcela.id_carne == carne_id).delete(synchronize_session='fetch')
-        db.flush() # Garante que as deleções sejam processadas antes de adicionar novas
-
-        valor_total_original_decimal = db_carne.valor_total_original # Alterado: Pydantic já validou para Decimal
-        valor_entrada_decimal = db_carne.valor_entrada # Alterado: Pydantic já validou para Decimal
-        valor_a_parcelar = valor_total_original_decimal - valor_entrada_decimal
-
-        # Se o carnê se torna não fixo
-        if not db_carne.parcela_fixa:
-            db_carne.numero_parcelas = 1
-            db_carne.valor_parcela_original = valor_a_parcelar.quantize(Decimal('0.01'))
-            db_carne.frequencia_pagamento = "única" # Ou "variável"
-
-            db_parcela_nova = models.Parcela(
-                id_carne=db_carne.id_carne,
-                numero_parcela=1,
-                valor_devido=valor_a_parcelar,
-                data_vencimento=db_carne.data_primeiro_vencimento,
-                valor_pago=Decimal('0.00'),
-                saldo_devedor=valor_a_parcelar,
-                status_parcela='Pendente',
-                juros_multa=Decimal('0.00'),
-                juros_multa_anterior_aplicada=Decimal('0.00'),
-                observacoes=None
-            )
-            db.add(db_parcela_nova)
-        else: # Se o carnê é fixo (ou mudou para fixo)
-            if db_carne.numero_parcelas <= 0:
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Para carnês com parcela fixa, o número de parcelas deve ser maior que zero.")
-            if valor_a_parcelar <= Decimal('0.00') and db_carne.numero_parcelas > 0:
-                 pass # A validação já é feita no frontend ou no esquema
-
-            valor_parcela_sugerido_decimal = carne_update.valor_parcela_sugerido if carne_update.valor_parcela_sugerido is not None else Decimal('0.00') # Alterado para usar o Decimal do update_data
-            if valor_parcela_sugerido_decimal == Decimal('0.00'): # Default se não sugerido
-                if valor_a_parcelar > Decimal('0.00'):
-                    valor_parcela_original_calculado = (valor_a_parcelar / db_carne.numero_parcelas).quantize(Decimal('0.01'))
-                else:
-                    valor_parcela_original_calculado = Decimal('0.00')
-            else:
-                valor_parcela_original_calculado = valor_parcela_sugerido_decimal
-
-
-            db_carne.valor_parcela_original = valor_parcela_original_calculado # ATUALIZA O VALOR NO OBJETO DO CARNÊ
-
-            current_due_date = db_carne.data_primeiro_vencimento
-            for i in range(db_carne.numero_parcelas):
-                parcela_valor_devido = valor_parcela_original_calculado
-                if i == db_carne.numero_parcelas - 1:
-                    soma_parcelas_anteriores = valor_parcela_original_calculado * i
-                    parcela_valor_devido = valor_a_parcelar - soma_parcelas_anteriores
-                    parcela_valor_devido = parcela_valor_devido.quantize(Decimal('0.01'))
-
-                if parcela_valor_devido < Decimal('0.00'):
-                    parcela_valor_devido = Decimal('0.00')
-
-                db_parcela = models.Parcela(
-                    id_carne=db_carne.id_carne,
-                    numero_parcela=i + 1,
-                    valor_devido=parcela_valor_devido,
-                    data_vencimento=current_due_date,
-                    valor_pago=Decimal('0.00'),
-                    saldo_devedor=parcela_valor_devido,
-                    status_parcela='Pendente',
-                    juros_multa=Decimal('0.00'),
-                    juros_multa_anterior_aplicada=Decimal('0.00'),
-                    observacoes=None
-                )
-                db.add(db_parcela)
-                current_due_date = calculate_next_due_date(current_due_date, db_carne.frequencia_pagamento)
-
-            db.commit()
-            db.refresh(db_carne) # Refresh novamente para carregar as parcelas
-        return db_carne
-
-
-def update_carne(db: Session, carne_id: int, carne_update: schemas.CarneCreate):
-    db_carne = db.query(models.Carne).filter(models.Carne.id_carne == carne_id).first()
-    if not db_carne:
-        return None
-
-    has_payments = db.query(models.Pagamento).join(models.Parcela).filter(models.Parcela.id_carne == carne_id).first()
-
-    update_data = carne_update.model_dump(exclude_unset=False)
-
-    new_data_venda = update_data.get('data_venda', db_carne.data_venda)
-    new_data_primeiro_vencimento = update_data.get('data_primeiro_vencimento', db_carne.data_primeiro_vencimento)
-    if new_data_venda and new_data_primeiro_vencimento < new_data_venda:
-         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A data do primeiro vencimento não pode ser anterior à data da venda.")
-
-    # Detectar mudança no tipo de carnê (fixo/flexível) ou em campos financeiros que exigem regeneração
-    regenerate_parcels_flag = False
-    financial_keys_for_parcel_regeneration = [
-        'valor_total_original', 'numero_parcelas',
-        'valor_parcela_sugerido', # Campo relevante para carnê fixo
-        'data_primeiro_vencimento',
-        'frequencia_pagamento', 'valor_entrada',
-        'parcela_fixa' # NOVO: Mudança no tipo de carnê exige regeneração
-    ]
-
-    if has_payments:
-        # Se tem pagamentos, só permite alterar descricao, status_carne, observacoes, data_venda
-        allowed_keys_with_payments = ['descricao', 'status_carne', 'observacoes', 'data_venda']
-        for key_to_update in list(update_data.keys()):
-            if key_to_update not in allowed_keys_with_payments:
-                if getattr(db_carne, key_to_update) != update_data[key_to_update]:
-                    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                                        detail=f"Não é possível alterar o campo '{key_to_update}' de um carnê que já possui pagamentos.")
-    else: # Não tem pagamentos, pode regenerar parcelas
-        for key in financial_keys_for_parcel_regeneration:
-            if key in update_data:
-                current_val = getattr(db_carne, key)
-                new_val = update_data.get(key)
-
-                # Tratamento para comparação de Decimals
-                if key in ['valor_total_original', 'valor_parcela_sugerido', 'valor_entrada']:
-                    current_val = Decimal(str(current_val)) if current_val is not None else None # manter str para Decimal para compatibilidade
-                    new_val = Decimal(str(new_val)) if new_val is not None else None # manter str para Decimal para compatibilidade
-                # Para booleanos, comparar diretamente
-                elif key == 'parcela_fixa':
-                    if current_val != new_val: # A mudança no tipo de parcela sempre dispara regeneração
-                        regenerate_parcels_flag = True
-                        break
-                # Para outros tipos, comparação padrão
-                if current_val != new_val:
-                    regenerate_parcels_flag = True
-                    break
-
-    # Aplicar as atualizações aos campos do objeto db_carne
-    for key, value in update_data.items():
-        if key == 'valor_parcela_original': # Este campo é calculado, não setado diretamente
-            continue
-        if key in ['valor_total_original', 'valor_entrada'] and value is not None:
-            setattr(db_carne, key, value) # Alterado: Pydantic já validou para Decimal
-        elif key == 'valor_parcela_sugerido' and value is not None:
-            pass # Não armazena diretamente no db_carne, é usado para cálculo
-        else:
-            setattr(db_carne, key, value)
-
-    # Lógica de regeneração de parcelas
-    if regenerate_parcels_flag and not has_payments:
-        # Excluir parcelas existentes
-        db.query(models.Parcela).filter(models.Parcela.id_carne == carne_id).delete(synchronize_session='fetch')
-        db.flush() # Garante que as deleções sejam processadas antes de adicionar novas
-
-        valor_total_original_decimal = db_carne.valor_total_original # Alterado: Pydantic já validou para Decimal
-        valor_entrada_decimal = db_carne.valor_entrada # Alterado: Pydantic já validou para Decimal
-        valor_a_parcelar = valor_total_original_decimal - valor_entrada_decimal
-
-        # Se o carnê se torna não fixo
-        if not db_carne.parcela_fixa:
-            db_carne.numero_parcelas = 1
-            db_carne.valor_parcela_original = valor_a_parcelar.quantize(Decimal('0.01'))
-            db_carne.frequencia_pagamento = "única" # Ou "variável"
-
-            db_parcela_nova = models.Parcela(
-                id_carne=db_carne.id_carne,
-                numero_parcela=1,
-                valor_devido=valor_a_parcelar,
-                data_vencimento=db_carne.data_primeiro_vencimento,
-                valor_pago=Decimal('0.00'),
-                saldo_devedor=valor_a_parcelar,
-                status_parcela='Pendente',
-                juros_multa=Decimal('0.00'),
-                juros_multa_anterior_aplicada=Decimal('0.00'),
-                observacoes=None
-            )
-            db.add(db_parcela_nova)
-        else: # Se o carnê é fixo (ou mudou para fixo)
-            if db_carne.numero_parcelas <= 0:
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Para carnês com parcela fixa, o número de parcelas deve ser maior que zero.")
-            if valor_a_parcelar <= Decimal('0.00') and db_carne.numero_parcelas > 0:
-                 pass # A validação já é feita no frontend ou no esquema
-
-            valor_parcela_sugerido_decimal = carne_update.valor_parcela_sugerido if carne_update.valor_parcela_sugerido is not None else Decimal('0.00') # Alterado para usar o Decimal do update_data
-            if valor_parcela_sugerido_decimal == Decimal('0.00'): # Default se não sugerido
-                if valor_a_parcelar > Decimal('0.00'):
-                    valor_parcela_original_calculado = (valor_a_parcelar / db_carne.numero_parcelas).quantize(Decimal('0.01'))
-                else:
-                    valor_parcela_original_calculado = Decimal('0.00')
-            else:
-                valor_parcela_original_calculado = valor_parcela_sugerido_decimal
-
-
-            db_carne.valor_parcela_original = valor_parcela_original_calculado # ATUALIZA O VALOR NO OBJETO DO CARNÊ
-
-            current_due_date = db_carne.data_primeiro_vencimento
-            for i in range(db_carne.numero_parcelas):
-                parcela_valor_devido = valor_parcela_original_calculado
-                if i == db_carne.numero_parcelas - 1:
-                    soma_parcelas_anteriores = valor_parcela_original_calculado * i
-                    parcela_valor_devido = valor_a_parcelar - soma_parcelas_anteriores
-                    parcela_valor_devido = parcela_valor_devido.quantize(Decimal('0.01'))
-
-                if parcela_valor_devido < Decimal('0.00'):
-                    parcela_valor_devido = Decimal('0.00')
-
-                db_parcela = models.Parcela(
-                    id_carne=db_carne.id_carne,
-                    numero_parcela=i + 1,
-                    valor_devido=parcela_valor_devido,
-                    data_vencimento=current_due_date,
-                    valor_pago=Decimal('0.00'),
-                    saldo_devedor=parcela_valor_devido,
-                    status_parcela='Pendente',
-                    juros_multa=Decimal('0.00'),
-                    juros_multa_anterior_aplicada=Decimal('0.00'),
-                    observacoes=None
-                )
-                db.add(db_parcela)
-                current_due_date = calculate_next_due_date(current_due_date, db_carne.frequencia_pagamento)
-
-            db.commit()
-            db.refresh(db_carne) # Refresh novamente para carregar as parcelas
-        return db_carne
-
-
-def update_carne(db: Session, carne_id: int, carne_update: schemas.CarneCreate):
-    db_carne = db.query(models.Carne).filter(models.Carne.id_carne == carne_id).first()
-    if not db_carne:
-        return None
-
-    has_payments = db.query(models.Pagamento).join(models.Parcela).filter(models.Parcela.id_carne == carne_id).first()
-
-    update_data = carne_update.model_dump(exclude_unset=False)
-
-    new_data_venda = update_data.get('data_venda', db_carne.data_venda)
-    new_data_primeiro_vencimento = update_data.get('data_primeiro_vencimento', db_carne.data_primeiro_vencimento)
-    if new_data_venda and new_data_primeiro_vencimento < new_data_venda:
-         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A data do primeiro vencimento não pode ser anterior à data da venda.")
-
-    # Detectar mudança no tipo de carnê (fixo/flexível) ou em campos financeiros que exigem regeneração
-    regenerate_parcels_flag = False
-    financial_keys_for_parcel_regeneration = [
-        'valor_total_original', 'numero_parcelas',
-        'valor_parcela_sugerido', # Campo relevante para carnê fixo
-        'data_primeiro_vencimento',
-        'frequencia_pagamento', 'valor_entrada',
-        'parcela_fixa' # NOVO: Mudança no tipo de carnê exige regeneração
-    ]
-
-    if has_payments:
-        # Se tem pagamentos, só permite alterar descricao, status_carne, observacoes, data_venda
-        allowed_keys_with_payments = ['descricao', 'status_carne', 'observacoes', 'data_venda']
-        for key_to_update in list(update_data.keys()):
-            if key_to_update not in allowed_keys_with_payments:
-                if getattr(db_carne, key_to_update) != update_data[key_to_update]:
-                    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                                        detail=f"Não é possível alterar o campo '{key_to_update}' de um carnê que já possui pagamentos.")
-    else: # Não tem pagamentos, pode regenerar parcelas
-        for key in financial_keys_for_parcel_regeneration:
-            if key in update_data:
-                current_val = getattr(db_carne, key)
-                new_val = update_data.get(key)
-
-                # Tratamento para comparação de Decimals
-                if key in ['valor_total_original', 'valor_parcela_sugerido', 'valor_entrada']:
-                    current_val = Decimal(str(current_val)) if current_val is not None else None # manter str para Decimal para compatibilidade
-                    new_val = Decimal(str(new_val)) if new_val is not None else None # manter str para Decimal para compatibilidade
-                # Para booleanos, comparar diretamente
-                elif key == 'parcela_fixa':
-                    if current_val != new_val: # A mudança no tipo de parcela sempre dispara regeneração
-                        regenerate_parcels_flag = True
-                        break
-                # Para outros tipos, comparação padrão
-                if current_val != new_val:
-                    regenerate_parcels_flag = True
-                    break
-
-    # Aplicar as atualizações aos campos do objeto db_carne
-    for key, value in update_data.items():
-        if key == 'valor_parcela_original': # Este campo é calculado, não setado diretamente
-            continue
-        if key in ['valor_total_original', 'valor_entrada'] and value is not None:
-            setattr(db_carne, key, value) # Alterado: Pydantic já validou para Decimal
-        elif key == 'valor_parcela_sugerido' and value is not None:
-            pass # Não armazena diretamente no db_carne, é usado para cálculo
-        else:
-            setattr(db_carne, key, value)
-
-    # Lógica de regeneração de parcelas
-    if regenerate_parcels_flag and not has_payments:
-        # Excluir parcelas existentes
-        db.query(models.Parcela).filter(models.Parcela.id_carne == carne_id).delete(synchronize_session='fetch')
-        db.flush() # Garante que as deleções sejam processadas antes de adicionar novas
-
-        valor_total_original_decimal = db_carne.valor_total_original # Alterado: Pydantic já validou para Decimal
-        valor_entrada_decimal = db_carne.valor_entrada # Alterado: Pydantic já validou para Decimal
-        valor_a_parcelar = valor_total_original_decimal - valor_entrada_decimal
-
-        # Se o carnê se torna não fixo
-        if not db_carne.parcela_fixa:
-            db_carne.numero_parcelas = 1
-            db_carne.valor_parcela_original = valor_a_parcelar.quantize(Decimal('0.01'))
-            db_carne.frequencia_pagamento = "única" # Ou "variável"
-
-            db_parcela_nova = models.Parcela(
-                id_carne=db_carne.id_carne,
-                numero_parcela=1,
-                valor_devido=valor_a_parcelar,
-                data_vencimento=db_carne.data_primeiro_vencimento,
-                valor_pago=Decimal('0.00'),
-                saldo_devedor=valor_a_parcelar,
-                status_parcela='Pendente',
-                juros_multa=Decimal('0.00'),
-                juros_multa_anterior_aplicada=Decimal('0.00'),
-                observacoes=None
-            )
-            db.add(db_parcela_nova)
-        else: # Se o carnê é fixo (ou mudou para fixo)
-            if db_carne.numero_parcelas <= 0:
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Para carnês com parcela fixa, o número de parcelas deve ser maior que zero.")
-            if valor_a_parcelar <= Decimal('0.00') and db_carne.numero_parcelas > 0:
-                 pass # A validação já é feita no frontend ou no esquema
-
-            valor_parcela_sugerido_decimal = carne_update.valor_parcela_sugerido if carne_update.valor_parcela_sugerido is not None else Decimal('0.00') # Alterado para usar o Decimal do update_data
-            if valor_parcela_sugerido_decimal == Decimal('0.00'): # Default se não sugerido
-                if valor_a_parcelar > Decimal('0.00'):
-                    valor_parcela_original_calculado = (valor_a_parcelar / db_carne.numero_parcelas).quantize(Decimal('0.01'))
-                else:
-                    valor_parcela_original_calculado = Decimal('0.00')
-            else:
-                valor_parcela_original_calculado = valor_parcela_sugerido_decimal
-
-
-            db_carne.valor_parcela_original = valor_parcela_original_calculado # ATUALIZA O VALOR NO OBJETO DO CARNÊ
-
-            current_due_date = db_carne.data_primeiro_vencimento
-            for i in range(db_carne.numero_parcelas):
-                parcela_valor_devido = valor_parcela_original_calculado
-                if i == db_carne.numero_parcelas - 1:
-                    soma_parcelas_anteriores = valor_parcela_original_calculado * i
-                    parcela_valor_devido = valor_a_parcelar - soma_parcelas_anteriores
-                    parcela_valor_devido = parcela_valor_devido.quantize(Decimal('0.01'))
-
-                if parcela_valor_devido < Decimal('0.00'):
-                    parcela_valor_devido = Decimal('0.00')
-
-                db_parcela = models.Parcela(
-                    id_carne=db_carne.id_carne,
-                    numero_parcela=i + 1,
-                    valor_devido=parcela_valor_devido,
-                    data_vencimento=current_due_date,
-                    valor_pago=Decimal('0.00'),
-                    saldo_devedor=parcela_valor_devido,
-                    status_parcela='Pendente',
-                    juros_multa=Decimal('0.00'),
-                    juros_multa_anterior_aplicada=Decimal('0.00'),
-                    observacoes=None
-                )
-                db.add(db_parcela)
-                current_due_date = calculate_next_due_date(current_due_date, db_carne.frequencia_pagamento)
-
-            db.commit()
-            db.refresh(db_carne) # Refresh novamente para carregar as parcelas
-        return db_carne
-
-
-def update_carne(db: Session, carne_id: int, carne_update: schemas.CarneCreate):
-    db_carne = db.query(models.Carne).filter(models.Carne.id_carne == carne_id).first()
-    if not db_carne:
-        return None
-
-    has_payments = db.query(models.Pagamento).join(models.Parcela).filter(models.Parcela.id_carne == carne_id).first()
-
-    update_data = carne_update.model_dump(exclude_unset=False)
-
-    new_data_venda = update_data.get('data_venda', db_carne.data_venda)
-    new_data_primeiro_vencimento = update_data.get('data_primeiro_vencimento', db_carne.data_primeiro_vencimento)
-    if new_data_venda and new_data_primeiro_vencimento < new_data_venda:
-         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A data do primeiro vencimento não pode ser anterior à data da venda.")
-
-    # Detectar mudança no tipo de carnê (fixo/flexível) ou em campos financeiros que exigem regeneração
-    regenerate_parcels_flag = False
-    financial_keys_for_parcel_regeneration = [
-        'valor_total_original', 'numero_parcelas',
-        'valor_parcela_sugerido', # Campo relevante para carnê fixo
-        'data_primeiro_vencimento',
-        'frequencia_pagamento', 'valor_entrada',
-        'parcela_fixa' # NOVO: Mudança no tipo de carnê exige regeneração
-    ]
-
-    if has_payments:
-        # Se tem pagamentos, só permite alterar descricao, status_carne, observacoes, data_venda
-        allowed_keys_with_payments = ['descricao', 'status_carne', 'observacoes', 'data_venda']
-        for key_to_update in list(update_data.keys()):
-            if key_to_update not in allowed_keys_with_payments:
-                if getattr(db_carne, key_to_update) != update_data[key_to_update]:
-                    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                                        detail=f"Não é possível alterar o campo '{key_to_update}' de um carnê que já possui pagamentos.")
-    else: # Não tem pagamentos, pode regenerar parcelas
-        for key in financial_keys_for_parcel_regeneration:
-            if key in update_data:
-                current_val = getattr(db_carne, key)
-                new_val = update_data.get(key)
-
-                # Tratamento para comparação de Decimals
-                if key in ['valor_total_original', 'valor_parcela_sugerido', 'valor_entrada']:
-                    current_val = Decimal(str(current_val)) if current_val is not None else None # manter str para Decimal para compatibilidade
-                    new_val = Decimal(str(new_val)) if new_val is not None else None # manter str para Decimal para compatibilidade
-                # Para booleanos, comparar diretamente
-                elif key == 'parcela_fixa':
-                    if current_val != new_val: # A mudança no tipo de parcela sempre dispara regeneração
-                        regenerate_parcels_flag = True
-                        break
-                # Para outros tipos, comparação padrão
-                if current_val != new_val:
-                    regenerate_parcels_flag = True
-                    break
-
-    # Aplicar as atualizações aos campos do objeto db_carne
-    for key, value in update_data.items():
-        if key == 'valor_parcela_original': # Este campo é calculado, não setado diretamente
-            continue
-        if key in ['valor_total_original', 'valor_entrada'] and value is not None:
-            setattr(db_carne, key, value) # Alterado: Pydantic já validou para Decimal
-        elif key == 'valor_parcela_sugerido' and value is not None:
-            pass # Não armazena diretamente no db_carne, é usado para cálculo
-        else:
-            setattr(db_carne, key, value)
-
-    # Lógica de regeneração de parcelas
-    if regenerate_parcels_flag and not has_payments:
-        # Excluir parcelas existentes
-        db.query(models.Parcela).filter(models.Parcela.id_carne == carne_id).delete(synchronize_session='fetch')
-        db.flush() # Garante que as deleções sejam processadas antes de adicionar novas
-
-        valor_total_original_decimal = db_carne.valor_total_original # Alterado: Pydantic já validou para Decimal
-        valor_entrada_decimal = db_carne.valor_entrada # Alterado: Pydantic já validou para Decimal
-        valor_a_parcelar = valor_total_original_decimal - valor_entrada_decimal
-
-        # Se o carnê se torna não fixo
-        if not db_carne.parcela_fixa:
-            db_carne.numero_parcelas = 1
-            db_carne.valor_parcela_original = valor_a_parcelar.quantize(Decimal('0.01'))
-            db_carne.frequencia_pagamento = "única" # Ou "variável"
-
-            db_parcela_nova = models.Parcela(
-                id_carne=db_carne.id_carne,
-                numero_parcela=1,
-                valor_devido=valor_a_parcelar,
-                data_vencimento=db_carne.data_primeiro_vencimento,
-                valor_pago=Decimal('0.00'),
-                saldo_devedor=valor_a_parcelar,
-                status_parcela='Pendente',
-                juros_multa=Decimal('0.00'),
-                juros_multa_anterior_aplicada=Decimal('0.00'),
-                observacoes=None
-            )
-            db.add(db_parcela_nova)
-        else: # Se o carnê é fixo (ou mudou para fixo)
-            if db_carne.numero_parcelas <= 0:
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Para carnês com parcela fixa, o número de parcelas deve ser maior que zero.")
-            if valor_a_parcelar <= Decimal('0.00') and db_carne.numero_parcelas > 0:
-                 pass # A validação já é feita no frontend ou no esquema
-
-            valor_parcela_sugerido_decimal = carne_update.valor_parcela_sugerido if carne_update.valor_parcela_sugerido is not None else Decimal('0.00') # Alterado para usar o Decimal do update_data
-            if valor_parcela_sugerido_decimal == Decimal('0.00'): # Default se não sugerido
-                if valor_a_parcelar > Decimal('0.00'):
-                    valor_parcela_original_calculado = (valor_a_parcelar / db_carne.numero_parcelas).quantize(Decimal('0.01'))
-                else:
-                    valor_parcela_original_calculado = Decimal('0.00')
-            else:
-                valor_parcela_original_calculado = valor_parcela_sugerido_decimal
-
-
-            db_carne.valor_parcela_original = valor_parcela_original_calculado # ATUALIZA O VALOR NO OBJETO DO CARNÊ
-
-            current_due_date = db_carne.data_primeiro_vencimento
-            for i in range(db_carne.numero_parcelas):
-                parcela_valor_devido = valor_parcela_original_calculado
-                if i == db_carne.numero_parcelas - 1:
-                    soma_parcelas_anteriores = valor_parcela_original_calculado * i
-                    parcela_valor_devido = valor_a_parcelar - soma_parcelas_anteriores
-                    parcela_valor_devido = parcela_valor_devido.quantize(Decimal('0.01'))
-
-                if parcela_valor_devido < Decimal('0.00'):
-                    parcela_valor_devido = Decimal('0.00')
-
-                db_parcela = models.Parcela(
-                    id_carne=db_carne.id_carne,
-                    numero_parcela=i + 1,
-                    valor_devido=parcela_valor_devido,
-                    data_vencimento=current_due_date,
-                    valor_pago=Decimal('0.00'),
-                    saldo_devedor=parcela_valor_devido,
-                    status_parcela='Pendente',
-                    juros_multa=Decimal('0.00'),
-                    juros_multa_anterior_aplicada=Decimal('0.00'),
-                    observacoes=None
-                )
-                db.add(db_parcela)
-                current_due_date = calculate_next_due_date(current_due_date, db_carne.frequencia_pagamento)
-
-            db.commit()
-            db.refresh(db_carne) # Refresh novamente para carregar as parcelas
-        return db_carne
-
-
-def update_carne(db: Session, carne_id: int, carne_update: schemas.CarneCreate):
-    db_carne = db.query(models.Carne).filter(models.Carne.id_carne == carne_id).first()
-    if not db_carne:
-        return None
-
-    has_payments = db.query(models.Pagamento).join(models.Parcela).filter(models.Parcela.id_carne == carne_id).first()
-
-    update_data = carne_update.model_dump(exclude_unset=False)
-
-    new_data_venda = update_data.get('data_venda', db_carne.data_venda)
-    new_data_primeiro_vencimento = update_data.get('data_primeiro_vencimento', db_carne.data_primeiro_vencimento)
-    if new_data_venda and new_data_primeiro_vencimento < new_data_venda:
-         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A data do primeiro vencimento não pode ser anterior à data da venda.")
-
-    # Detectar mudança no tipo de carnê (fixo/flexível) ou em campos financeiros que exigem regeneração
-    regenerate_parcels_flag = False
-    financial_keys_for_parcel_regeneration = [
-        'valor_total_original', 'numero_parcelas',
-        'valor_parcela_sugerido', # Campo relevante para carnê fixo
-        'data_primeiro_vencimento',
-        'frequencia_pagamento', 'valor_entrada',
-        'parcela_fixa' # NOVO: Mudança no tipo de carnê exige regeneração
-    ]
-
-    if has_payments:
-        # Se tem pagamentos, só permite alterar descricao, status_carne, observacoes, data_venda
-        allowed_keys_with_payments = ['descricao', 'status_carne', 'observacoes', 'data_venda']
-        for key_to_update in list(update_data.keys()):
-            if key_to_update not in allowed_keys_with_payments:
-                if getattr(db_carne, key_to_update) != update_data[key_to_update]:
-                    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                                        detail=f"Não é possível alterar o campo '{key_to_update}' de um carnê que já possui pagamentos.")
-    else: # Não tem pagamentos, pode regenerar parcelas
-        for key in financial_keys_for_parcel_regeneration:
-            if key in update_data:
-                current_val = getattr(db_carne, key)
-                new_val = update_data.get(key)
-
-                # Tratamento para comparação de Decimals
-                if key in ['valor_total_original', 'valor_parcela_sugerido', 'valor_entrada']:
-                    current_val = Decimal(str(current_val)) if current_val is not None else None # manter str para Decimal para compatibilidade
-                    new_val = Decimal(str(new_val)) if new_val is not None else None # manter str para Decimal para compatibilidade
-                # Para booleanos, comparar diretamente
-                elif key == 'parcela_fixa':
-                    if current_val != new_val: # A mudança no tipo de parcela sempre dispara regeneração
-                        regenerate_parcels_flag = True
-                        break
-                # Para outros tipos, comparação padrão
-                if current_val != new_val:
-                    regenerate_parcels_flag = True
-                    break
-
-    # Aplicar as atualizações aos campos do objeto db_carne
-    for key, value in update_data.items():
-        if key == 'valor_parcela_original': # Este campo é calculado, não setado diretamente
-            continue
-        if key in ['valor_total_original', 'valor_entrada'] and value is not None:
-            setattr(db_carne, key, value) # Alterado: Pydantic já validou para Decimal
-        elif key == 'valor_parcela_sugerido' and value is not None:
-            pass # Não armazena diretamente no db_carne, é usado para cálculo
-        else:
-            setattr(db_carne, key, value)
-
-    # Lógica de regeneração de parcelas
-    if regenerate_parcels_flag and not has_payments:
-        # Excluir parcelas existentes
-        db.query(models.Parcela).filter(models.Parcela.id_carne == carne_id).delete(synchronize_session='fetch')
-        db.flush() # Garante que as deleções sejam processadas antes de adicionar novas
-
-        valor_total_original_decimal = db_carne.valor_total_original # Alterado: Pydantic já validou para Decimal
-        valor_entrada_decimal = db_carne.valor_entrada # Alterado: Pydantic já validou para Decimal
-        valor_a_parcelar = valor_total_original_decimal - valor_entrada_decimal
-
-        # Se o carnê se torna não fixo
-        if not db_carne.parcela_fixa:
-            db_carne.numero_parcelas = 1
-            db_carne.valor_parcela_original = valor_a_parcelar.quantize(Decimal('0.01'))
-            db_carne.frequencia_pagamento = "única" # Ou "variável"
-
-            db_parcela_nova = models.Parcela(
-                id_carne=db_carne.id_carne,
-                numero_parcela=1,
-                valor_devido=valor_a_parcelar,
-                data_vencimento=db_carne.data_primeiro_vencimento,
-                valor_pago=Decimal('0.00'),
-                saldo_devedor=valor_a_parcelar,
-                status_parcela='Pendente',
-                juros_multa=Decimal('0.00'),
-                juros_multa_anterior_aplicada=Decimal('0.00'),
-                observacoes=None
-            )
-            db.add(db_parcela_nova)
-        else: # Se o carnê é fixo (ou mudou para fixo)
-            if db_carne.numero_parcelas <= 0:
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Para carnês com parcela fixa, o número de parcelas deve ser maior que zero.")
-            if valor_a_parcelar <= Decimal('0.00') and db_carne.numero_parcelas > 0:
-                 pass # A validação já é feita no frontend ou no esquema
-
-            valor_parcela_sugerido_decimal = carne_update.valor_parcela_sugerido if carne_update.valor_parcela_sugerido is not None else Decimal('0.00') # Alterado para usar o Decimal do update_data
-            if valor_parcela_sugerido_decimal == Decimal('0.00'): # Default se não sugerido
-                if valor_a_parcelar > Decimal('0.00'):
-                    valor_parcela_original_calculado = (valor_a_parcelar / db_carne.numero_parcelas).quantize(Decimal('0.01'))
-                else:
-                    valor_parcela_original_calculado = Decimal('0.00')
-            else:
-                valor_parcela_original_calculado = valor_parcela_sugerido_decimal
-
-
-            db_carne.valor_parcela_original = valor_parcela_original_calculado # ATUALIZA O VALOR NO OBJETO DO CARNÊ
-
-            current_due_date = db_carne.data_primeiro_vencimento
-            for i in range(db_carne.numero_parcelas):
-                parcela_valor_devido = valor_parcela_original_calculado
-                if i == db_carne.numero_parcelas - 1:
-                    soma_parcelas_anteriores = valor_parcela_original_calculado * i
-                    parcela_valor_devido = valor_a_parcelar - soma_parcelas_anteriores
-                    parcela_valor_devido = parcela_valor_devido.quantize(Decimal('0.01'))
-
-                if parcela_valor_devido < Decimal('0.00'):
-                    parcela_valor_devido = Decimal('0.00')
-
-                db_parcela = models.Parcela(
-                    id_carne=db_carne.id_carne,
-                    numero_parcela=i + 1,
-                    valor_devido=parcela_valor_devido,
-                    data_vencimento=current_due_date,
-                    valor_pago=Decimal('0.00'),
-                    saldo_devedor=parcela_valor_devido,
-                    status_parcela='Pendente',
-                    juros_multa=Decimal('0.00'),
-                    juros_multa_anterior_aplicada=Decimal('0.00'),
-                    observacoes=None
-                )
-                db.add(db_parcela)
-                current_due_date = calculate_next_due_date(current_due_date, db_carne.frequencia_pagamento)
-
-            db.commit()
-            db.refresh(db_carne) # Refresh novamente para carregar as parcelas
-        return db_carne
-
-
-def update_carne(db: Session, carne_id: int, carne_update: schemas.CarneCreate):
-    db_carne = db.query(models.Carne).filter(models.Carne.id_carne == carne_id).first()
-    if not db_carne:
-        return None
-
-    has_payments = db.query(models.Pagamento).join(models.Parcela).filter(models.Parcela.id_carne == carne_id).first()
-
-    update_data = carne_update.model_dump(exclude_unset=False)
-
-    new_data_venda = update_data.get('data_venda', db_carne.data_venda)
-    new_data_primeiro_vencimento = update_data.get('data_primeiro_vencimento', db_carne.data_primeiro_vencimento)
-    if new_data_venda and new_data_primeiro_vencimento < new_data_venda:
-         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A data do primeiro vencimento não pode ser anterior à data da venda.")
-
-    # Detectar mudança no tipo de carnê (fixo/flexível) ou em campos financeiros que exigem regeneração
-    regenerate_parcels_flag = False
-    financial_keys_for_parcel_regeneration = [
-        'valor_total_original', 'numero_parcelas',
-        'valor_parcela_sugerido', # Campo relevante para carnê fixo
-        'data_primeiro_vencimento',
-        'frequencia_pagamento', 'valor_entrada',
-        'parcela_fixa' # NOVO: Mudança no tipo de carnê exige regeneração
-    ]
-
-    if has_payments:
-        # Se tem pagamentos, só permite alterar descricao, status_carne, observacoes, data_venda
-        allowed_keys_with_payments = ['descricao', 'status_carne', 'observacoes', 'data_venda']
-        for key_to_update in list(update_data.keys()):
-            if key_to_update not in allowed_keys_with_payments:
-                if getattr(db_carne, key_to_update) != update_data[key_to_update]:
-                    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                                        detail=f"Não é possível alterar o campo '{key_to_update}' de um carnê que já possui pagamentos.")
-    else: # Não tem pagamentos, pode regenerar parcelas
-        for key in financial_keys_for_parcel_regeneration:
-            if key in update_data:
-                current_val = getattr(db_carne, key)
-                new_val = update_data.get(key)
-
-                # Tratamento para comparação de Decimals
-                if key in ['valor_total_original', 'valor_parcela_sugerido', 'valor_entrada']:
-                    current_val = Decimal(str(current_val)) if current_val is not None else None # manter str para Decimal para compatibilidade
-                    new_val = Decimal(str(new_val)) if new_val is not None else None # manter str para Decimal para compatibilidade
-                # Para booleanos, comparar diretamente
-                elif key == 'parcela_fixa':
-                    if current_val != new_val: # A mudança no tipo de parcela sempre dispara regeneração
-                        regenerate_parcels_flag = True
-                        break
-                # Para outros tipos, comparação padrão
-                if current_val != new_val:
-                    regenerate_parcels_flag = True
-                    break
-
-    # Aplicar as atualizações aos campos do objeto db_carne
-    for key, value in update_data.items():
-        if key == 'valor_parcela_original': # Este campo é calculado, não setado diretamente
-            continue
-        if key in ['valor_total_original', 'valor_entrada'] and value is not None:
-            setattr(db_carne, key, value) # Alterado: Pydantic já validou para Decimal
-        elif key == 'valor_parcela_sugerido' and value is not None:
-            pass # Não armazena diretamente no db_carne, é usado para cálculo
-        else:
-            setattr(db_carne, key, value)
-
-    # Lógica de regeneração de parcelas
-    if regenerate_parcels_flag and not has_payments:
-        # Excluir parcelas existentes
-        db.query(models.Parcela).filter(models.Parcela.id_carne == carne_id).delete(synchronize_session='fetch')
-        db.flush() # Garante que as deleções sejam processadas antes de adicionar novas
-
-        valor_total_original_decimal = db_carne.valor_total_original # Alterado: Pydantic já validou para Decimal
-        valor_entrada_decimal = db_carne.valor_entrada # Alterado: Pydantic já validou para Decimal
-        valor_a_parcelar = valor_total_original_decimal - valor_entrada_decimal
-
-        # Se o carnê se torna não fixo
-        if not db_carne.parcela_fixa:
-            db_carne.numero_parcelas = 1
-            db_carne.valor_parcela_original = valor_a_parcelar.quantize(Decimal('0.01'))
-            db_carne.frequencia_pagamento = "única" # Ou "variável"
-
-            db_parcela_nova = models.Parcela(
-                id_carne=db_carne.id_carne,
-                numero_parcela=1,
-                valor_devido=valor_a_parcelar,
-                data_vencimento=db_carne.data_primeiro_vencimento,
-                valor_pago=Decimal('0.00'),
-                saldo_devedor=valor_a_parcelar,
-                status_parcela='Pendente',
-                juros_multa=Decimal('0.00'),
-                juros_multa_anterior_aplicada=Decimal('0.00'),
-                observacoes=None
-            )
-            db.add(db_parcela_nova)
-        else: # Se o carnê é fixo (ou mudou para fixo)
-            if db_carne.numero_parcelas <= 0:
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Para carnês com parcela fixa, o número de parcelas deve ser maior que zero.")
-            if valor_a_parcelar <= Decimal('0.00') and db_carne.numero_parcelas > 0:
-                 pass # A validação já é feita no frontend ou no esquema
-
-            valor_parcela_sugerido_decimal = carne_update.valor_parcela_sugerido if carne_update.valor_parcela_sugerido is not None else Decimal('0.00') # Alterado para usar o Decimal do update_data
-            if valor_parcela_sugerido_decimal == Decimal('0.00'): # Default se não sugerido
-                if valor_a_parcelar > Decimal('0.00'):
-                    valor_parcela_original_calculado = (valor_a_parcelar / db_carne.numero_parcelas).quantize(Decimal('0.01'))
-                else:
-                    valor_parcela_original_calculado = Decimal('0.00')
-            else:
-                valor_parcela_original_calculado = valor_parcela_sugerido_decimal
-
-
-            db_carne.valor_parcela_original = valor_parcela_original_calculado # ATUALIZA O VALOR NO OBJETO DO CARNÊ
-
-            current_due_date = db_carne.data_primeiro_vencimento
-            for i in range(db_carne.numero_parcelas):
-                parcela_valor_devido = valor_parcela_original_calculado
-                if i == db_carne.numero_parcelas - 1:
-                    soma_parcelas_anteriores = valor_parcela_original_calculado * i
-                    parcela_valor_devido = valor_a_parcelar - soma_parcelas_anteriores
-                    parcela_valor_devido = parcela_valor_devido.quantize(Decimal('0.01'))
-
-                if parcela_valor_devido < Decimal('0.00'):
-                    parcela_valor_devido = Decimal('0.00')
-
-                db_parcela = models.Parcela(
-                    id_carne=db_carne.id_carne,
-                    numero_parcela=i + 1,
-                    valor_devido=parcela_valor_devido,
-                    data_vencimento=current_due_date,
-                    valor_pago=Decimal('0.00'),
-                    saldo_devedor=parcela_valor_devido,
-                    status_parcela='Pendente',
-                    juros_multa=Decimal('0.00'),
-                    juros_multa_anterior_aplicada=Decimal('0.00'),
-                    observacoes=None
-                )
-                db.add(db_parcela)
-                current_due_date = calculate_next_due_date(current_due_date, db_carne.frequencia_pagamento)
-
-            db.commit()
-            db.refresh(db_carne) # Refresh novamente para carregar as parcelas
-        return db_carne
-
-
-def update_carne(db: Session, carne_id: int, carne_update: schemas.CarneCreate):
-    db_carne = db.query(models.Carne).filter(models.Carne.id_carne == carne_id).first()
-    if not db_carne:
-        return None
-
-    has_payments = db.query(models.Pagamento).join(models.Parcela).filter(models.Parcela.id_carne == carne_id).first()
-
-    update_data = carne_update.model_dump(exclude_unset=False)
-
-    new_data_venda = update_data.get('data_venda', db_carne.data_venda)
-    new_data_primeiro_vencimento = update_data.get('data_primeiro_vencimento', db_carne.data_primeiro_vencimento)
-    if new_data_venda and new_data_primeiro_vencimento < new_data_venda:
-         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A data do primeiro vencimento não pode ser anterior à data da venda.")
-
-    # Detectar mudança no tipo de carnê (fixo/flexível) ou em campos financeiros que exigem regeneração
-    regenerate_parcels_flag = False
-    financial_keys_for_parcel_regeneration = [
-        'valor_total_original', 'numero_parcelas',
-        'valor_parcela_sugerido', # Campo relevante para carnê fixo
-        'data_primeiro_vencimento',
-        'frequencia_pagamento', 'valor_entrada',
-        'parcela_fixa' # NOVO: Mudança no tipo de carnê exige regeneração
-    ]
-
-    if has_payments:
-        # Se tem pagamentos, só permite alterar descricao, status_carne, observacoes, data_venda
-        allowed_keys_with_payments = ['descricao', 'status_carne', 'observacoes', 'data_venda']
-        for key_to_update in list(update_data.keys()):
-            if key_to_update not in allowed_keys_with_payments:
-                if getattr(db_carne, key_to_update) != update_data[key_to_update]:
-                    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                                        detail=f"Não é possível alterar o campo '{key_to_update}' de um carnê que já possui pagamentos.")
-    else: # Não tem pagamentos, pode regenerar parcelas
-        for key in financial_keys_for_parcel_regeneration:
-            if key in update_data:
-                current_val = getattr(db_carne, key)
-                new_val = update_data.get(key)
-
-                # Tratamento para comparação de Decimals
-                if key in ['valor_total_original', 'valor_parcela_sugerido', 'valor_entrada']:
-                    current_val = Decimal(str(current_val)) if current_val is not None else None # manter str para Decimal para compatibilidade
-                    new_val = Decimal(str(new_val)) if new_val is not None else None # manter str para Decimal para compatibilidade
-                # Para booleanos, comparar diretamente
-                elif key == 'parcela_fixa':
-                    if current_val != new_val: # A mudança no tipo de parcela sempre dispara regeneração
-                        regenerate_parcels_flag = True
-                        break
-                # Para outros tipos, comparação padrão
-                if current_val != new_val:
-                    regenerate_parcels_flag = True
-                    break
-
-    # Aplicar as atualizações aos campos do objeto db_carne
-    for key, value in update_data.items():
-        if key == 'valor_parcela_original': # Este campo é calculado, não setado diretamente
-            continue
-        if key in ['valor_total_original', 'valor_entrada'] and value is not None:
-            setattr(db_carne, key, value) # Alterado: Pydantic já validou para Decimal
-        elif key == 'valor_parcela_sugerido' and value is not None:
-            pass # Não armazena diretamente no db_carne, é usado para cálculo
-        else:
-            setattr(db_carne, key, value)
-
-    # Lógica de regeneração de parcelas
-    if regenerate_parcels_flag and not has_payments:
-        # Excluir parcelas existentes
-        db.query(models.Parcela).filter(models.Parcela.id_carne == carne_id).delete(synchronize_session='fetch')
-        db.flush() # Garante que as deleções sejam processadas antes de adicionar novas
-
-        valor_total_original_decimal = db_carne.valor_total_original # Alterado: Pydantic já validou para Decimal
-        valor_entrada_decimal = db_carne.valor_entrada # Alterado: Pydantic já validou para Decimal
-        valor_a_parcelar = valor_total_original_decimal - valor_entrada_decimal
-
-        # Se o carnê se torna não fixo
-        if not db_carne.parcela_fixa:
-            db_carne.numero_parcelas = 1
-            db_carne.valor_parcela_original = valor_a_parcelar.quantize(Decimal('0.01'))
-            db_carne.frequencia_pagamento = "única" # Ou "variável"
-
-            db_parcela_nova = models.Parcela(
-                id_carne=db_carne.id_carne,
-                numero_parcela=1,
-                valor_devido=valor_a_parcelar,
-                data_vencimento=db_carne.data_primeiro_vencimento,
-                valor_pago=Decimal('0.00'),
-                saldo_devedor=valor_a_parcelar,
-                status_parcela='Pendente',
-                juros_multa=Decimal('0.00'),
-                juros_multa_anterior_aplicada=Decimal('0.00'),
-                observacoes=None
-            )
-            db.add(db_parcela_nova)
-        else: # Se o carnê é fixo (ou mudou para fixo)
-            if db_carne.numero_parcelas <= 0:
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Para carnês com parcela fixa, o número de parcelas deve ser maior que zero.")
-            if valor_a_parcelar <= Decimal('0.00') and db_carne.numero_parcelas > 0:
-                 pass # A validação já é feita no frontend ou no esquema
-
-            valor_parcela_sugerido_decimal = carne_update.valor_parcela_sugerido if carne_update.valor_parcela_sugerido is not None else Decimal('0.00') # Alterado para usar o Decimal do update_data
-            if valor_parcela_sugerido_decimal == Decimal('0.00'): # Default se não sugerido
-                if valor_a_parcelar > Decimal('0.00'):
-                    valor_parcela_original_calculado = (valor_a_parcelar / db_carne.numero_parcelas).quantize(Decimal('0.01'))
-                else:
-                    valor_parcela_original_calculado = Decimal('0.00')
-            else:
-                valor_parcela_original_calculado = valor_parcela_sugerido_decimal
-
-
-            db_carne.valor_parcela_original = valor_parcela_original_calculado # ATUALIZA O VALOR NO OBJETO DO CARNÊ
-
-            current_due_date = db_carne.data_primeiro_vencimento
-            for i in range(db_carne.numero_parcelas):
-                parcela_valor_devido = valor_parcela_original_calculado
-                if i == db_carne.numero_parcelas - 1:
-                    soma_parcelas_anteriores = valor_parcela_original_calculado * i
-                    parcela_valor_devido = valor_a_parcelar - soma_parcelas_anteriores
-                    parcela_valor_devido = parcela_valor_devido.quantize(Decimal('0.01'))
-
-                if parcela_valor_devido < Decimal('0.00'):
-                    parcela_valor_devido = Decimal('0.00')
-
-                db_parcela = models.Parcela(
-                    id_carne=db_carne.id_carne,
-                    numero_parcela=i + 1,
-                    valor_devido=parcela_valor_devido,
-                    data_vencimento=current_due_date,
-                    valor_pago=Decimal('0.00'),
-                    saldo_devedor=parcela_valor_devido,
-                    status_parcela='Pendente',
-                    juros_multa=Decimal('0.00'),
-                    juros_multa_anterior_aplicada=Decimal('0.00'),
-                    observacoes=None
-                )
-                db.add(db_parcela)
-                current_due_date = calculate_next_due_date(current_due_date, db_carne.frequencia_pagamento)
-
-            db.commit()
-            db.refresh(db_carne) # Refresh novamente para carregar as parcelas
-        return db_carne
-
-
-def update_carne(db: Session, carne_id: int, carne_update: schemas.CarneCreate):
-    db_carne = db.query(models.Carne).filter(models.Carne.id_carne == carne_id).first()
-    if not db_carne:
-        return None
-
-    has_payments = db.query(models.Pagamento).join(models.Parcela).filter(models.Parcela.id_carne == carne_id).first()
-
-    update_data = carne_update.model_dump(exclude_unset=False)
-
-    new_data_venda = update_data.get('data_venda', db_carne.data_venda)
-    new_data_primeiro_vencimento = update_data.get('data_primeiro_vencimento', db_carne.data_primeiro_vencimento)
-    if new_data_venda and new_data_primeiro_vencimento < new_data_venda:
-         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A data do primeiro vencimento não pode ser anterior à data da venda.")
-
-    # Detectar mudança no tipo de carnê (fixo/flexível) ou em campos financeiros que exigem regeneração
-    regenerate_parcels_flag = False
-    financial_keys_for_parcel_regeneration = [
-        'valor_total_original', 'numero_parcelas',
-        'valor_parcela_sugerido', # Campo relevante para carnê fixo
-        'data_primeiro_vencimento',
-        'frequencia_pagamento', 'valor_entrada',
-        'parcela_fixa' # NOVO: Mudança no tipo de carnê exige regeneração
-    ]
-
-    if has_payments:
-        # Se tem pagamentos, só permite alterar descricao, status_carne, observacoes, data_venda
-        allowed_keys_with_payments = ['descricao', 'status_carne', 'observacoes', 'data_venda']
-        for key_to_update in list(update_data.keys()):
-            if key_to_update not in allowed_keys_with_payments:
-                if getattr(db_carne, key_to_update) != update_data[key_to_update]:
-                    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                                        detail=f"Não é possível alterar o campo '{key_to_update}' de um carnê que já possui pagamentos.")
-    else: # Não tem pagamentos, pode regenerar parcelas
-        for key in financial_keys_for_parcel_regeneration:
-            if key in update_data:
-                current_val = getattr(db_carne, key)
-                new_val = update_data.get(key)
-
-                # Tratamento para comparação de Decimals
-                if key in ['valor_total_original', 'valor_parcela_sugerido', 'valor_entrada']:
-                    current_val = Decimal(str(current_val)) if current_val is not None else None # manter str para Decimal para compatibilidade
-                    new_val = Decimal(str(new_val)) if new_val is not None else None # manter str para Decimal para compatibilidade
-                # Para booleanos, comparar diretamente
-                elif key == 'parcela_fixa':
-                    if current_val != new_val: # A mudança no tipo de parcela sempre dispara regeneração
-                        regenerate_parcels_flag = True
-                        break
-                # Para outros tipos, comparação padrão
-                if current_val != new_val:
-                    regenerate_parcels_flag = True
-                    break
-
-    # Aplicar as atualizações aos campos do objeto db_carne
-    for key, value in update_data.items():
-        if key == 'valor_parcela_original': # Este campo é calculado, não setado diretamente
-            continue
-        if key in ['valor_total_original', 'valor_entrada'] and value is not None:
-            setattr(db_carne, key, value) # Alterado: Pydantic já validou para Decimal
-        elif key == 'valor_parcela_sugerido' and value is not None:
-            pass # Não armazena diretamente no db_carne, é usado para cálculo
-        else:
-            setattr(db_carne, key, value)
-
-    # Lógica de regeneração de parcelas
-    if regenerate_parcels_flag and not has_payments:
-        # Excluir parcelas existentes
-        db.query(models.Parcela).filter(models.Parcela.id_carne == carne_id).delete(synchronize_session='fetch')
-        db.flush() # Garante que as deleções sejam processadas antes de adicionar novas
-
-        valor_total_original_decimal = db_carne.valor_total_original # Alterado: Pydantic já validou para Decimal
-        valor_entrada_decimal = db_carne.valor_entrada # Alterado: Pydantic já validou para Decimal
-        valor_a_parcelar = valor_total_original_decimal - valor_entrada_decimal
-
-        # Se o carnê se torna não fixo
-        if not db_carne.parcela_fixa:
-            db_carne.numero_parcelas = 1
-            db_carne.valor_parcela_original = valor_a_parcelar.quantize(Decimal('0.01'))
-            db_carne.frequencia_pagamento = "única" # Ou "variável"
-
-            db_parcela_nova = models.Parcela(
-                id_carne=db_carne.id_carne,
-                numero_parcela=1,
-                valor_devido=valor_a_parcelar,
-                data_vencimento=db_carne.data_primeiro_vencimento,
-                valor_pago=Decimal('0.00'),
-                saldo_devedor=valor_a_parcelar,
-                status_parcela='Pendente',
-                juros_multa=Decimal('0.00'),
-                juros_multa_anterior_aplicada=Decimal('0.00'),
-                observacoes=None
-            )
-            db.add(db_parcela_nova)
-        else: # Se o carnê é fixo (ou mudou para fixo)
-            if db_carne.numero_parcelas <= 0:
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Para carnês com parcela fixa, o número de parcelas deve ser maior que zero.")
-            if valor_a_parcelar <= Decimal('0.00') and db_carne.numero_parcelas > 0:
-                 pass # A validação já é feita no frontend ou no esquema
-
-            valor_parcela_sugerido_decimal = carne_update.valor_parcela_sugerido if carne_update.valor_parcela_sugerido is not None else Decimal('0.00') # Alterado para usar o Decimal do update_data
-            if valor_parcela_sugerido_decimal == Decimal('0.00'): # Default se não sugerido
-                if valor_a_parcelar > Decimal('0.00'):
-                    valor_parcela_original_calculado = (valor_a_parcelar / db_carne.numero_parcelas).quantize(Decimal('0.01'))
-                else:
-                    valor_parcela_original_calculado = Decimal('0.00')
-            else:
-                valor_parcela_original_calculado = valor_parcela_sugerido_decimal
-
-
-            db_carne.valor_parcela_original = valor_parcela_original_calculado # ATUALIZA O VALOR NO OBJETO DO CARNÊ
-
-            current_due_date = db_carne.data_primeiro_vencimento
-            for i in range(db_carne.numero_parcelas):
-                parcela_valor_devido = valor_parcela_original_calculado
-                if i == db_carne.numero_parcelas - 1:
-                    soma_parcelas_anteriores = valor_parcela_original_calculado * i
-                    parcela_valor_devido = valor_a_parcelar - soma_parcelas_anteriores
-                    parcela_valor_devido = parcela_valor_devido.quantize(Decimal('0.01'))
-
-                if parcela_valor_devido < Decimal('0.00'):
-                    parcela_valor_devido = Decimal('0.00')
-
-                db_parcela = models.Parcela(
-                    id_carne=db_carne.id_carne,
-                    numero_parcela=i + 1,
-                    valor_devido=parcela_valor_devido,
-                    data_vencimento=current_due_date,
-                    valor_pago=Decimal('0.00'),
-                    saldo_devedor=parcela_valor_devido,
-                    status_parcela='Pendente',
-                    juros_multa=Decimal('0.00'),
-                    juros_multa_anterior_aplicada=Decimal('0.00'),
-                    observacoes=None
-                )
-                db.add(db_parcela)
-                current_due_date = calculate_next_due_date(current_due_date, db_carne.frequencia_pagamento)
-
-            db.commit()
-            db.refresh(db_carne) # Refresh novamente para carregar as parcelas
-        return db_carne
-
-
-def update_carne(db: Session, carne_id: int, carne_update: schemas.CarneCreate):
-    db_carne = db.query(models.Carne).filter(models.Carne.id_carne == carne_id).first()
-    if not db_carne:
-        return None
-
-    has_payments = db.query(models.Pagamento).join(models.Parcela).filter(models.Parcela.id_carne == carne_id).first()
-
-    update_data = carne_update.model_dump(exclude_unset=False)
-
-    new_data_venda = update_data.get('data_venda', db_carne.data_venda)
-    new_data_primeiro_vencimento = update_data.get('data_primeiro_vencimento', db_carne.data_primeiro_vencimento)
-    if new_data_venda and new_data_primeiro_vencimento < new_data_venda:
-         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A data do primeiro vencimento não pode ser anterior à data da venda.")
-
-    # Detectar mudança no tipo de carnê (fixo/flexível) ou em campos financeiros que exigem regeneração
-    regenerate_parcels_flag = False
-    financial_keys_for_parcel_regeneration = [
-        'valor_total_original', 'numero_parcelas',
-        'valor_parcela_sugerido', # Campo relevante para carnê fixo
-        'data_primeiro_vencimento',
-        'frequencia_pagamento', 'valor_entrada',
-        'parcela_fixa' # NOVO: Mudança no tipo de carnê exige regeneração
-    ]
-
-    if has_payments:
-        # Se tem pagamentos, só permite alterar descricao, status_carne, observacoes, data_venda
-        allowed_keys_with_payments = ['descricao', 'status_carne', 'observacoes', 'data_venda']
-        for key_to_update in list(update_data.keys()):
-            if key_to_update not in allowed_keys_with_payments:
-                if getattr(db_carne, key_to_update) != update_data[key_to_update]:
-                    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                                        detail=f"Não é possível alterar o campo '{key_to_update}' de um carnê que já possui pagamentos.")
-    else: # Não tem pagamentos, pode regenerar parcelas
-        for key in financial_keys_for_parcel_regeneration:
-            if key in update_data:
-                current_val = getattr(db_carne, key)
-                new_val = update_data.get(key)
-
-                # Tratamento para comparação de Decimals
-                if key in ['valor_total_original', 'valor_parcela_sugerido', 'valor_entrada']:
-                    current_val = Decimal(str(current_val)) if current_val is not None else None # manter str para Decimal para compatibilidade
-                    new_val = Decimal(str(new_val)) if new_val is not None else None # manter str para Decimal para compatibilidade
-                # Para booleanos, comparar diretamente
-                elif key == 'parcela_fixa':
-                    if current_val != new_val: # A mudança no tipo de parcela sempre dispara regeneração
-                        regenerate_parcels_flag = True
-                        break
-                # Para outros tipos, comparação padrão
-                if current_val != new_val:
-                    regenerate_parcels_flag = True
-                    break
-
-    # Aplicar as atualizações aos campos do objeto db_carne
-    for key, value in update_data.items():
-        if key == 'valor_parcela_original': # Este campo é calculado, não setado diretamente
-            continue
-        if key in ['valor_total_original', 'valor_entrada'] and value is not None:
-            setattr(db_carne, key, value) # Alterado: Pydantic já validou para Decimal
-        elif key == 'valor_parcela_sugerido' and value is not None:
-            pass # Não armazena diretamente no db_carne, é usado para cálculo
+            pass # Não armazena directamente no db_carne, é usado para cálculo
         else:
             setattr(db_carne, key, value)
 
@@ -3690,288 +2283,6 @@ def update_carne(db: Session, carne_id: int, carne_update: schemas.CarneCreate):
                 if key in ['valor_total_original', 'valor_parcela_sugerido', 'valor_entrada']:
                     current_val = Decimal(str(current_val)) if current_val is not None else None # manter str para Decimal para compatibilidade
                     new_val = Decimal(str(new_val)) if new_val is not None else None # manter str para Decimal para compatibilidade
-                # Para booleanos, comparar diretamente
-                elif key == 'parcela_fixa':
-                    if current_val != new_val: # A mudança no tipo de parcela sempre dispara regeneração
-                        regenerate_parcels_flag = True
-                        break
-                # Para outros tipos, comparação padrão
-                if current_val != new_val:
-                    regenerate_parcels_flag = True
-                    break
-
-    # Aplicar as atualizações aos campos do objeto db_carne
-    for key, value in update_data.items():
-        if key == 'valor_parcela_original': # Este campo é calculado, não setado diretamente
-            continue
-        if key in ['valor_total_original', 'valor_entrada'] and value is not None:
-            setattr(db_carne, key, value) # Alterado: Pydantic já validou para Decimal
-        elif key == 'valor_parcela_sugerido' and value is not None:
-            pass # Não armazena diretamente no db_carne, é usado para cálculo
-        else:
-            setattr(db_carne, key, value)
-
-    # Lógica de regeneração de parcelas
-    if regenerate_parcels_flag and not has_payments:
-        # Excluir parcelas existentes
-        db.query(models.Parcela).filter(models.Parcela.id_carne == carne_id).delete(synchronize_session='fetch')
-        db.flush() # Garante que as deleções sejam processadas antes de adicionar novas
-
-        valor_total_original_decimal = db_carne.valor_total_original # Alterado: Pydantic já validou para Decimal
-        valor_entrada_decimal = db_carne.valor_entrada # Alterado: Pydantic já validou para Decimal
-        valor_a_parcelar = valor_total_original_decimal - valor_entrada_decimal
-
-        # Se o carnê se torna não fixo
-        if not db_carne.parcela_fixa:
-            db_carne.numero_parcelas = 1
-            db_carne.valor_parcela_original = valor_a_parcelar.quantize(Decimal('0.01'))
-            db_carne.frequencia_pagamento = "única" # Ou "variável"
-
-            db_parcela_nova = models.Parcela(
-                id_carne=db_carne.id_carne,
-                numero_parcela=1,
-                valor_devido=valor_a_parcelar,
-                data_vencimento=db_carne.data_primeiro_vencimento,
-                valor_pago=Decimal('0.00'),
-                saldo_devedor=valor_a_parcelar,
-                status_parcela='Pendente',
-                juros_multa=Decimal('0.00'),
-                juros_multa_anterior_aplicada=Decimal('0.00'),
-                observacoes=None
-            )
-            db.add(db_parcela_nova)
-        else: # Se o carnê é fixo (ou mudou para fixo)
-            if db_carne.numero_parcelas <= 0:
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Para carnês com parcela fixa, o número de parcelas deve ser maior que zero.")
-            if valor_a_parcelar <= Decimal('0.00') and db_carne.numero_parcelas > 0:
-                 pass # A validação já é feita no frontend ou no esquema
-
-            valor_parcela_sugerido_decimal = carne_update.valor_parcela_sugerido if carne_update.valor_parcela_sugerido is not None else Decimal('0.00') # Alterado para usar o Decimal do update_data
-            if valor_parcela_sugerido_decimal == Decimal('0.00'): # Default se não sugerido
-                if valor_a_parcelar > Decimal('0.00'):
-                    valor_parcela_original_calculado = (valor_a_parcelar / db_carne.numero_parcelas).quantize(Decimal('0.01'))
-                else:
-                    valor_parcela_original_calculado = Decimal('0.00')
-            else:
-                valor_parcela_original_calculado = valor_parcela_sugerido_decimal
-
-
-            db_carne.valor_parcela_original = valor_parcela_original_calculado # ATUALIZA O VALOR NO OBJETO DO CARNÊ
-
-            current_due_date = db_carne.data_primeiro_vencimento
-            for i in range(db_carne.numero_parcelas):
-                parcela_valor_devido = valor_parcela_original_calculado
-                if i == db_carne.numero_parcelas - 1:
-                    soma_parcelas_anteriores = valor_parcela_original_calculado * i
-                    parcela_valor_devido = valor_a_parcelar - soma_parcelas_anteriores
-                    parcela_valor_devido = parcela_valor_devido.quantize(Decimal('0.01'))
-
-                if parcela_valor_devido < Decimal('0.00'):
-                    parcela_valor_devido = Decimal('0.00')
-
-                db_parcela = models.Parcela(
-                    id_carne=db_carne.id_carne,
-                    numero_parcela=i + 1,
-                    valor_devido=parcela_valor_devido,
-                    data_vencimento=current_due_date,
-                    valor_pago=Decimal('0.00'),
-                    saldo_devedor=parcela_valor_devido,
-                    status_parcela='Pendente',
-                    juros_multa=Decimal('0.00'),
-                    juros_multa_anterior_aplicada=Decimal('0.00'),
-                    observacoes=None
-                )
-                db.add(db_parcela)
-                current_due_date = calculate_next_due_date(current_due_date, db_carne.frequencia_pagamento)
-
-            db.commit()
-            db.refresh(db_carne) # Refresh novamente para carregar as parcelas
-        return db_carne
-
-
-def update_carne(db: Session, carne_id: int, carne_update: schemas.CarneCreate):
-    db_carne = db.query(models.Carne).filter(models.Carne.id_carne == carne_id).first()
-    if not db_carne:
-        return None
-
-    has_payments = db.query(models.Pagamento).join(models.Parcela).filter(models.Parcela.id_carne == carne_id).first()
-
-    update_data = carne_update.model_dump(exclude_unset=False)
-
-    new_data_venda = update_data.get('data_venda', db_carne.data_venda)
-    new_data_primeiro_vencimento = update_data.get('data_primeiro_vencimento', db_carne.data_primeiro_vencimento)
-    if new_data_venda and new_data_primeiro_vencimento < new_data_venda:
-         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A data do primeiro vencimento não pode ser anterior à data da venda.")
-
-    # Detectar mudança no tipo de carnê (fixo/flexível) ou em campos financeiros que exigem regeneração
-    regenerate_parcels_flag = False
-    financial_keys_for_parcel_regeneration = [
-        'valor_total_original', 'numero_parcelas',
-        'valor_parcela_sugerido', # Campo relevante para carnê fixo
-        'data_primeiro_vencimento',
-        'frequencia_pagamento', 'valor_entrada',
-        'parcela_fixa' # NOVO: Mudança no tipo de carnê exige regeneração
-    ]
-
-    if has_payments:
-        # Se tem pagamentos, só permite alterar descricao, status_carne, observacoes, data_venda
-        allowed_keys_with_payments = ['descricao', 'status_carne', 'observacoes', 'data_venda']
-        for key_to_update in list(update_data.keys()):
-            if key_to_update not in allowed_keys_with_payments:
-                if getattr(db_carne, key_to_update) != update_data[key_to_update]:
-                    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                                        detail=f"Não é possível alterar o campo '{key_to_update}' de um carnê que já possui pagamentos.")
-    else: # Não tem pagamentos, pode regenerar parcelas
-        for key in financial_keys_for_parcel_regeneration:
-            if key in update_data:
-                current_val = getattr(db_carne, key)
-                new_val = update_data.get(key)
-
-                # Tratamento para comparação de Decimals
-                if key in ['valor_total_original', 'valor_parcela_sugerido', 'valor_entrada']:
-                    current_val = Decimal(str(current_val)) if current_val is not None else None # manter str para Decimal para compatibilidade
-                    new_val = Decimal(str(new_val)) if new_val is not None else None # manter str para Decimal para compatibilidade
-                # Para booleanos, comparar diretamente
-                elif key == 'parcela_fixa':
-                    if current_val != new_val: # A mudança no tipo de parcela sempre dispara regeneração
-                        regenerate_parcels_flag = True
-                        break
-                # Para outros tipos, comparação padrão
-                if current_val != new_val:
-                    regenerate_parcels_flag = True
-                    break
-
-    # Aplicar as atualizações aos campos do objeto db_carne
-    for key, value in update_data.items():
-        if key == 'valor_parcela_original': # Este campo é calculado, não setado diretamente
-            continue
-        if key in ['valor_total_original', 'valor_entrada'] and value is not None:
-            setattr(db_carne, key, value) # Alterado: Pydantic já validou para Decimal
-        elif key == 'valor_parcela_sugerido' and value is not None:
-            pass # Não armazena diretamente no db_carne, é usado para cálculo
-        else:
-            setattr(db_carne, key, value)
-
-    # Lógica de regeneração de parcelas
-    if regenerate_parcels_flag and not has_payments:
-        # Excluir parcelas existentes
-        db.query(models.Parcela).filter(models.Parcela.id_carne == carne_id).delete(synchronize_session='fetch')
-        db.flush() # Garante que as deleções sejam processadas antes de adicionar novas
-
-        valor_total_original_decimal = db_carne.valor_total_original # Alterado: Pydantic já validou para Decimal
-        valor_entrada_decimal = db_carne.valor_entrada # Alterado: Pydantic já validou para Decimal
-        valor_a_parcelar = valor_total_original_decimal - valor_entrada_decimal
-
-        # Se o carnê se torna não fixo
-        if not db_carne.parcela_fixa:
-            db_carne.numero_parcelas = 1
-            db_carne.valor_parcela_original = valor_a_parcelar.quantize(Decimal('0.01'))
-            db_carne.frequencia_pagamento = "única" # Ou "variável"
-
-            db_parcela_nova = models.Parcela(
-                id_carne=db_carne.id_carne,
-                numero_parcela=1,
-                valor_devido=valor_a_parcelar,
-                data_vencimento=db_carne.data_primeiro_vencimento,
-                valor_pago=Decimal('0.00'),
-                saldo_devedor=valor_a_parcelar,
-                status_parcela='Pendente',
-                juros_multa=Decimal('0.00'),
-                juros_multa_anterior_aplicada=Decimal('0.00'),
-                observacoes=None
-            )
-            db.add(db_parcela_nova)
-        else: # Se o carnê é fixo (ou mudou para fixo)
-            if db_carne.numero_parcelas <= 0:
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Para carnês com parcela fixa, o número de parcelas deve ser maior que zero.")
-            if valor_a_parcelar <= Decimal('0.00') and db_carne.numero_parcelas > 0:
-                 pass # A validação já é feita no frontend ou no esquema
-
-            valor_parcela_sugerido_decimal = carne_update.valor_parcela_sugerido if carne_update.valor_parcela_sugerido is not None else Decimal('0.00') # Alterado para usar o Decimal do update_data
-            if valor_parcela_sugerido_decimal == Decimal('0.00'): # Default se não sugerido
-                if valor_a_parcelar > Decimal('0.00'):
-                    valor_parcela_original_calculado = (valor_a_parcelar / db_carne.numero_parcelas).quantize(Decimal('0.01'))
-                else:
-                    valor_parcela_original_calculado = Decimal('0.00')
-            else:
-                valor_parcela_original_calculado = valor_parcela_sugerido_decimal
-
-
-            db_carne.valor_parcela_original = valor_parcela_original_calculado # ATUALIZA O VALOR NO OBJETO DO CARNÊ
-
-            current_due_date = db_carne.data_primeiro_vencimento
-            for i in range(db_carne.numero_parcelas):
-                parcela_valor_devido = valor_parcela_original_calculado
-                if i == db_carne.numero_parcelas - 1:
-                    soma_parcelas_anteriores = valor_parcela_original_calculado * i
-                    parcela_valor_devido = valor_a_parcelar - soma_parcelas_anteriores
-                    parcela_valor_devido = parcela_valor_devido.quantize(Decimal('0.01'))
-
-                if parcela_valor_devido < Decimal('0.00'):
-                    parcela_valor_devido = Decimal('0.00')
-
-                db_parcela = models.Parcela(
-                    id_carne=db_carne.id_carne,
-                    numero_parcela=i + 1,
-                    valor_devido=parcela_valor_devido,
-                    data_vencimento=current_due_date,
-                    valor_pago=Decimal('0.00'),
-                    saldo_devedor=parcela_valor_devido,
-                    status_parcela='Pendente',
-                    juros_multa=Decimal('0.00'),
-                    juros_multa_anterior_aplicada=Decimal('0.00'),
-                    observacoes=None
-                )
-                db.add(db_parcela)
-                current_due_date = calculate_next_due_date(current_due_date, db_carne.frequencia_pagamento)
-
-            db.commit()
-            db.refresh(db_carne) # Refresh novamente para carregar as parcelas
-        return db_carne
-
-
-def update_carne(db: Session, carne_id: int, carne_update: schemas.CarneCreate):
-    db_carne = db.query(models.Carne).filter(models.Carne.id_carne == carne_id).first()
-    if not db_carne:
-        return None
-
-    has_payments = db.query(models.Pagamento).join(models.Parcela).filter(models.Parcela.id_carne == carne_id).first()
-
-    update_data = carne_update.model_dump(exclude_unset=False)
-
-    new_data_venda = update_data.get('data_venda', db_carne.data_venda)
-    new_data_primeiro_vencimento = update_data.get('data_primeiro_vencimento', db_carne.data_primeiro_vencimento)
-    if new_data_venda and new_data_primeiro_vencimento < new_data_venda:
-         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A data do primeiro vencimento não pode ser anterior à data da venda.")
-
-    # Detectar mudança no tipo de carnê (fixo/flexível) ou em campos financeiros que exigem regeneração
-    regenerate_parcels_flag = False
-    financial_keys_for_parcel_regeneration = [
-        'valor_total_original', 'numero_parcelas',
-        'valor_parcela_sugerido', # Campo relevante para carnê fixo
-        'data_primeiro_vencimento',
-        'frequencia_pagamento', 'valor_entrada',
-        'parcela_fixa' # NOVO: Mudança no tipo de carnê exige regeneração
-    ]
-
-    if has_payments:
-        # Se tem pagamentos, só permite alterar descricao, status_carne, observacoes, data_venda
-        allowed_keys_with_payments = ['descricao', 'status_carne', 'observacoes', 'data_venda']
-        for key_to_update in list(update_data.keys()):
-            if key_to_update not in allowed_keys_with_payments:
-                if getattr(db_carne, key_to_update) != update_data[key_to_update]:
-                    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                                        detail=f"Não é possível alterar o campo '{key_to_update}' de um carnê que já possui pagamentos.")
-    else: # Não tem pagamentos, pode regenerar parcelas
-        for key in financial_keys_for_parcel_regeneration:
-            if key in update_data:
-                current_val = getattr(db_carne, key)
-                new_val = update_data.get(key)
-
-                # Tratamento para comparação de Decimals
-                if key in ['valor_total_original', 'valor_parcela_sugerido', 'valor_entrada']:
-                    current_val = Decimal(str(current_val)) if current_val is not None else None # manter str para Decimal para compatibilidade
-                    new_val = Decimal(str(new_val)) if new_val is not None else None # manter str para Decimal para compatibilidade
                 # Para booleanos, comparar directamente
                 elif key == 'parcela_fixa':
                     if current_val != new_val: # A mudança no tipo de parcela sempre dispara regeneração
@@ -3990,147 +2301,6 @@ def update_carne(db: Session, carne_id: int, carne_update: schemas.CarneCreate):
             setattr(db_carne, key, value) # Alterado: Pydantic já validou para Decimal
         elif key == 'valor_parcela_sugerido' and value is not None:
             pass # Não armazena directamente no db_carne, é usado para cálculo
-        else:
-            setattr(db_carne, key, value)
-
-    # Lógica de regeneração de parcelas
-    if regenerate_parcels_flag and not has_payments:
-        # Excluir parcelas existentes
-        db.query(models.Parcela).filter(models.Parcela.id_carne == carne_id).delete(synchronize_session='fetch')
-        db.flush() # Garante que as deleções sejam processadas antes de adicionar novas
-
-        valor_total_original_decimal = db_carne.valor_total_original # Alterado: Pydantic já validou para Decimal
-        valor_entrada_decimal = db_carne.valor_entrada # Alterado: Pydantic já validou para Decimal
-        valor_a_parcelar = valor_total_original_decimal - valor_entrada_decimal
-
-        # Se o carnê se torna não fixo
-        if not db_carne.parcela_fixa:
-            db_carne.numero_parcelas = 1
-            db_carne.valor_parcela_original = valor_a_parcelar.quantize(Decimal('0.01'))
-            db_carne.frequencia_pagamento = "única" # Ou "variável"
-
-            db_parcela_nova = models.Parcela(
-                id_carne=db_carne.id_carne,
-                numero_parcela=1,
-                valor_devido=valor_a_parcelar,
-                data_vencimento=db_carne.data_primeiro_vencimento,
-                valor_pago=Decimal('0.00'),
-                saldo_devedor=valor_a_parcelar,
-                status_parcela='Pendente',
-                juros_multa=Decimal('0.00'),
-                juros_multa_anterior_aplicada=Decimal('0.00'),
-                observacoes=None
-            )
-            db.add(db_parcela_nova)
-        else: # Se o carnê é fixo (ou mudou para fixo)
-            if db_carne.numero_parcelas <= 0:
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Para carnês com parcela fixa, o número de parcelas deve ser maior que zero.")
-            if valor_a_parcelar <= Decimal('0.00') and db_carne.numero_parcelas > 0:
-                 pass # A validação já é feita no frontend ou no esquema
-
-            valor_parcela_sugerido_decimal = carne_update.valor_parcela_sugerido if carne_update.valor_parcela_sugerido is not None else Decimal('0.00') # Alterado para usar o Decimal do update_data
-            if valor_parcela_sugerido_decimal == Decimal('0.00'): # Default se não sugerido
-                if valor_a_parcelar > Decimal('0.00'):
-                    valor_parcela_original_calculado = (valor_a_parcelar / db_carne.numero_parcelas).quantize(Decimal('0.01'))
-                else:
-                    valor_parcela_original_calculado = Decimal('0.00')
-            else:
-                valor_parcela_original_calculado = valor_parcela_sugerido_decimal
-
-
-            db_carne.valor_parcela_original = valor_parcela_original_calculado # ATUALIZA O VALOR NO OBJETO DO CARNÊ
-
-            current_due_date = db_carne.data_primeiro_vencimento
-            for i in range(db_carne.numero_parcelas):
-                parcela_valor_devido = valor_parcela_original_calculado
-                if i == db_carne.numero_parcelas - 1:
-                    soma_parcelas_anteriores = valor_parcela_original_calculado * i
-                    parcela_valor_devido = valor_a_parcelar - soma_parcelas_anteriores
-                    parcela_valor_devido = parcela_valor_devido.quantize(Decimal('0.01'))
-
-                if parcela_valor_devido < Decimal('0.00'):
-                    parcela_valor_devido = Decimal('0.00')
-
-                db_parcela = models.Parcela(
-                    id_carne=db_carne.id_carne,
-                    numero_parcela=i + 1,
-                    valor_devido=parcela_valor_devido,
-                    data_vencimento=current_due_date,
-                    valor_pago=Decimal('0.00'),
-                    saldo_devedor=parcela_valor_devido,
-                    status_parcela='Pendente',
-                    juros_multa=Decimal('0.00'),
-                    juros_multa_anterior_aplicada=Decimal('0.00'),
-                    observacoes=None
-                )
-                db.add(db_parcela)
-                current_due_date = calculate_next_due_date(current_due_date, db_carne.frequencia_pagamento)
-
-            db.commit()
-            db.refresh(db_carne) # Refresh novamente para carregar as parcelas
-        return db_carne
-
-
-def update_carne(db: Session, carne_id: int, carne_update: schemas.CarneCreate):
-    db_carne = db.query(models.Carne).filter(models.Carne.id_carne == carne_id).first()
-    if not db_carne:
-        return None
-
-    has_payments = db.query(models.Pagamento).join(models.Parcela).filter(models.Parcela.id_carne == carne_id).first()
-
-    update_data = carne_update.model_dump(exclude_unset=False)
-
-    new_data_venda = update_data.get('data_venda', db_carne.data_venda)
-    new_data_primeiro_vencimento = update_data.get('data_primeiro_vencimento', db_carne.data_primeiro_vencimento)
-    if new_data_venda and new_data_primeiro_vencimento < new_data_venda:
-         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A data do primeiro vencimento não pode ser anterior à data da venda.")
-
-    # Detectar mudança no tipo de carnê (fixo/flexível) ou em campos financeiros que exigem regeneração
-    regenerate_parcels_flag = False
-    financial_keys_for_parcel_regeneration = [
-        'valor_total_original', 'numero_parcelas',
-        'valor_parcela_sugerido', # Campo relevante para carnê fixo
-        'data_primeiro_vencimento',
-        'frequencia_pagamento', 'valor_entrada',
-        'parcela_fixa' # NOVO: Mudança no tipo de carnê exige regeneração
-    ]
-
-    if has_payments:
-        # Se tem pagamentos, só permite alterar descricao, status_carne, observacoes, data_venda
-        allowed_keys_with_payments = ['descricao', 'status_carne', 'observacoes', 'data_venda']
-        for key_to_update in list(update_data.keys()):
-            if key_to_update not in allowed_keys_with_payments:
-                if getattr(db_carne, key_to_update) != update_data[key_to_update]:
-                    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                                        detail=f"Não é possível alterar o campo '{key_to_update}' de um carnê que já possui pagamentos.")
-    else: # Não tem pagamentos, pode regenerar parcelas
-        for key in financial_keys_for_parcel_regeneration:
-            if key in update_data:
-                current_val = getattr(db_carne, key)
-                new_val = update_data.get(key)
-
-                # Tratamento para comparação de Decimals
-                if key in ['valor_total_original', 'valor_parcela_sugerido', 'valor_entrada']:
-                    current_val = Decimal(str(current_val)) if current_val is not None else None # manter str para Decimal para compatibilidade
-                    new_val = Decimal(str(new_val)) if new_val is not None else None # manter str para Decimal para compatibilidade
-                # Para booleanos, comparar diretamente
-                elif key == 'parcela_fixa':
-                    if current_val != new_val: # A mudança no tipo de parcela sempre dispara regeneração
-                        regenerate_parcels_flag = True
-                        break
-                # Para outros tipos, comparação padrão
-                if current_val != new_val:
-                    regenerate_parcels_flag = True
-                    break
-
-    # Aplicar as atualizações aos campos do objeto db_carne
-    for key, value in update_data.items():
-        if key == 'valor_parcela_original': # Este campo é calculado, não setado diretamente
-            continue
-        if key in ['valor_total_original', 'valor_entrada'] and value is not None:
-            setattr(db_carne, key, value) # Alterado: Pydantic já validou para Decimal
-        elif key == 'valor_parcela_sugerido' and value is not None:
-            pass # Não armazena diretamente no db_carne, é usado para cálculo
         else:
             setattr(db_carne, key, value)
 
@@ -4139,3 +2309,516 @@ def update_carne(db: Session, carne_id: int, carne_update: schemas.CarneCreate):
         # Excluir parcelas existentes
         db.query(models.Parcela).filter(models.Parcela.id_carne == carne_id).delete(synchronize_session='fetch')
         db.flush()
+
+    valor_total_original_decimal = db_carne.valor_total_original 
+    valor_entrada_decimal = db_carne.valor_entrada
+    valor_a_parcelar = valor_total_original_decimal - valor_entrada_decimal
+
+    # Se o carnê se torna não fixo
+    if not db_carne.parcela_fixa:
+        db_carne.numero_parcelas = 1
+        db_carne.valor_parcela_original = valor_a_parcelar.quantize(Decimal('0.01'))
+        db_carne.frequencia_pagamento = "única" # Ou "variável"
+
+        db_parcela_nova = models.Parcela(
+            id_carne=db_carne.id_carne,
+            numero_parcela=1,
+            valor_devido=valor_a_parcelar,
+            data_vencimento=db_carne.data_primeiro_vencimento,
+            valor_pago=Decimal('0.00'),
+            saldo_devedor=valor_a_parcelar,
+            status_parcela='Pendente',
+            juros_multa=Decimal('0.00'),
+            juros_multa_anterior_aplicada=Decimal('0.00'),
+            observacoes=None
+        )
+        db.add(db_parcela_nova)
+    else: # Se o carnê é fixo (ou mudou para fixo)
+        if db_carne.numero_parcelas <= 0:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Para carnês com parcela fixa, o número de parcelas deve ser maior que zero.")
+        if valor_a_parcelar <= Decimal('0.00') and db_carne.numero_parcelas > 0:
+             pass # A validação já é feita no frontend ou no esquema
+
+        valor_parcela_sugerido_decimal = carne_update.valor_parcela_sugerido if carne_update.valor_parcela_sugerido is not None else Decimal('0.00') 
+        if valor_parcela_sugerido_decimal == Decimal('0.00'): # Default se não sugerido
+            if valor_a_parcelar > Decimal('0.00'):
+                valor_parcela_original_calculado = (valor_a_parcelar / db_carne.numero_parcelas).quantize(Decimal('0.01'))
+            else:
+                valor_parcela_original_calculado = Decimal('0.00')
+        else:
+            valor_parcela_original_calculado = valor_parcela_sugerido_decimal
+
+
+        db_carne.valor_parcela_original = valor_parcela_original_calculado 
+
+        current_due_date = db_carne.data_primeiro_vencimento
+        for i in range(db_carne.numero_parcelas):
+            parcela_valor_devido = valor_parcela_original_calculado
+            if i == db_carne.numero_parcelas - 1:
+                soma_parcelas_anteriores = valor_parcela_original_calculado * i
+                parcela_valor_devido = valor_a_parcelar - soma_parcelas_anteriores
+                parcela_valor_devido = parcela_valor_devido.quantize(Decimal('0.01'))
+
+            if parcela_valor_devido < Decimal('0.00'):
+                parcela_valor_devido = Decimal('0.00')
+
+            db_parcela = models.Parcela(
+                id_carne=db_carne.id_carne,
+                numero_parcela=i + 1,
+                valor_devido=parcela_valor_devido,
+                data_vencimento=current_due_date,
+                valor_pago=Decimal('0.00'),
+                saldo_devedor=parcela_valor_devido,
+                status_parcela='Pendente',
+                juros_multa=Decimal('0.00'),
+                juros_multa_anterior_aplicada=Decimal('0.00'),
+                observacoes=None
+            )
+            db.add(db_parcela)
+            current_due_date = calculate_next_due_date(current_due_date, db_carne.frequencia_pagamento)
+
+    db.commit()
+    db.refresh(db_carne)
+    return db_carne
+
+def delete_carne(db: Session, carne_id: int):
+    db_carne = db.query(models.Carne).filter(models.Carne.id_carne == carne_id).first()
+    if not db_carne:
+        return None
+    db.delete(db_carne)
+    db.commit()
+    return True
+
+# --- Operações de Parcela ---
+def get_parcela(db: Session, parcela_id: int):
+    return db.query(models.Parcela).filter(models.Parcela.id_parcela == parcela_id).first()
+
+def get_parcelas_by_carne_id(db: Session, carne_id: int):
+    parcelas = db.query(models.Parcela).filter(models.Parcela.id_carne == carne_id).all()
+    for parcela in parcelas:
+        _apply_interest_and_fine_if_due(db, parcela)
+    db.commit()
+    return parcelas
+
+def update_parcela(db: Session, parcela_id: int, parcela_update: schemas.ParcelaUpdate):
+    db_parcela = get_parcela(db, parcela_id)
+    if not db_parcela:
+        return None
+    update_data = parcela_update.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(db_parcela, key, value)
+    db.add(db_parcela)
+    db.commit()
+    db.refresh(db_parcela)
+    _apply_interest_and_fine_if_due(db, db_parcela) # Re-aplica juros caso a atualização afete o cálculo
+    db.commit()
+    return db_parcela
+
+def renegotiate_parcela(db: Session, parcela_id: int, renegotiation_data: schemas.ParcelaRenegotiate):
+    db_parcela = db.query(models.Parcela).filter(models.Parcela.id_parcela == parcela_id).first()
+    if not db_parcela:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Parcela não encontrada para renegociação.")
+
+    # Verifica se a parcela já foi paga (total ou parcialmente)
+    if db_parcela.status_parcela in ['Paga', 'Paga com Atraso']:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Não é possível renegociar uma parcela já quitada.")
+    
+    # Atualiza a data de vencimento
+    db_parcela.data_vencimento = renegotiation_data.new_data_vencimento
+
+    # Se um novo valor for fornecido, atualiza valor_devido e saldo_devedor.
+    # Caso contrário, mantém o valor devido atual e recalcula o saldo com base nos juros/multas até a nova data.
+    if renegotiation_data.new_valor_devido is not None:
+        db_parcela.valor_devido = renegotiation_data.new_valor_devido
+        db_parcela.valor_pago = Decimal('0.00') # Reseta o valor pago para a nova renegociação
+        db_parcela.juros_multa = Decimal('0.00') # Reseta juros/multa para a nova renegociação
+        db_parcela.juros_multa_anterior_aplicada = Decimal('0.00')
+        db_parcela.saldo_devedor = db_parcela.valor_devido # Saldo devedor é o novo valor devido
+    else:
+        # Se nenhum novo valor_devido é fornecido, recalcula os juros/multas
+        # com base na nova data de vencimento e no valor devido original (menos o que já foi pago).
+        # É importante zerar juros/multas anteriores para recalcular
+        db_parcela.juros_multa = Decimal('0.00')
+        db_parcela.juros_multa_anterior_aplicada = Decimal('0.00')
+        # A função _apply_interest_and_fine_if_due irá recalcular o saldo e juros/multa
+        # com base na nova data de vencimento e no valor_devido - valor_pago atual.
+
+    # Define o status após renegociação. Por padrão, "Renegociada" ou "Pendente"
+    db_parcela.status_parcela = renegotiation_data.status_parcela_apos_renegociacao or 'Renegociada'
+    
+    db.add(db_parcela)
+    db.commit()
+    db.refresh(db_parcela)
+
+    # Aplica juros/multas imediatamente com base na nova data e valor (se aplicável)
+    # Isso atualizará o saldo_devedor final.
+    _apply_interest_and_fine_if_due(db, db_parcela)
+    db.commit()
+    db.refresh(db_parcela) # Refresh final para ter certeza que todos os campos estão atualizados
+
+    # Atualiza o status do carnê pai se necessário
+    db_carne = db.query(models.Carne).filter(models.Carne.id_carne == db_parcela.id_carne).first()
+    if db_carne:
+        # Recalcula o status do carnê com base no status de todas as suas parcelas
+        all_parcels_paid = all(p.status_parcela in ['Paga', 'Paga com Atraso'] for p in db_carne.parcelas)
+        has_overdue_parcel = any(p.status_parcela == 'Atrasada' for p in db_carne.parcelas)
+        has_partially_paid_parcel = any(p.status_parcela == 'Parcialmente Paga' for p in db_carne.parcelas)
+
+        if db_carne.status_carne != 'Cancelado': # Não muda o status se o carnê foi cancelado
+            if all_parcels_paid and db_carne.parcelas:
+                db_carne.status_carne = 'Quitado'
+            elif has_overdue_parcel:
+                db_carne.status_carne = 'Em Atraso'
+            elif has_partially_paid_parcel:
+                db_carne.status_carne = 'Ativo' # Ou 'Parcialmente Ativo'
+            else:
+                db_carne.status_carne = 'Ativo'
+        db.add(db_carne)
+        db.commit()
+        db.refresh(db_carne)
+        
+    return db_parcela
+
+# --- Operações de Pagamento ---
+def create_pagamento(db: Session, pagamento: schemas.PagamentoCreate, usuario_id: int):
+    db_parcela = db.query(models.Parcela).filter(models.Parcela.id_parcela == pagamento.id_parcela).first()
+    if not db_parcela:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Parcela não encontrada.")
+
+    valor_pago_decimal = pagamento.valor_pago # Já é Decimal
+
+    if valor_pago_decimal <= 0:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Valor pago deve ser maior que zero.")
+
+    # Atualiza o valor pago da parcela e recalcula o saldo
+    db_parcela.valor_pago += valor_pago_decimal
+    
+    # Recalcula saldo devedor
+    _apply_interest_and_fine_if_due(db, db_parcela) # Garante que juros/multa e status estão atualizados
+
+    # Se o pagamento quita a parcela, define data_pagamento_completo
+    if db_parcela.saldo_devedor <= Decimal('0.00') and not db_parcela.data_pagamento_completo:
+        db_parcela.data_pagamento_completo = date.today() # Define a data de quitação
+
+    db.add(db_parcela) # Marca a parcela para ser salva
+
+    # Cria o registro de pagamento
+    db_pagamento = models.Pagamento(
+        id_parcela=pagamento.id_parcela,
+        data_pagamento=pagamento.data_pagamento if pagamento.data_pagamento else datetime.now(),
+        valor_pago=valor_pago_decimal,
+        forma_pagamento=pagamento.forma_pagamento,
+        observacoes=pagamento.observacoes,
+        id_usuario_registro=usuario_id
+    )
+    db.add(db_pagamento) # Marca o pagamento para ser salvo
+    db.commit() # Salva tanto a parcela quanto o pagamento
+    
+    db.refresh(db_parcela) # Refresh para ter a parcela com os dados atualizados
+
+    # Atualiza o status do carnê pai com base no status das parcelas
+    db_carne = db.query(models.Carne).filter(models.Carne.id_carne == db_parcela.id_carne).first()
+    if db_carne:
+        needs_carne_status_update = False
+        all_parcels_paid = all(p.status_parcela in ['Paga', 'Paga com Atraso'] for p in db_carne.parcelas)
+        has_overdue_parcel = any(p.status_parcela == 'Atrasada' for p in db_carne.parcelas)
+        has_partially_paid_parcel = any(p.status_parcela == 'Parcialmente Paga' for p in db_carne.parcelas)
+
+        new_carne_status = db_carne.status_carne
+        if db_carne.status_carne != 'Cancelado':
+            if all_parcels_paid and db_carne.parcelas:
+                new_carne_status = 'Quitado'
+            elif has_overdue_parcel:
+                new_carne_status = 'Em Atraso'
+            elif has_partially_paid_parcel:
+                new_carne_status = 'Ativo'
+            else:
+                new_carne_status = 'Ativo' # Se não tem atrasadas e não pagas, mas também não totalmente pagas
+        
+        if new_carne_status != db_carne.status_carne:
+            db_carne.status_carne = new_carne_status
+            db.add(db_carne)
+            db.commit() # Commit do status do carnê
+            db.refresh(db_carne)
+
+    db.refresh(db_pagamento) # Refresh do pagamento para garantir o retorno correto
+    return db_pagamento
+
+def delete_pagamento(db: Session, pagamento_id: int):
+    db_pagamento = db.query(models.Pagamento).filter(models.Pagamento.id_pagamento == pagamento_id).first()
+    if not db_pagamento:
+        return False
+
+    db_parcela = db.query(models.Parcela).filter(models.Parcela.id_parcela == db_pagamento.id_parcela).first()
+    if not db_parcela:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Parcela associada ao pagamento não encontrada.")
+
+    # Reverte o valor pago da parcela
+    db_parcela.valor_pago -= db_pagamento.valor_pago
+    if db_parcela.valor_pago < Decimal('0.00'):
+        db_parcela.valor_pago = Decimal('0.00')
+
+    # Remove a data de pagamento completo se o estorno fizer a parcela voltar a dever
+    if db_parcela.saldo_devedor <= Decimal('0.00') and db_parcela.data_pagamento_completo:
+        db_parcela.data_pagamento_completo = None # A parcela não está mais totalmente paga
+
+    # Recalcula o saldo devedor e status da parcela após o estorno
+    _apply_interest_and_fine_if_due(db, db_parcela)
+    
+    db.delete(db_pagamento)
+    db.add(db_parcela) # Salva as alterações na parcela
+    db.commit()
+
+    db.refresh(db_parcela) # Refresh para ter a parcela com os dados atualizados
+    
+    # Atualiza o status do carnê pai
+    db_carne = db.query(models.Carne).filter(models.Carne.id_carne == db_parcela.id_carne).first()
+    if db_carne:
+        needs_carne_status_update = False
+        all_parcels_paid = all(p.status_parcela in ['Paga', 'Paga com Atraso'] for p in db_carne.parcelas)
+        has_overdue_parcel = any(p.status_parcela == 'Atrasada' for p in db_carne.parcelas)
+        has_partially_paid_parcel = any(p.status_parcela == 'Parcialmente Paga' for p in db_carne.parcelas)
+
+        new_carne_status = db_carne.status_carne
+        if db_carne.status_carne != 'Cancelado':
+            if all_parcels_paid and db_carne.parcelas:
+                new_carne_status = 'Quitado'
+            elif has_overdue_parcel:
+                new_carne_status = 'Em Atraso'
+            elif has_partially_paid_parcel:
+                new_carne_status = 'Ativo'
+            else:
+                new_carne_status = 'Ativo' # Se não tem atrasadas e não pagas, mas também não totalmente pagas
+        
+        if new_carne_status != db_carne.status_carne:
+            db_carne.status_carne = new_carne_status
+            db.add(db_carne)
+            db.commit() # Commit do status do carnê
+            db.refresh(db_carne)
+
+    return True
+
+# --- Relatórios e Dashboard ---
+def get_dashboard_summary(db: Session):
+    # Fetch all relevant data to ensure accurate calculation and status updates
+    all_carnes = db.query(models.Carne).options(
+        joinedload(models.Carne.parcelas).joinedload(models.Parcela.pagamentos)
+    ).all()
+
+    needs_commit = False
+    for carne_obj in all_carnes:
+        # First, ensure all parcels have correct juros, multa, and saldo_devedor
+        for parcela in carne_obj.parcelas:
+            original_juros_multa = parcela.juros_multa
+            original_saldo_devedor = parcela.saldo_devedor
+            original_status_parcela = parcela.status_parcela
+            _apply_interest_and_fine_if_due(db, parcela)
+            if (parcela.juros_multa != original_juros_multa or 
+                parcela.saldo_devedor != original_saldo_devedor or 
+                parcela.status_parcela != original_status_parcela):
+                needs_commit = True
+                db.add(parcela) # Mark for saving
+
+        # Then, update the carne status based on its updated parcels
+        if carne_obj.status_carne != 'Cancelado':
+            all_parcels_paid = all(p.status_parcela in ['Paga', 'Paga com Atraso'] for p in carne_obj.parcelas)
+            has_overdue_parcel = any(p.status_parcela == 'Atrasada' for p in carne_obj.parcelas)
+            has_partially_paid_parcel = any(p.status_parcela == 'Parcialmente Paga' for p in carne_obj.parcelas)
+
+            new_carne_status = carne_obj.status_carne
+            if all_parcels_paid and carne_obj.parcelas:
+                new_carne_status = 'Quitado'
+            elif has_overdue_parcel:
+                new_carne_status = 'Em Atraso'
+            elif has_partially_paid_parcel:
+                new_carne_status = 'Ativo'
+            else:
+                new_carne_status = 'Ativo' # Default if not overdue, not partially paid, and not fully paid yet
+            
+            if carne_obj.status_carne != new_carne_status:
+                carne_obj.status_carne = new_carne_status
+                needs_commit = True
+                db.add(carne_obj) # Mark for saving
+
+    if needs_commit:
+        db.commit() # Commit all changes accumulated above
+        # Refresh all_carnes to ensure local objects reflect the committed state
+        db.expire_all() # Invalidate all loaded objects to force a fresh load
+        all_carnes = db.query(models.Carne).options(
+            joinedload(models.Carne.parcelas).joinedload(models.Parcela.pagamentos)
+        ).all()
+
+    # Now, perform aggregations on the updated data
+    total_clientes = db.query(models.Cliente).count()
+    total_carnes = db.query(models.Carne).count()
+    total_carnes_ativos = db.query(models.Carne).filter(models.Carne.status_carne == 'Ativo').count()
+    total_carnes_quitados = db.query(models.Carne).filter(models.Carne.status_carne == 'Quitado').count()
+    total_carnes_atrasados = db.query(models.Carne).filter(models.Carne.status_carne == 'Em Atraso').count()
+
+    total_divida_geral_aberta = Decimal('0.00')
+    parcelas_atrasadas = 0
+    parcelas_a_vencer_7dias = 0
+    today = date.today()
+    seven_days_from_now = today + timedelta(days=7)
+
+    for carne_obj in all_carnes:
+        for parcela in carne_obj.parcelas:
+            # Ensure the parcela status is based on the updated values
+            if parcela.status_parcela not in ['Paga', 'Paga com Atraso', 'Cancelada']:
+                total_divida_geral_aberta += parcela.saldo_devedor
+                if parcela.status_parcela == 'Atrasada':
+                    parcelas_atrasadas += 1
+                elif today <= parcela.data_vencimento <= seven_days_from_now:
+                    parcelas_a_vencer_7dias += 1
+
+    # Pagamentos hoje
+    start_of_today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    end_of_today = datetime.now().replace(hour=23, minute=59, second=59, microsecond=999999)
+    total_recebido_hoje = db.query(func.sum(models.Pagamento.valor_pago)).filter(
+        models.Pagamento.data_pagamento >= start_of_today,
+        models.Pagamento.data_pagamento <= end_of_today
+    ).scalar() or Decimal('0.00')
+
+    # Pagamentos este mês
+    first_day_of_month = datetime(today.year, today.month, 1)
+    last_day_of_month = (first_day_of_month + relativedelta(months=1)) - timedelta(microseconds=1)
+    total_recebido_mes = db.query(func.sum(models.Pagamento.valor_pago)).filter(
+        models.Pagamento.data_pagamento >= first_day_of_month,
+        models.Pagamento.data_pagamento <= last_day_of_month
+    ).scalar() or Decimal('0.00')
+
+    response_data = schemas.DashboardSummaryResponse(
+        total_clientes=total_clientes,
+        total_carnes=total_carnes,
+        total_carnes_ativos=total_carnes_ativos,
+        total_carnes_quitados=total_carnes_quitados,
+        total_carnes_atrasados=total_carnes_atrasados,
+        total_divida_geral_aberta=float(total_divida_geral_aberta),
+        total_recebido_hoje=float(total_recebido_hoje),
+        total_recebido_mes=float(total_recebido_mes),
+        parcelas_a_vencer_7dias=parcelas_a_vencer_7dias,
+        parcelas_atrasadas=parcelas_atrasadas
+    )
+    return response_data
+
+def get_receipts_report(db: Session, start_date: date, end_date: date):
+    # Modificado para carregar descrições de carnê e nomes de cliente/usuário
+    pagamentos = db.query(models.Pagamento).options(
+        joinedload(models.Pagamento.parcela).joinedload(models.Parcela.carne).joinedload(models.Carne.cliente),
+        joinedload(models.Pagamento.usuario_registro)
+    ).filter(
+        models.Pagamento.data_pagamento >= start_date,
+        models.Pagamento.data_pagamento <= (datetime.combine(end_date, datetime.max.time())) # Inclui o dia inteiro
+    ).order_by(models.Pagamento.data_pagamento.desc()).all()
+
+    total_recebido_periodo = Decimal('0.00')
+    report_items = []
+
+    for pag in pagamentos:
+        total_recebido_periodo += pag.valor_pago
+        report_items.append(
+            schemas.PagamentoReportItem(
+                id_pagamento=pag.id_pagamento,
+                id_parcela=pag.id_parcela,
+                data_pagamento=pag.data_pagamento,
+                valor_pago=float(pag.valor_pago),
+                forma_pagamento=pag.forma_pagamento,
+                observacoes=pag.observacoes,
+                id_usuario_registro=pag.id_usuario_registro,
+                cliente_nome=pag.parcela.carne.cliente.nome if pag.parcela and pag.parcela.carne and pag.parcela.carne.cliente else 'N/A',
+                carnes_descricao=pag.parcela.carne.descricao if pag.parcela and pag.parcela.carne else 'N/A',
+                parcela_numero=pag.parcela.numero_parcela if pag.parcela else 0,
+                parcela_data_vencimento=pag.parcela.data_vencimento if pag.parcela else date.min
+            )
+        )
+    
+    return schemas.ReceiptsReportResponse(
+        start_date=start_date,
+        end_date=end_date,
+        total_recebido_periodo=float(total_recebido_periodo),
+        pagamentos=report_items
+    )
+
+def get_pending_debts_by_client(db: Session, client_id: int):
+    db_client = db.query(models.Cliente).options(
+        joinedload(models.Cliente.carnes).joinedload(models.Carne.parcelas)
+    ).filter(models.Cliente.id_cliente == client_id).first()
+
+    if not db_client:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cliente não encontrado.")
+
+    total_divida_pendente = Decimal('0.00')
+    parcelas_pendentes_list = []
+
+    needs_commit = False
+    for carne_obj in db_client.carnes:
+        for parcela in carne_obj.parcelas:
+            original_juros_multa = parcela.juros_multa
+            original_saldo_devedor = parcela.saldo_devedor
+            original_status_parcela = parcela.status_parcela
+            _apply_interest_and_fine_if_due(db, parcela)
+            if (parcela.juros_multa != original_juros_multa or 
+                parcela.saldo_devedor != original_saldo_devedor or 
+                parcela.status_parcela != original_status_parcela):
+                needs_commit = True
+                db.add(parcela)
+        # Recalcula o status do carnê
+        if carne_obj.status_carne != 'Cancelado':
+            all_parcels_paid = all(p.status_parcela in ['Paga', 'Paga com Atraso'] for p in carne_obj.parcelas)
+            has_overdue_parcel = any(p.status_parcela == 'Atrasada' for p in carne_obj.parcelas)
+            has_partially_paid_parcel = any(p.status_parcela == 'Parcialmente Paga' for p in carne_obj.parcelas)
+
+            new_status_carne = carne_obj.status_carne
+            if all_parcels_paid and carne_obj.parcelas:
+                new_status_carne = 'Quitado'
+            elif has_overdue_parcel:
+                new_status_carne = 'Em Atraso'
+            elif has_partially_paid_parcel:
+                new_status_carne = 'Ativo'
+            else:
+                new_status_carne = 'Ativo'
+            
+            if carne_obj.status_carne != new_status_carne:
+                carne_obj.status_carne = new_status_carne
+                needs_commit = True
+                db.add(carne_obj)
+
+    if needs_commit:
+        db.commit()
+        db.refresh(db_client) # Refresh client to get updated carnes and parcels
+        # Re-load or refresh associated objects to ensure updated status and values are picked up
+        db.expire_all()
+        db_client = db.query(models.Cliente).options(
+            joinedload(models.Cliente.carnes).joinedload(models.Carne.parcelas)
+        ).filter(models.Cliente.id_cliente == client_id).first()
+
+
+    for carne_obj in db_client.carnes:
+        for parcela in carne_obj.parcelas:
+            if parcela.status_parcela not in ['Paga', 'Paga com Atraso', 'Cancelada']:
+                total_divida_pendente += parcela.saldo_devedor
+                parcelas_pendentes_list.append(
+                    schemas.PendingDebtItem(
+                        id_parcela=parcela.id_parcela,
+                        numero_parcela=parcela.numero_parcela,
+                        valor_devido=float(parcela.valor_devido),
+                        valor_pago=float(parcela.valor_pago),
+                        saldo_devedor=float(parcela.saldo_devedor),
+                        juros_multa=float(parcela.juros_multa),
+                        data_vencimento=parcela.data_vencimento,
+                        status_parcela=parcela.status_parcela,
+                        id_carne=parcela.id_carne,
+                        carnes_descricao=carne_obj.descricao,
+                        carne_status=carne_obj.status_carne
+                    )
+                )
+    # Sort pending parcels by due date
+    parcelas_pendentes_list.sort(key=lambda p: p.data_vencimento)
+
+    return schemas.PendingDebtsReportResponse(
+        cliente_id=db_client.id_cliente,
+        cliente_nome=db_client.nome,
+        cliente_cpf_cnpj=db_client.cpf_cnpj,
+        total_divida_pendente=float(total_divida_pendente),
+        parcelas_pendentes=parcelas_pendentes_list
+    )
