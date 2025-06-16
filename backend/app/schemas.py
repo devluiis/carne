@@ -138,6 +138,16 @@ class ParcelaRenegotiate(BaseModel):
     new_valor_devido: Optional[Decimal] = None # ALTERADO: DE FLOAT PARA DECIMAL
     status_parcela_apos_renegociacao: Optional[str] = "Renegociada" # Ou "Pendente"
 
+# NOVO SCHEMA: ParcelaUpdate
+class ParcelaUpdate(BaseModel):
+    # Todos os campos são opcionais para permitir atualizações parciais
+    numero_parcela: Optional[int] = None
+    valor_devido: Optional[Decimal] = None
+    data_vencimento: Optional[date] = None
+    status_parcela: Optional[str] = None
+    observacoes: Optional[str] = None
+    # Não incluir id_carne para evitar mover a parcela para outro carnê
+
 # --- Pagamento (Schemas completos para CRUD) ---
 class PagamentoCreate(BaseModel):
     id_parcela: int
