@@ -22,7 +22,8 @@ def create_carne_route(
 ):
     if not crud.get_client(db, client_id=carne.id_cliente):
         raise HTTPException(status_code=404, detail="Cliente não encontrado")
-    return crud.create_carne(db=db, carne=carne, user_id=current_user.id_usuario)
+    # CORREÇÃO AQUI: Removido 'user_id=current_user.id_usuario'
+    return crud.create_carne(db=db, carne=carne) 
 
 # Rota para buscar todos os carnês
 @router.get("/", response_model=List[schemas.CarneResponse])
@@ -105,11 +106,10 @@ def create_pagamento_route(
 def reverse_payment_route(
     carne_id: int,
     parcela_id: int,
-    pagamento_info: schemas.PagamentoReverse, # AQUI ESTÁ A MUDANÇA: Recebe o corpo da requisição
+    pagamento_info: schemas.PagamentoReverse, # Recebe o corpo da requisição
     db: Session = Depends(get_db),
     current_user: models.Usuario = Depends(get_current_admin_user) # Sugestão: tornar esta rota exclusiva para admin
 ):
-    # crud.delete_pagamento agora recebe o pagamento_id diretamente
     result = crud.delete_pagamento(db, pagamento_id=pagamento_info.pagamento_id)
     
     if not result:
