@@ -20,9 +20,9 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Chip from '@mui/material/Chip'; // Para os badges de status
 import Dialog from '@mui/material/Dialog'; // Para os modais
-import DialogActions from '@mui/material/DialogActions'; // Corrigido o import
-import DialogContent from '@mui/material/DialogContent'; // Corrigido o import
-import DialogTitle from '@mui/material/DialogTitle'; // Corrigido o import
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
 import TextField from '@mui/material/TextField';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
@@ -54,177 +54,179 @@ const CarneDetailsPage = () => {
 
 
     const fetchCarneDetails = useCallback(async () => {
-        if (!user) {
-            setError("Usuário não autenticado.");
-            setLoading(false);
-            return;
+        if (!user) { //
+            setError("Usuário não autenticado."); //
+            setLoading(false); //
+            return; //
         }
         try {
-            const response = await api.get(`/carnes/${id}`, {
-                headers: {
-                    Authorization: `Bearer ${user.token}`
+            const response = await api.get(`/carnes/${id}`, { //
+                headers: { //
+                    Authorization: `Bearer ${user.token}` //
                 }
             });
-            setCarne(response.data);
+            setCarne(response.data); //
         } catch (err) {
-            console.error("Erro ao buscar detalhes do carnê:", err);
-            setError(err.response?.data?.detail || "Erro ao carregar detalhes do carnê.");
+            console.error("Erro ao buscar detalhes do carnê:", err); //
+            setError(err.response?.data?.detail || "Erro ao carregar detalhes do carnê."); //
         } finally {
-            setLoading(false);
+            setLoading(false); //
         }
-    }, [id, user, setGlobalAlert]);
+    }, [id, user, setGlobalAlert]); //
 
     useEffect(() => {
-        fetchCarneDetails();
-    }, [fetchCarneDetails]);
+        fetchCarneDetails(); //
+    }, [fetchCarneDetails]); //
 
     const handlePayClick = (parcela) => {
-        setParcelaToPay(parcela);
-        setPaymentValue(parcela.saldo_devedor.toFixed(2));
-        setFormaPagamento('');
+        setParcelaToPay(parcela); //
+        setPaymentValue(Number(parcela.saldo_devedor).toFixed(2)); // CORREÇÃO AQUI
+        setFormaPagamento(''); //
         // Preenche a data de pagamento com a data atual por padrão
-        setDataPagamento(new Date().toISOString().split('T')[0]); 
-        setShowPaymentModal(true);
+        setDataPagamento(new Date().toISOString().split('T')[0]); //
+        setShowPaymentModal(true); //
     };
 
     const handlePaymentSubmit = async () => {
-        if (!user || !parcelaToPay) return;
+        if (!user || !parcelaToPay) return; //
         try {
-            const parsedPaymentValue = parseFloat(paymentValue);
-            if (isNaN(parsedPaymentValue) || parsedPaymentValue <= 0) {
-                setGlobalAlert({ type: 'warning', message: 'Por favor, insira um valor de pagamento válido.' });
-                return;
+            const parsedPaymentValue = parseFloat(paymentValue); //
+            if (isNaN(parsedPaymentValue) || parsedPaymentValue <= 0) { //
+                setGlobalAlert({ type: 'warning', message: 'Por favor, insira um valor de pagamento válido.' }); //
+                return; //
             }
             if (parsedPaymentValue > parcelaToPay.saldo_devedor + 0.01) { // Pequena margem para evitar problemas de float
-                setGlobalAlert({ type: 'warning', message: 'O valor do pagamento excede o saldo devedor da parcela.' });
-                return;
+                setGlobalAlert({ type: 'warning', message: 'O valor do pagamento excede o saldo devedor da parcela.' }); //
+                return; //
             }
-            if (!formaPagamento) {
-                setGlobalAlert({ type: 'warning', message: 'Por favor, selecione a forma de pagamento.' });
-                return;
+            if (!formaPagamento) { //
+                setGlobalAlert({ type: 'warning', message: 'Por favor, selecione a forma de pagamento.' }); //
+                return; //
             }
             if (!dataPagamento) { // Nova validação para a data de pagamento
-                setGlobalAlert({ type: 'warning', message: 'Por favor, insira a data do pagamento.' });
-                return;
+                setGlobalAlert({ type: 'warning', message: 'Por favor, insira a data do pagamento.' }); //
+                return; //
             }
 
-            await api.post(`/carnes/${carne.id_carne}/parcelas/${parcelaToPay.id_parcela}/pagar`, {
-                id_parcela: parcelaToPay.id_parcela,
-                valor_pago: parsedPaymentValue,
-                forma_pagamento: formaPagamento,
+            await api.post(`/carnes/${carne.id_carne}/parcelas/${parcelaToPay.id_parcela}/pagar`, { //
+                id_parcela: parcelaToPay.id_parcela, //
+                valor_pago: parsedPaymentValue, //
+                forma_pagamento: formaPagamento, //
                 data_pagamento: dataPagamento // ENVIAR A DATA DE PAGAMENTO
             }, {
-                headers: {
-                    Authorization: `Bearer ${user.token}`
+                headers: { //
+                    Authorization: `Bearer ${user.token}` //
                 }
             });
-            setGlobalAlert({ type: 'success', message: 'Pagamento registrado com sucesso!' });
-            setShowPaymentModal(false);
+            setGlobalAlert({ type: 'success', message: 'Pagamento registrado com sucesso!' }); //
+            setShowPaymentModal(false); //
             fetchCarneDetails(); // Recarrega os detalhes do carnê para atualizar o status e saldos
         } catch (err) {
-            console.error("Erro ao registrar pagamento:", err);
-            setGlobalAlert({ type: 'error', message: err.response?.data?.detail || 'Erro ao registrar pagamento.' });
+            console.error("Erro ao registrar pagamento:", err); //
+            setGlobalAlert({ type: 'error', message: err.response?.data?.detail || 'Erro ao registrar pagamento.' }); //
         }
     };
 
     const handleReversePaymentClick = (parcela, pagamento) => {
-        setParcelaToReverse(parcela);
-        setPaymentToReverse(pagamento);
-        setShowReversePaymentModal(true);
+        setParcelaToReverse(parcela); //
+        setPaymentToReverse(pagamento); //
+        setShowReversePaymentModal(true); //
     };
 
     const handleReversePaymentConfirm = async () => {
-        if (!user || !parcelaToReverse || !paymentToReverse) return;
+        if (!user || !parcelaToReverse || !paymentToReverse) return; //
         try {
             // A rota de estorno no backend espera 'pagamento_id' como parâmetro de query ou corpo
             // No backend, a rota está definida para receber um objeto no body com `pagamento_id`
-            await api.post(`/carnes/${carne.id_carne}/parcelas/${parcelaToReverse.id_parcela}/reverse-payment`, {
-                pagamento_id: paymentToReverse.id_pagamento
+            await api.post(`/carnes/${carne.id_carne}/parcelas/${parcelaToReverse.id_parcela}/reverse-payment`, { //
+                pagamento_id: paymentToReverse.id_pagamento //
             }, {
-                headers: {
-                    Authorization: `Bearer ${user.token}`
+                headers: { //
+                    Authorization: `Bearer ${user.token}` //
                 }
             });
-            setGlobalAlert({ type: 'success', message: 'Pagamento estornado com sucesso!' });
-            setShowReversePaymentModal(false);
+            setGlobalAlert({ type: 'success', message: 'Pagamento estornado com sucesso!' }); //
+            setShowReversePaymentModal(false); //
             fetchCarneDetails(); // Recarrega os detalhes do carnê para atualizar o status e saldos
         } catch (err) {
-            console.error("Erro ao estornar pagamento:", err);
-            setGlobalAlert({ type: 'error', message: err.response?.data?.detail || 'Erro ao estornar pagamento.' });
+            console.error("Erro ao estornar pagamento:", err); //
+            setGlobalAlert({ type: 'error', message: err.response?.data?.detail || 'Erro ao estornar pagamento.' }); //
         }
     };
 
     const handleRenegotiateClick = (parcela) => {
-        setParcelaToRenegotiate(parcela);
+        setParcelaToRenegotiate(parcela); //
         setNewDueDate(parcela.data_vencimento.split('T')[0]); // Define a data de vencimento atual como padrão
-        setNewRenegotiatedValue(parcela.valor_devido.toFixed(2)); // Define o valor atual como padrão
-        setShowRenegotiateModal(true);
+        setNewRenegotiatedValue(Number(parcela.valor_devido).toFixed(2)); // CORREÇÃO AQUI
+        setShowRenegotiateModal(true); //
     };
 
     const handleRenegotiateSubmit = async () => {
-        if (!user || !parcelaToRenegotiate) return;
+        if (!user || !parcelaToRenegotiate) return; //
         try {
-            const parsedNewValue = newRenegotiatedValue ? parseFloat(newRenegotiatedValue) : null;
-            if (newDueDate === '') {
-                setGlobalAlert({ type: 'warning', message: 'Por favor, insira a nova data de vencimento.' });
-                return;
+            const parsedNewValue = newRenegotiatedValue ? parseFloat(newRenegotiatedValue) : null; //
+            if (newDueDate === '') { //
+                setGlobalAlert({ type: 'warning', message: 'Por favor, insira a nova data de vencimento.' }); //
+                return; //
             }
-            if (parsedNewValue !== null && (isNaN(parsedNewValue) || parsedNewValue <= 0)) {
-                setGlobalAlert({ type: 'warning', message: 'Por favor, insira um novo valor válido (opcional).' });
-                return;
+            if (parsedNewValue !== null && (isNaN(parsedNewValue) || parsedNewValue <= 0)) { //
+                setGlobalAlert({ type: 'warning', message: 'Por favor, insira um novo valor válido (opcional).' }); //
+                return; //
             }
 
-            await api.post(`/carnes/${carne.id_carne}/parcelas/${parcelaToRenegotiate.id_parcela}/renegotiate`, {
-                new_data_vencimento: newDueDate,
-                new_valor_devido: parsedNewValue
+            await api.post(`/carnes/${carne.id_carne}/parcelas/${parcelaToRenegotiate.id_parcela}/renegotiate`, { //
+                new_data_vencimento: newDueDate, //
+                new_valor_devido: parsedNewValue //
                 // status_parcela_apos_renegociacao pode ser enviado se houver lógica específica
             }, {
-                headers: {
-                    Authorization: `Bearer ${user.token}`
+                headers: { //
+                    Authorization: `Bearer ${user.token}` //
                 }
             });
-            setGlobalAlert({ type: 'success', message: 'Parcela renegociada com sucesso!' });
-            setShowRenegotiateModal(false);
+            setGlobalAlert({ type: 'success', message: 'Parcela renegociada com sucesso!' }); //
+            setShowRenegotiateModal(false); //
             fetchCarneDetails(); // Recarrega os detalhes do carnê para atualizar
         } catch (err) {
-            console.error("Erro ao renegociar parcela:", err);
-            setGlobalAlert({ type: 'error', message: err.response?.data?.detail || 'Erro ao renegociar parcela.' });
+            console.error("Erro ao renegociar parcela:", err); //
+            setGlobalAlert({ type: 'error', message: err.response?.data?.detail || 'Erro ao renegociar parcela.' }); //
         }
     };
 
-    if (loading) {
-        return <LoadingSpinner />;
+    if (loading) { //
+        return <LoadingSpinner />; //
     }
 
-    if (error) {
-        return <Typography color="error" className="text-center p-4">{error}</Typography>;
+    if (error) { //
+        return <Typography color="error" className="text-center p-4">{error}</Typography>; //
     }
 
-    if (!carne) {
-        return <Typography color="info" className="text-center p-4">Carnê não encontrado.</Typography>;
+    if (!carne) { //
+        return <Typography color="info" className="text-center p-4">Carnê não encontrado.</Typography>; //
     }
 
     // Função auxiliar para formatar moeda
     const formatCurrency = (value) => {
+        // Garantir que o valor é um número antes de formatar, para Decimal ou String
+        const numValue = typeof value === 'string' ? parseFloat(value) : value;
         return new Intl.NumberFormat('pt-BR', {
             style: 'currency',
             currency: 'BRL',
-        }).format(value);
+        }).format(numValue);
     };
 
     // Função auxiliar para determinar a cor do chip de status
     const getStatusChipColor = (status) => {
-        switch (status.toLowerCase()) {
-            case 'quitado': return 'success';
-            case 'em atraso': return 'error';
-            case 'cancelado': return 'default';
-            case 'ativo': return 'primary';
-            case 'paga': return 'success';
-            case 'pendente': return 'warning';
-            case 'parcialmente paga': return 'warning';
-            case 'paga com atraso': return 'success';
-            case 'renegociada': return 'info';
-            default: return 'info';
+        switch (status.toLowerCase()) { //
+            case 'quitado': return 'success'; //
+            case 'em atraso': return 'error'; //
+            case 'cancelado': return 'default'; //
+            case 'ativo': return 'primary'; //
+            case 'paga': return 'success'; //
+            case 'pendente': return 'warning'; //
+            case 'parcialmente paga': return 'warning'; //
+            case 'paga com atraso': return 'success'; //
+            case 'renegociada': return 'info'; //
+            default: return 'info'; //
         }
     };
 
@@ -293,7 +295,7 @@ const CarneDetailsPage = () => {
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {carne.parcelas.map(parcela => (
+                        {carne.parcelas.map(parcela => ( //
                             <TableRow key={parcela.id_parcela} className="hover:bg-gray-50">
                                 <TableCell>{parcela.numero_parcela}</TableCell>
                                 <TableCell>{formatCurrency(parcela.valor_devido)}</TableCell>
@@ -355,7 +357,7 @@ const CarneDetailsPage = () => {
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {carne.pagamentos.map(pagamento => (
+                            {carne.pagamentos.map(pagamento => ( //
                                 <TableRow key={pagamento.id_pagamento} className="hover:bg-gray-50">
                                     <TableCell>{pagamento.id_pagamento}</TableCell>
                                     <TableCell>{pagamento.parcela_numero}</TableCell>
@@ -364,7 +366,7 @@ const CarneDetailsPage = () => {
                                     <TableCell>{pagamento.forma_pagamento || 'N/A'}</TableCell>
                                     <TableCell>{pagamento.usuario_registro_nome || 'N/A'}</TableCell>
                                     <TableCell>
-                                        {user.perfil === 'admin' && (
+                                        {user.perfil === 'admin' && ( //
                                             <Button
                                                 variant="contained"
                                                 color="error"
@@ -384,7 +386,7 @@ const CarneDetailsPage = () => {
                     </Table>
                 </TableContainer>
             ) : (
-                <Typography className="text-center text-gray-600">Nenhum pagamento registrado para este carnê.</Typography>
+                <Typography className="text-center text-gray-600">Nenhum pagamento registrado para este carnê.</Typography> //
             )}
 
             {/* Modal de Pagamento (usando Dialog do MUI) */}
@@ -403,7 +405,7 @@ const CarneDetailsPage = () => {
                         variant="outlined"
                         value={paymentValue}
                         onChange={(e) => setPaymentValue(e.target.value)}
-                        inputProps={{ step: "0.01", min: "0.01", max: parcelaToPay?.saldo_devedor ? (parcelaToPay.saldo_devedor + 0.01).toFixed(2) : undefined }}
+                        inputProps={{ step: "0.01", min: "0.01", max: parcelaToPay?.saldo_devedor ? (Number(parcelaToPay.saldo_devedor) + 0.01).toFixed(2) : undefined }} // CORREÇÃO AQUI
                     />
                     <TextField // CAMPO DE DATA DE PAGAMENTO
                         margin="dense"
